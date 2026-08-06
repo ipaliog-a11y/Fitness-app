@@ -1,0 +1,652 @@
+/*
+ * One stylesheet, because the app is small and a build step that splits CSS
+ * across a dozen files buys nothing at this size.
+ *
+ * Dark by default: this is looked at outdoors at dawn and in a dim gym, and a
+ * white screen at either is unpleasant.
+ */
+
+:root {
+  --bg: #0e1116;
+  --surface: #161b23;
+  --surface-2: #1e242e;
+  --line: #2a323e;
+  --text: #e8edf4;
+  --muted: #93a0b3;
+  --accent: #4ade80;
+  --accent-dim: #1e5f3c;
+  --warn: #fbbf24;
+  --danger: #f87171;
+
+  --radius: 14px;
+  /* Kept in variables because the run screen has to stay clear of the home
+     indicator on iOS and the gesture bar on Android. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Numbers that do not jitter as the last digit changes — a stopwatch with
+     proportional digits visibly twitches every tick. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Shell --------------------------------------------------------------- */
+
+.app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.screen {
+  flex: 1;
+  padding: calc(var(--safe-top) + 16px) 16px 96px;
+}
+
+.screen h1 {
+  font-size: 26px;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.screen .subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.tabs {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: rgba(16, 20, 27, 0.94);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  padding-bottom: var(--safe-bottom);
+  z-index: 20;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 10px 4px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tabs button[aria-current='page'] {
+  color: var(--accent);
+}
+
+.tabs .glyph {
+  font-size: 19px;
+  line-height: 1;
+}
+
+/* --- Cards and rows ------------------------------------------------------ */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.card h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.row + .row {
+  margin-top: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.field + .field {
+  margin-top: 14px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+
+.btn {
+  border-radius: 12px;
+  padding: 13px 18px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #06210f;
+  border-color: transparent;
+}
+
+.btn.danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn.wide {
+  width: 100%;
+  display: block;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-row > * {
+  flex: 1;
+}
+
+/* --- Metrics ------------------------------------------------------------- */
+
+.metric-hero {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.metric-hero .value {
+  /* Deliberately enormous: this is read at arm's length, in motion, often in
+     sunlight. */
+  font-size: clamp(64px, 22vw, 108px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.metric-hero .label {
+  color: var(--muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 6px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.metric {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.metric .value {
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 1.15;
+}
+
+.metric .label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 4px;
+}
+
+/* --- Status pills -------------------------------------------------------- */
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.pill.good {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.pill.warn {
+  color: var(--warn);
+  border-color: #5a4415;
+}
+
+.pill.bad {
+  color: var(--danger);
+  border-color: #5c2626;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dot.live {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* Someone who gets motion sick should not be given a pulsing dot. */
+@media (prefers-reduced-motion: reduce) {
+  .dot.live {
+    animation: none;
+  }
+}
+
+/* --- Mode picker --------------------------------------------------------- */
+
+.mode-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.mode-picker button {
+  padding: 16px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.mode-picker button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.mode-picker .name {
+  font-weight: 650;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.mode-picker .blurb {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* --- History ------------------------------------------------------------- */
+
+.run-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 13px 14px;
+  margin-bottom: 10px;
+}
+
+.run-item .glyph {
+  font-size: 22px;
+}
+
+.run-item .body {
+  flex: 1;
+  min-width: 0;
+}
+
+.run-item .headline {
+  /* Both of these are spans inside a button, so they need making block
+     explicitly — inline, the duration and the date run together. */
+  display: block;
+  font-weight: 650;
+  font-size: 16px;
+}
+
+.run-item .meta {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.empty .glyph {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* --- Charts -------------------------------------------------------------- */
+
+.map {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.map canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.map .attribution {
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  font-size: 9px;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 120px;
+}
+
+.bars .bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.bars .fill {
+  background: var(--accent-dim);
+  border-radius: 4px 4px 0 0;
+  /* A week with a run must never render as invisible. */
+  min-height: 2px;
+}
+
+.bars .fill.current {
+  background: var(--accent);
+}
+
+.bars .tick {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 5px;
+}
+
+.zone-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+  font-size: 13px;
+}
+
+.zone-row .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.zone-row .name {
+  /* Wide enough for "Z1 Recovery" on one line — the longest of the five. */
+  width: 92px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.zone-row .track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.zone-row .track span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.zone-row .time {
+  width: 52px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.splits {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.splits th {
+  text-align: left;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-bottom: 8px;
+  font-weight: 600;
+}
+
+.splits td {
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+
+.splits .barcell {
+  width: 45%;
+}
+
+.splits .barcell span {
+  display: block;
+  height: 7px;
+  background: var(--accent-dim);
+  border-radius: 4px;
+}
+
+.splits .partial {
+  color: var(--muted);
+}
+
+/* --- Tips ---------------------------------------------------------------- */
+
+.tip {
+  border-left: 3px solid var(--line);
+  padding: 2px 0 2px 12px;
+  margin-bottom: 14px;
+}
+
+.tip.praise {
+  border-color: var(--accent);
+}
+
+.tip.caution {
+  border-color: var(--warn);
+}
+
+.tip .title {
+  font-weight: 650;
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+
+.tip .body {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* --- Misc ---------------------------------------------------------------- */
+
+.back {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 6px 0;
+  margin-bottom: 8px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(78px + var(--safe-bottom));
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 13px;
+  z-index: 40;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.segmented {
+  display: flex;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.segmented button {
+  flex: 1;
+  padding: 9px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #06210f;
+  font-weight: 600;
+}

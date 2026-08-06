@@ -1,0 +1,30 @@
+{
+  "name": "fitness-app",
+  "version": "0.1.0",
+  "description": "A GPS running and cardio tracker that keeps every run on your own device",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:core",
+    "icons": "node tools/make-icons.mjs",
+    "test:browser": "node tests/browser.test.mjs",
+    "test:core": "esbuild tests/core.test.mjs --bundle --platform=node --format=esm --outfile=node_modules/.cache/core.test.bundle.mjs --log-level=error && node node_modules/.cache/core.test.bundle.mjs"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "esbuild": "^0.24.0",
+    "playwright": "^1.56.1",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21"
+  }
+}

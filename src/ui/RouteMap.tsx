@@ -1,0 +1,192 @@
+/**
+ * The route, drawn on OpenStreetMap tiles.
+ *
+ * Tiles are fetched only when the detail screen asks for them, and the track is
+ * drawn whether or not they arrive — offline, the line renders on a plain
+ * background rather than showing nothing. That fallback is the point: this app
+ * is meant to work in a forest with no signal.
+ */
+
+import { useEffect, useRef, useState } from 'react';
+import type { GeoPoint } from '../core/geo';
+import {
+  fitBounds,
+  tileUrl,
+  toScreen,
+  visibleTiles,
+  TILE_ATTRIBUTION,
+  TILE_SIZE,
+  type MapView,
+} from '../core/mercator';
+
+interface Props {
+  segments: GeoPoint[][];
+  /** Fetch map tiles. Off gives the bare track on a flat background. */
+  tiles?: boolean;
+  /** Marks the newest point, for a run in progress. */
+  live?: boolean;
+}
+
+/**
+ * Tiles are cached across mounts, so flicking between runs does not re-fetch
+ * the same neighbourhood repeatedly. Bounded, because an unbounded image cache
+ * on a long-lived page is a memory leak with extra steps.
+ */
+const tileCache = new Map<string, HTMLImageElement>();
+const TILE_CACHE_LIMIT = 200;
+
+function loadTile(url: string): Promise<HTMLImageElement | null> {
+  const cached = tileCache.get(url);
+  if (cached) return Promise.resolve(cached);
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    // Tiles are drawn to a canvas that is never read back, so this is only
+    // about letting the browser reuse them without tainting anything.
+    image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      if (tileCache.size >= TILE_CACHE_LIMIT) {
+        const oldest = tileCache.keys().next().value;
+        if (oldest) tileCache.delete(oldest);
+      }
+      tileCache.set(url, image);
+      resolve(image);
+    };
+    // Offline, or a tile server having a bad day: the track still draws.
+    image.onerror = () => resolve(null);
+    image.src = url;
+  });
+}
+
+export function RouteMap({ segments, tiles = true, live = false }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  // The canvas is sized in CSS but drawn in device pixels, so it has to be
+  // measured rather than assumed.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize({ width, height });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || size.width === 0) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = size.width * dpr;
+    canvas.height = size.height * dpr;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const view = fitBounds(segments, size.width, size.height, 22);
+    // `cancelled` stops a slow tile from painting over a map the user has
+    // already navigated away from.
+    let cancelled = false;
+
+    const drawTrack = (v: MapView) => {
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      for (const segment of segments) {
+        if (segment.length < 2) continue;
+        const points = segment.map((p) => toScreen(p.lat, p.lon, v));
+
+        // A dark casing under the bright line keeps it legible over both pale
+        // streets and dark parkland.
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+        ctx.stroke();
+
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+        ctx.stroke();
+      }
+
+      const first = segments.find((s) => s.length > 0)?.[0];
+      const lastSegment = [...segments].reverse().find((s) => s.length > 0);
+      const last = lastSegment?.[lastSegment.length - 1];
+
+      const marker = (point: GeoPoint, fill: string, radius: number) => {
+        const [x, y] = toScreen(point.lat, point.lon, v);
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#0e1116';
+        ctx.stroke();
+      };
+
+      if (first) marker(first, '#e8edf4', 5);
+      if (last && last !== first) marker(last, live ? '#4ade80' : '#f87171', live ? 7 : 5);
+    };
+
+    if (!view) {
+      ctx.fillStyle = '#1e242e';
+      ctx.fillRect(0, 0, size.width, size.height);
+      ctx.fillStyle = '#93a0b3';
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No route recorded', size.width / 2, size.height / 2);
+      return;
+    }
+
+    ctx.fillStyle = '#1e242e';
+    ctx.fillRect(0, 0, size.width, size.height);
+
+    if (!tiles) {
+      drawTrack(view);
+      return;
+    }
+
+    // Draw the track immediately, then again over the tiles as they land, so
+    // the route is visible from the first frame instead of after the network.
+    drawTrack(view);
+
+    void Promise.all(
+      visibleTiles(view).map(async (tile) => {
+        const image = await loadTile(tileUrl(tile));
+        return { tile, image };
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      ctx.fillStyle = '#1e242e';
+      ctx.fillRect(0, 0, size.width, size.height);
+
+      // OSM's standard style is light; dimming it keeps the app dark and makes
+      // the green track the brightest thing on screen.
+      ctx.globalAlpha = 0.72;
+      for (const { tile, image } of results) {
+        if (image) ctx.drawImage(image, tile.left, tile.top, TILE_SIZE, TILE_SIZE);
+      }
+      ctx.globalAlpha = 1;
+
+      drawTrack(view);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [segments, size, tiles, live]);
+
+  return (
+    <div className="map" ref={containerRef}>
+      <canvas ref={canvasRef} />
+      {tiles && <div className="attribution">{TILE_ATTRIBUTION}</div>}
+    </div>
+  );
+}

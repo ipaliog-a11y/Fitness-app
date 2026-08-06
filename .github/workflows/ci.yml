@@ -1,0 +1,43 @@
+name: Build and test
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        # Playwright is only used by the browser test, which CI does not run;
+        # its postinstall would otherwise pull several hundred MB of browsers.
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        run: npm ci
+
+      - name: Test the core
+        run: npm test
+
+      # Also typechecks — `npm run build` runs tsc --noEmit first.
+      - name: Build
+        run: npm run build
+
+      - name: Check the icons are current
+        # Regenerating must be a no-op; a hand-edited icon that no longer
+        # matches the generator is a trap for whoever next runs `npm run icons`.
+        run: |
+          npm run icons
+          git diff --exit-code -- public/
