@@ -136,13 +136,345 @@ textarea:focus-visible {
   color: var(--muted);
 }
 
+.tabs-5 button {
+  font-size: 10px;
+  padding: 10px 2px 12px;
+}
+
 .tabs button[aria-current='page'] {
   color: var(--accent);
 }
 
 .tabs .glyph {
+  position: relative;
   font-size: 19px;
   line-height: 1;
+}
+
+/* Live run still going while the athlete is on another tab. */
+.tabs .tab-live {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(16, 20, 27, 0.94);
+}
+
+.screen-host {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.screen-host[hidden] {
+  display: none !important;
+}
+
+.sensor-status .sensor-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sensor-status .row + .row {
+  margin-top: 14px;
+}
+
+/* --- Run goals ----------------------------------------------------------- */
+
+.goal-kinds {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.goal-kinds button {
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.goal-kinds button[aria-pressed='true'] {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.chip.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.goal-summary {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.goal-track {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.goal-track.met {
+  border-color: var(--accent-dim);
+}
+
+.goal-track-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.goal-track.met .goal-track-head {
+  color: var(--accent);
+}
+
+.goal-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.goal-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.2s ease-out;
+}
+
+.goal-track.goal-flash {
+  animation: goal-pulse 1.2s ease-out 2;
+}
+
+@keyframes goal-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(74, 222, 128, 0);
+  }
+}
+
+.lap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lap-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.lap-list li:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* --- Workouts, shoes, selects -------------------------------------------- */
+
+.select {
+  width: 100%;
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.custom-workout {
+  margin-top: 12px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.workout-phase {
+  margin: 14px 0 0;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.workout-phase.kind-work {
+  border-color: var(--danger);
+}
+
+.workout-phase.kind-rest {
+  border-color: var(--warn);
+}
+
+.workout-phase.kind-warmup,
+.workout-phase.kind-cooldown {
+  border-color: var(--accent-dim);
+}
+
+.workout-remaining {
+  font-size: clamp(28px, 8vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 6px 0 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.shoe-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.shoe-row:first-of-type {
+  border-top: none;
+}
+
+.shoe-row .body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shoe-row .meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.shoe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shoe-actions .btn {
+  flex: 1;
+  min-width: 4.5rem;
+}
+
+/* --- History filters ----------------------------------------------------- */
+
+.history-filters .filter-row {
+  margin-bottom: 12px;
+}
+
+.history-filters .filter-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.filter-chips {
+  margin-top: 0;
+}
+
+.history-group {
+  margin-top: 8px;
+}
+
+.history-group-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 16px 0 8px;
+}
+
+.history-zone-strip {
+  display: flex;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 8px;
+  background: var(--surface-2);
+  gap: 1px;
+}
+
+.history-zone-strip > span {
+  min-width: 2px;
+  border-radius: 1px;
+}
+
+/* --- Modal --------------------------------------------------------------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: calc(16px + var(--safe-bottom) + 64px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 16px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.modal h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
 }
 
 /* --- Cards and rows ------------------------------------------------------ */

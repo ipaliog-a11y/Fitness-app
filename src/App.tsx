@@ -1,7 +1,7 @@
 /**
  * The shell: which screen is showing, and the one copy of the data they share.
  *
- * State lives here rather than in a store library. There is one user, four
+ * State lives here rather than in a store library. There is one user, five
  * screens and a single list of runs; anything more elaborate would be
  * scaffolding around a problem this app does not have.
  */
@@ -10,19 +10,22 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Activity } from './core/activity';
 import { byNewest } from './core/activity';
 import { allActivities, deleteActivity, saveActivity } from './core/db';
-import { loadProfile, saveProfile, type Profile } from './core/settings';
+import { loadProfile, saveProfile, sanitise, type Profile } from './core/settings';
+import { addDistanceToShoe, loadShoes, saveShoes, shoeNeedsWarning } from './core/shoes';
 import { DetailScreen } from './ui/DetailScreen';
 import { HistoryScreen } from './ui/HistoryScreen';
+import { ProfileScreen } from './ui/ProfileScreen';
 import { RunScreen } from './ui/RunScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
 import { StatsScreen } from './ui/StatsScreen';
 
-type Tab = 'run' | 'history' | 'stats' | 'settings';
+type Tab = 'run' | 'history' | 'stats' | 'profile' | 'settings';
 
 const TABS: Array<{ id: Tab; label: string; glyph: string }> = [
   { id: 'run', label: 'Run', glyph: '▶' },
   { id: 'history', label: 'History', glyph: '☰' },
   { id: 'stats', label: 'Dashboard', glyph: '◴' },
+  { id: 'profile', label: 'Profile', glyph: '◉' },
   { id: 'settings', label: 'Settings', glyph: '⚙' },
 ];
 
@@ -32,6 +35,9 @@ export function App() {
   const [profile, setProfile] = useState<Profile>(() => loadProfile());
   const [openId, setOpenId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // True while a run is armed or in progress. The Run screen stays mounted so
+  // switching tabs does not tear down sensors or the clock.
+  const [runLive, setRunLive] = useState(false);
 
   const reload = useCallback(() => {
     void allActivities().then(setActivities);
@@ -45,8 +51,11 @@ export function App() {
   }, []);
 
   const changeProfile = useCallback((next: Profile) => {
-    setProfile(next);
-    saveProfile(next);
+    // Always re-sanitise so a partial write never leaves the UI with missing
+    // fields (e.g. displayName) that crash the Profile screen on .trim().
+    const clean = sanitise(next);
+    setProfile(clean);
+    saveProfile(clean);
   }, []);
 
   const handleFinish = useCallback(
@@ -57,6 +66,14 @@ export function App() {
         return;
       }
       await saveActivity(activity);
+      if (activity.shoeId) {
+        const shoes = addDistanceToShoe(loadShoes(), activity.shoeId, activity.distanceM);
+        saveShoes(shoes);
+        const shoe = shoes.find((s) => s.id === activity.shoeId);
+        if (shoe && shoeNeedsWarning(shoe)) {
+          showToast(`${shoe.name} has reached its wear limit.`);
+        }
+      }
       setActivities((current) => [activity, ...current].sort(byNewest));
       setOpenId(activity.id);
       setTab('history');
@@ -80,52 +97,76 @@ export function App() {
   }, []);
 
   const open = activities.find((a) => a.id === openId) ?? null;
-
-  const body = open ? (
-    <DetailScreen
-      activity={open}
-      // The run being looked at is excluded from its own history, so "longest
-      // run yet" is measured against what came before it.
-      history={activities.filter((a) => a.id !== open.id && a.startedAt < open.startedAt)}
-      profile={profile}
-      onBack={() => setOpenId(null)}
-      onDelete={handleDelete}
-      onNoteChange={handleNote}
-    />
-  ) : tab === 'run' ? (
-    <RunScreen
-      profile={profile}
-      onFinish={handleFinish}
-      onProfileChange={changeProfile}
-      onToast={showToast}
-    />
-  ) : tab === 'history' ? (
-    <HistoryScreen activities={activities} profile={profile} onOpen={setOpenId} />
-  ) : tab === 'stats' ? (
-    <StatsScreen
-      activities={activities}
-      profile={profile}
-      onOpen={(id) => {
-        setOpenId(id);
-        setTab('history');
-      }}
-    />
-  ) : (
-    <SettingsScreen
-      profile={profile}
-      onChange={changeProfile}
-      onReload={reload}
-      onToast={showToast}
-    />
-  );
+  const showRun = !open && tab === 'run';
+  const showHistory = !open && tab === 'history';
+  const showStats = !open && tab === 'stats';
+  const showProfile = !open && tab === 'profile';
+  const showSettings = !open && tab === 'settings';
 
   return (
     <div className="app">
-      {body}
+      {/* Always mounted so an in-progress run survives tab switches. Hidden
+          rather than unmounted — cleanup would stop GPS and drop the session. */}
+      <div className="screen-host" hidden={!showRun} aria-hidden={!showRun}>
+        <RunScreen
+          profile={profile}
+          onFinish={handleFinish}
+          onProfileChange={changeProfile}
+          onToast={showToast}
+          onLiveChange={setRunLive}
+          visible={showRun}
+        />
+      </div>
+
+      {open && (
+        <DetailScreen
+          activity={open}
+          // The run being looked at is excluded from its own history, so
+          // "longest run yet" is measured against what came before it.
+          history={activities.filter((a) => a.id !== open.id && a.startedAt < open.startedAt)}
+          profile={profile}
+          onBack={() => setOpenId(null)}
+          onSave={() => {
+            setOpenId(null);
+            setTab('run');
+          }}
+          onDelete={handleDelete}
+          onNoteChange={handleNote}
+          onToast={showToast}
+        />
+      )}
+
+      {showHistory && (
+        <HistoryScreen activities={activities} profile={profile} onOpen={setOpenId} />
+      )}
+
+      {showStats && (
+        <StatsScreen
+          activities={activities}
+          profile={profile}
+          onOpen={(id) => {
+            setOpenId(id);
+            setTab('history');
+          }}
+        />
+      )}
+
+      {showProfile && (
+        <ProfileScreen profile={profile} onChange={changeProfile} onToast={showToast} />
+      )}
+
+      {showSettings && (
+        <SettingsScreen
+          profile={profile}
+          onChange={changeProfile}
+          onReload={reload}
+          onToast={showToast}
+        />
+      )}
 
       {toast && <div className="toast">{toast}</div>}
 
-      <nav className="tabs">
+      <nav className="tabs tabs-5">
         {TABS.map((entry) => (
           <button
             key={entry.id}
@@ -139,6 +180,7 @@ export function App() {
           >
             <span className="glyph" aria-hidden>
               {entry.glyph}
+              {entry.id === 'run' && runLive && <span className="tab-live" title="Run in progress" />}
             </span>
             {entry.label}
           </button>

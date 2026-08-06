@@ -115,6 +115,101 @@ export interface HeartSummary {
 }
 
 /**
+ * Snapshot of zone times frozen at finish so history stays stable if max HR
+ * changes later. Zones are stored by index (1–5), not full Zone objects.
+ */
+export interface HeartReport {
+  averageBpm: number;
+  maxBpm: number;
+  minBpm: number;
+  measuredMs: number;
+  /** Max HR used when this report was computed. */
+  maxHeartRate: number;
+  zones: Array<{
+    zoneIndex: number;
+    ms: number;
+    fraction: number;
+  }>;
+}
+
+/** Build a storable report from live samples. */
+export function buildHeartReport(
+  samples: HeartSample[],
+  maxHeartRate: number,
+): HeartReport | null {
+  const summary = summariseHeart(samples, maxHeartRate);
+  if (!summary) return null;
+  return {
+    averageBpm: summary.averageBpm,
+    maxBpm: summary.maxBpm,
+    minBpm: summary.minBpm,
+    measuredMs: summary.measuredMs,
+    maxHeartRate,
+    zones: summary.zones.map((z) => ({
+      zoneIndex: z.zone.index,
+      ms: z.ms,
+      fraction: z.fraction,
+    })),
+  };
+}
+
+/** Rehydrate a stored report into the shape the UI already uses. */
+export function heartSummaryFromReport(report: HeartReport): HeartSummary {
+  const zones: ZoneTime[] = ZONES.map((zone) => {
+    const row = report.zones.find((z) => z.zoneIndex === zone.index);
+    return {
+      zone,
+      ms: row?.ms ?? 0,
+      fraction: row?.fraction ?? 0,
+    };
+  });
+  return {
+    averageBpm: report.averageBpm,
+    maxBpm: report.maxBpm,
+    minBpm: report.minBpm,
+    measuredMs: report.measuredMs,
+    zones,
+  };
+}
+
+export function sanitiseHeartReport(raw: unknown): HeartReport | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Partial<HeartReport>;
+  if (
+    typeof r.averageBpm !== 'number' ||
+    typeof r.maxBpm !== 'number' ||
+    typeof r.minBpm !== 'number' ||
+    typeof r.measuredMs !== 'number' ||
+    typeof r.maxHeartRate !== 'number' ||
+    !Array.isArray(r.zones)
+  ) {
+    return null;
+  }
+  const zones = r.zones
+    .map((z) => {
+      if (!z || typeof z !== 'object') return null;
+      const row = z as { zoneIndex?: unknown; ms?: unknown; fraction?: unknown };
+      if (typeof row.zoneIndex !== 'number' || typeof row.ms !== 'number') return null;
+      return {
+        zoneIndex: row.zoneIndex,
+        ms: Math.max(0, row.ms),
+        fraction:
+          typeof row.fraction === 'number' && Number.isFinite(row.fraction) ? row.fraction : 0,
+      };
+    })
+    .filter((z): z is HeartReport['zones'][number] => z !== null);
+  if (zones.length === 0) return null;
+  return {
+    averageBpm: r.averageBpm,
+    maxBpm: r.maxBpm,
+    minBpm: r.minBpm,
+    measuredMs: Math.max(0, r.measuredMs),
+    maxHeartRate: r.maxHeartRate,
+    zones,
+  };
+}
+
+/**
  * Time spent in each zone.
  *
  * Each sample is credited with the interval up to the *next* sample, which is

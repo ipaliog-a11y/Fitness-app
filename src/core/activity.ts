@@ -8,9 +8,12 @@
  */
 
 import { distanceBetween, elevationGain, type GeoPoint } from './geo';
+import type { RunGoal } from './goal';
+import type { HeartReport } from './heart';
 import { paceSecondsPerUnit, paceUnitMetres, type UnitSystem } from './units';
 
 export type RunMode = 'outdoor' | 'treadmill';
+export type { RunGoal };
 
 /**
  * Where a treadmill run's distance came from. Kept on the record because a
@@ -24,6 +27,20 @@ export interface HeartSample {
   t: number;
   /** Beats per minute, as reported by the strap. */
   bpm: number;
+}
+
+/** A manual lap pressed during the run (not GPS auto-splits). */
+export interface ManualLap {
+  /** 1-based lap index. */
+  index: number;
+  /** Total distance when the lap was pressed. */
+  atDistanceM: number;
+  /** Moving time when the lap was pressed. */
+  atDurationMs: number;
+  /** Distance covered in this lap alone. */
+  splitDistanceM: number;
+  /** Moving time of this lap alone. */
+  splitDurationMs: number;
 }
 
 export interface Activity {
@@ -47,10 +64,30 @@ export interface Activity {
   segments: GeoPoint[][];
   /** Heart rate through the run, empty when no strap was connected. */
   heart: HeartSample[];
+  /**
+   * Zone times and avg/max/min frozen at finish. Null when no HR samples or on
+   * older records (recomputed from `heart` when missing).
+   */
+  heartReport: HeartReport | null;
   /** Steps counted on the treadmill, null when nothing counted them. */
   steps: number | null;
   /** Treadmill incline in percent, null when unknown or outdoors. */
   inclinePercent: number | null;
+  /**
+   * Estimated kilocalories for this run (ACSM from distance, time, weight).
+   * Null on older records that pre-date the estimate.
+   */
+  caloriesKcal: number | null;
+  /** Optional target set before the run; null when free run. */
+  goal: RunGoal | null;
+  /** Manual laps taken mid-run; empty when none. */
+  manualLaps: ManualLap[];
+  /** Shoe used for this run, if any. */
+  shoeId: string | null;
+  /** Structured workout template id, if any. */
+  workoutId: string | null;
+  /** Display name of the workout at finish time. */
+  workoutName: string | null;
   note: string;
 }
 

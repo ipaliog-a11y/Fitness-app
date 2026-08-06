@@ -19,11 +19,21 @@ import {
   type UnitSystem,
 } from '../core/units';
 
-export function ZoneBars({ summary, maxHeartRate }: { summary: HeartSummary; maxHeartRate: number }) {
+export function ZoneBars({
+  summary,
+  maxHeartRate,
+  showPercent = false,
+}: {
+  summary: HeartSummary;
+  maxHeartRate: number;
+  /** Append share of measured HR time next to the duration. */
+  showPercent?: boolean;
+}) {
   return (
     <div>
       {summary.zones.map(({ zone, ms, fraction }) => {
         const range = zoneBounds(zone, maxHeartRate);
+        const pct = Math.round(fraction * 100);
         return (
           <div className="zone-row" key={zone.index}>
             <span className="swatch" style={{ background: zone.colour }} />
@@ -38,8 +48,15 @@ export function ZoneBars({ summary, maxHeartRate }: { summary: HeartSummary; max
                 }}
               />
             </span>
-            <span className="time" title={`${range.from}${range.to ? `–${range.to}` : '+'} bpm`}>
-              {ms > 0 ? formatDuration(ms) : '—'}
+            <span
+              className="time"
+              title={`${range.from}${range.to ? `–${range.to}` : '+'} bpm`}
+            >
+              {ms > 0
+                ? showPercent
+                  ? `${formatDuration(ms)} · ${pct}%`
+                  : formatDuration(ms)
+                : '—'}
             </span>
           </div>
         );

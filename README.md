@@ -56,6 +56,19 @@ middle of a 10 km still counts.
 and on the dashboard: how the run compared, how much of it was genuinely easy,
 whether this week is a big jump on last. It is deliberately not a training plan.
 
+**During the run (Phase A).** Manual laps, auto-pause when you stop moving
+(outdoor GPS or treadmill foot pod), spoken audio cues for distance and goals,
+and a clear alert when a run goal is met. Toggle audio and auto-pause under
+Settings → During a run.
+
+**Workouts (Phase B).** Preset and custom interval sessions with live phase
+countdown and voice prompts when a phase changes.
+
+**Shoes, GPX, routes (Phase C).** Track shoe mileage, export/import GPX, and save
+outdoor routes as a ghost path for the next run.
+
+Roadmap and feature tiers live in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
 ## How it is put together
 
 ```

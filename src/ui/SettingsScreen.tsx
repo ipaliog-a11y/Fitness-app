@@ -1,11 +1,11 @@
-/** Profile, units, zones, and getting the data out. */
+/** App preferences, routes, and getting the data out — not the athlete profile. */
 
 import { useRef, useState } from 'react';
-import { estimateMaxHeartRate, ZONES, zoneBounds } from '../core/heart';
-import { estimateStride } from '../core/steps';
-import { clearAll, exportJson, importJson } from '../core/db';
+import { clearAll, exportJson, importJson, saveActivity } from '../core/db';
+import { activityFromGpx } from '../core/gpx';
+import { loadRoutes, saveRoutes } from '../core/routes';
 import type { Profile } from '../core/settings';
-import { distanceLabel, fromDisplayDistance, toDisplayDistance } from '../core/units';
+import { distanceLabel, formatDistance, fromDisplayDistance, toDisplayDistance } from '../core/units';
 
 interface Props {
   profile: Profile;
@@ -16,10 +16,15 @@ interface Props {
 
 export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const gpxRef = useRef<HTMLInputElement | null>(null);
   const [confirmingWipe, setConfirmingWipe] = useState(false);
+  const [routesTick, setRoutesTick] = useState(0);
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value });
+
+  const routes = loadRoutes();
+  void routesTick;
 
   const download = async () => {
     const json = await exportJson();
@@ -41,10 +46,23 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
     }
   };
 
+  const uploadGpx = async (file: File) => {
+    try {
+      const activity = activityFromGpx(await file.text());
+      await saveActivity(activity);
+      onToast(
+        `Imported GPX — ${formatDistance(activity.distanceM, profile.units)} ${distanceLabel(profile.units)}.`,
+      );
+      onReload();
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'GPX import failed.');
+    }
+  };
+
   return (
     <div className="screen">
       <h1>Settings</h1>
-      <p className="subtitle">Everything here stays on this device.</p>
+      <p className="subtitle">Units, run behaviour, routes, and backups.</p>
 
       <div className="card">
         <h2>Units</h2>
@@ -62,47 +80,75 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       </div>
 
       <div className="card">
-        <h2>You</h2>
+        <h2>Weekly goal</h2>
         <div className="field">
-          <label htmlFor="age">Age</label>
+          <label htmlFor="goal">Distance per week ({distanceLabel(profile.units)})</label>
           <input
-            id="age"
+            id="goal"
             type="number"
-            inputMode="numeric"
-            value={profile.age}
+            step="0.5"
+            inputMode="decimal"
+            value={toDisplayDistance(profile.weeklyGoalM, profile.units).toFixed(1)}
             onChange={(e) => {
-              const age = Number(e.target.value);
-              if (!Number.isFinite(age)) return;
-              // Changing age re-seeds the max heart rate only while it still
-              // matches the old estimate — a tested figure typed in by hand must
-              // not be silently overwritten by a birthday.
-              const reseed = profile.maxHeartRate === estimateMaxHeartRate(profile.age);
-              onChange({
-                ...profile,
-                age,
-                maxHeartRate: reseed ? estimateMaxHeartRate(age) : profile.maxHeartRate,
-              });
+              const value = Number(e.target.value);
+              if (Number.isFinite(value) && value >= 0) {
+                set('weeklyGoalM', fromDisplayDistance(value, profile.units));
+              }
             }}
           />
+          <p className="hint">Set to 0 to turn the goal off. Body &amp; shoes live under Profile.</p>
         </div>
+      </div>
 
-        <div className="field">
-          <label htmlFor="height">Height (cm)</label>
-          <input
-            id="height"
-            type="number"
-            inputMode="numeric"
-            value={profile.heightCm}
-            onChange={(e) => {
-              const heightCm = Number(e.target.value);
-              if (!Number.isFinite(heightCm)) return;
-              set('heightCm', heightCm);
-            }}
-          />
+      <div className="card">
+        <h2>During a run</h2>
+        <div className="row">
+          <span>Keep the screen awake</span>
+          <button
+            type="button"
+            className="btn"
+            aria-pressed={profile.keepAwake}
+            onClick={() => set('keepAwake', !profile.keepAwake)}
+          >
+            {profile.keepAwake ? 'On' : 'Off'}
+          </button>
         </div>
+        <div className="row" style={{ marginTop: 12 }}>
+          <span>Audio cues</span>
+          <button
+            type="button"
+            className="btn"
+            aria-pressed={profile.audioCues}
+            onClick={() => set('audioCues', !profile.audioCues)}
+          >
+            {profile.audioCues ? 'On' : 'Off'}
+          </button>
+        </div>
+        <p className="hint">
+          Speaks kilometres/miles, goal progress, laps, and pause/resume. Uses the phone&apos;s
+          voice (works offline).
+        </p>
+        <div className="row" style={{ marginTop: 12 }}>
+          <span>Auto-pause</span>
+          <button
+            type="button"
+            className="btn"
+            aria-pressed={profile.autoPause}
+            onClick={() => set('autoPause', !profile.autoPause)}
+          >
+            {profile.autoPause ? 'On' : 'Off'}
+          </button>
+        </div>
+        <p className="hint">
+          Pauses when you stop moving (outdoor GPS or treadmill foot pod) and resumes when you go
+          again.
+        </p>
+      </div>
 
+      <div className="card">
+        <h2>Foot pod</h2>
         <div className="field">
-          <label htmlFor="podcal">Foot pod correction</label>
+          <label htmlFor="podcal">Distance correction</label>
           <input
             id="podcal"
             type="number"
@@ -125,6 +171,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                   (profile.footpodCalibration - 1) * 100
                 ).toFixed(1)}%.`}{' '}
             <button
+              type="button"
               className="pill"
               onClick={() => set('footpodCalibration', 1)}
               style={{ cursor: 'pointer' }}
@@ -133,124 +180,64 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             </button>
           </p>
         </div>
+      </div>
 
-        <div className="field">
-          <label htmlFor="stride">Treadmill stride (m per step)</label>
-          <input
-            id="stride"
-            type="number"
-            step="0.01"
-            inputMode="decimal"
-            value={profile.strideM.toFixed(2)}
-            onChange={(e) => {
-              const stride = Number(e.target.value);
-              if (Number.isFinite(stride) && stride > 0) set('strideM', stride);
-            }}
-          />
-          <p className="hint">
-            Used to turn counted steps into distance when no foot pod is connected. Finish a
-            treadmill run with the console's distance typed in and this calibrates itself.{' '}
+      <div className="card">
+        <h2>Saved routes</h2>
+        <p className="hint" style={{ marginTop: 0 }}>
+          Save a route from a finished outdoor run&apos;s detail screen.
+        </p>
+        {routes.length === 0 && <p className="hint">No saved routes yet.</p>}
+        {routes.map((route) => (
+          <div className="row" key={route.id} style={{ marginBottom: 8 }}>
+            <span>
+              {route.name}
+              <span
+                className="meta"
+                style={{ display: 'block', fontSize: 12, color: 'var(--muted)' }}
+              >
+                {formatDistance(route.distanceM, profile.units)} {distanceLabel(profile.units)}
+              </span>
+            </span>
             <button
-              className="pill"
-              onClick={() => set('strideM', estimateStride(profile.heightCm))}
-              style={{ cursor: 'pointer' }}
+              type="button"
+              className="btn danger"
+              onClick={() => {
+                saveRoutes(loadRoutes().filter((r) => r.id !== route.id));
+                onToast('Route deleted.');
+                setRoutesTick((t) => t + 1);
+              }}
             >
-              Reset from height
+              Delete
             </button>
-          </p>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Heart rate</h2>
-        <div className="field">
-          <label htmlFor="maxhr">Maximum heart rate (bpm)</label>
-          <input
-            id="maxhr"
-            type="number"
-            inputMode="numeric"
-            value={profile.maxHeartRate}
-            onChange={(e) => {
-              const max = Number(e.target.value);
-              if (Number.isFinite(max) && max > 0) set('maxHeartRate', max);
-            }}
-          />
-          <p className="hint">
-            Estimated as 220 − age ({estimateMaxHeartRate(profile.age)} for you), which is a
-            population average with a good deal of scatter. If you know yours from a real test, put
-            that in instead — every zone below depends on it.
-          </p>
-        </div>
-
-        <div style={{ marginTop: 16 }}>
-          {ZONES.map((zone) => {
-            const range = zoneBounds(zone, profile.maxHeartRate);
-            return (
-              <div className="zone-row" key={zone.index}>
-                <span className="swatch" style={{ background: zone.colour }} />
-                <span className="name">
-                  Z{zone.index} {zone.name}
-                </span>
-                <span style={{ flex: 1, fontSize: 12, color: 'var(--muted)' }}>{zone.blurb}</span>
-                <span className="time">
-                  {range.from}
-                  {range.to ? `–${range.to}` : '+'}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Weekly goal</h2>
-        <div className="field">
-          <label htmlFor="goal">Distance per week ({distanceLabel(profile.units)})</label>
-          <input
-            id="goal"
-            type="number"
-            step="0.5"
-            inputMode="decimal"
-            value={toDisplayDistance(profile.weeklyGoalM, profile.units).toFixed(1)}
-            onChange={(e) => {
-              const value = Number(e.target.value);
-              if (Number.isFinite(value) && value >= 0) {
-                set('weeklyGoalM', fromDisplayDistance(value, profile.units));
-              }
-            }}
-          />
-          <p className="hint">Set to 0 to turn the goal off.</p>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>During a run</h2>
-        <div className="row">
-          <span>Keep the screen awake</span>
-          <button
-            className="btn"
-            aria-pressed={profile.keepAwake}
-            onClick={() => set('keepAwake', !profile.keepAwake)}
-          >
-            {profile.keepAwake ? 'On' : 'Off'}
-          </button>
-        </div>
+          </div>
+        ))}
       </div>
 
       <div className="card">
         <h2>Your data</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          Runs live in this browser's storage and nowhere else. Nothing is uploaded — which also
-          means clearing site data deletes them. Export now and then.
+          Runs live in this browser&apos;s storage and nowhere else. Export now and then.
         </p>
         <div className="btn-row" style={{ marginBottom: 10 }}>
-          <button className="btn" onClick={download}>
-            Export
+          <button type="button" className="btn" onClick={download}>
+            Export JSON
           </button>
-          <button className="btn" onClick={() => fileRef.current?.click()}>
-            Import
+          <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+            Import JSON
           </button>
         </div>
+        <button
+          type="button"
+          className="btn wide"
+          style={{ marginBottom: 10 }}
+          onClick={() => gpxRef.current?.click()}
+        >
+          Import GPX
+        </button>
+        <p className="hint">
+          GPX brings in outdoor tracks from other apps. Export GPX from a run&apos;s detail screen.
+        </p>
         <input
           ref={fileRef}
           type="file"
@@ -259,17 +246,28 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) void upload(file);
-            // Cleared so re-picking the same file fires change again.
+            e.target.value = '';
+          }}
+        />
+        <input
+          ref={gpxRef}
+          type="file"
+          accept=".gpx,application/gpx+xml,application/xml,text/xml"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void uploadGpx(file);
             e.target.value = '';
           }}
         />
 
         {confirmingWipe ? (
           <div className="btn-row">
-            <button className="btn" onClick={() => setConfirmingWipe(false)}>
+            <button type="button" className="btn" onClick={() => setConfirmingWipe(false)}>
               Cancel
             </button>
             <button
+              type="button"
               className="btn danger"
               onClick={async () => {
                 await clearAll();
@@ -282,7 +280,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             </button>
           </div>
         ) : (
-          <button className="btn danger wide" onClick={() => setConfirmingWipe(true)}>
+          <button type="button" className="btn danger wide" onClick={() => setConfirmingWipe(true)}>
             Delete all runs
           </button>
         )}

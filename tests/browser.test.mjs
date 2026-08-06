@@ -98,11 +98,14 @@ await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
 await page.waitForSelector('.mode-picker', { timeout: 10_000 });
 check('the run screen renders', await page.isVisible('text=New run'));
 check('both modes are offered', (await page.locator('.mode-picker button').count()) === 2);
-check('all four tabs are present', (await page.locator('.tabs button').count()) === 4);
+check('all five tabs are present', (await page.locator('.tabs button').count()) === 5);
 
 // --- An outdoor run -------------------------------------------------------
 
 await page.click('text=Start outdoor run');
+await page.waitForSelector('text=Get ready', { timeout: 5000 });
+check('arming shows sensor status', await page.isVisible('text=Sensors'));
+await page.click('button:has-text("Start now")');
 await page.waitForSelector('.metric-hero', { timeout: 5000 });
 check('the run screen takes over', await page.isVisible('text=Finish'));
 
@@ -178,6 +181,8 @@ await page.click('.tabs button:has-text("Run")');
 await page.waitForSelector('.mode-picker');
 await page.click('text=🎽 Treadmill');
 await page.click('text=Start treadmill run');
+await page.waitForSelector('text=Get ready', { timeout: 5000 });
+await page.click('button:has-text("Start now")');
 await page.waitForSelector('.metric-hero');
 check('the treadmill run offers a manual distance', await page.isVisible('text=From the console'));
 

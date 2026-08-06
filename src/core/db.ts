@@ -7,6 +7,8 @@
  */
 
 import { byNewest, SCHEMA_VERSION, type Activity } from './activity';
+import { sanitiseGoal } from './goal';
+import { sanitiseHeartReport } from './heart';
 
 const DB_NAME = 'runlog';
 const STORE = 'activities';
@@ -116,7 +118,17 @@ export async function importJson(text: string): Promise<ImportResult> {
       ...activity,
       segments: Array.isArray(activity.segments) ? activity.segments : [],
       heart: Array.isArray(activity.heart) ? activity.heart : [],
+      heartReport: sanitiseHeartReport(activity.heartReport),
       note: typeof activity.note === 'string' ? activity.note : '',
+      caloriesKcal:
+        typeof activity.caloriesKcal === 'number' && Number.isFinite(activity.caloriesKcal)
+          ? activity.caloriesKcal
+          : null,
+      goal: sanitiseGoal(activity.goal),
+      manualLaps: Array.isArray(activity.manualLaps) ? activity.manualLaps : [],
+      shoeId: typeof activity.shoeId === 'string' ? activity.shoeId : null,
+      workoutId: typeof activity.workoutId === 'string' ? activity.workoutId : null,
+      workoutName: typeof activity.workoutName === 'string' ? activity.workoutName : null,
     });
     imported++;
   }

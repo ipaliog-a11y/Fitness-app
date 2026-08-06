@@ -6,17 +6,35 @@
  * a single number can be drawn.
  */
 
+import type { BiologicalSex } from './calories';
 import { estimateMaxHeartRate } from './heart';
 import { estimateStride } from './steps';
 import type { UnitSystem } from './units';
 
 const KEY = 'runlog:settings:v1';
 
+export type { BiologicalSex };
+
 export interface Profile {
+  /**
+   * Preferred name for greetings and coach copy. Empty until set.
+   * Not a login identity — stays on device only.
+   */
+  displayName: string;
   units: UnitSystem;
-  /** Years. Used only to seed a max heart rate. */
+  /** Years. Used for max HR seed and Keytel calorie estimate. */
   age: number;
   heightCm: number;
+  /**
+   * Body mass in kilograms. Used for estimated calories on each run.
+   * Stored in kg regardless of the unit system; the settings screen converts.
+   */
+  weightKg: number;
+  /**
+   * Improves HR-based calorie accuracy (Keytel). Unspecified averages the
+   * male and female equations.
+   */
+  sex: BiologicalSex;
   /** Beats per minute. Seeded from age, overwritable with a tested figure. */
   maxHeartRate: number;
   /** Metres per step on the treadmill, used when there is no foot pod. */
@@ -30,17 +48,29 @@ export interface Profile {
   weeklyGoalM: number;
   /** Keep the screen awake while a run is in progress. */
   keepAwake: boolean;
+  /** Speak distance / goal / lap cues during a run. */
+  audioCues: boolean;
+  /**
+   * Auto-pause when stopped (outdoor GPS or treadmill with foot-pod speed).
+   * Auto-resumes when movement returns.
+   */
+  autoPause: boolean;
 }
 
 export const DEFAULTS: Profile = {
+  displayName: '',
   units: 'metric',
   age: 35,
   heightCm: 175,
+  weightKg: 70,
+  sex: 'male',
   maxHeartRate: estimateMaxHeartRate(35),
   strideM: estimateStride(175),
   footpodCalibration: 1,
   weeklyGoalM: 20000,
   keepAwake: true,
+  audioCues: true,
+  autoPause: true,
 };
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -61,10 +91,20 @@ export function sanitise(raw: unknown): Profile {
   const age = clamp(num(input.age, DEFAULTS.age), 5, 120);
   const heightCm = clamp(num(input.heightCm, DEFAULTS.heightCm), 80, 250);
 
+  // Profile only stores male/female; legacy "unspecified" maps to default.
+  const sex: BiologicalSex =
+    input.sex === 'male' || input.sex === 'female' ? input.sex : DEFAULTS.sex;
+
+  const displayName =
+    typeof input.displayName === 'string' ? input.displayName.trim().slice(0, 40) : DEFAULTS.displayName;
+
   return {
+    displayName,
     units: input.units === 'imperial' ? 'imperial' : 'metric',
     age,
     heightCm,
+    weightKg: clamp(num(input.weightKg, DEFAULTS.weightKg), 30, 250),
+    sex,
     // Falls back to the age estimate rather than the constant default, so a
     // profile with an age but no tested max still gets a sensible number.
     maxHeartRate: clamp(num(input.maxHeartRate, estimateMaxHeartRate(age)), 100, 230),
@@ -75,6 +115,8 @@ export function sanitise(raw: unknown): Profile {
     footpodCalibration: clamp(num(input.footpodCalibration, 1), 0.5, 2),
     weeklyGoalM: clamp(num(input.weeklyGoalM, DEFAULTS.weeklyGoalM), 0, 500_000),
     keepAwake: typeof input.keepAwake === 'boolean' ? input.keepAwake : DEFAULTS.keepAwake,
+    audioCues: typeof input.audioCues === 'boolean' ? input.audioCues : DEFAULTS.audioCues,
+    autoPause: typeof input.autoPause === 'boolean' ? input.autoPause : DEFAULTS.autoPause,
   };
 }
 
@@ -90,7 +132,7 @@ export function loadProfile(): Profile {
 
 export function saveProfile(profile: Profile): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(profile));
+    localStorage.setItem(KEY, JSON.stringify(sanitise(profile)));
   } catch {
     // Private mode refuses writes; the in-memory profile still works for now.
   }

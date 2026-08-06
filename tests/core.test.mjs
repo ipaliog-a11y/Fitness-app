@@ -23,7 +23,14 @@ import {
 } from '../src/core/units.ts';
 import { splits, bestEffort } from '../src/core/activity.ts';
 import { RunSession } from '../src/core/session.ts';
-import { summariseHeart, zoneOf, estimateMaxHeartRate, heartTrace } from '../src/core/heart.ts';
+import {
+  summariseHeart,
+  zoneOf,
+  estimateMaxHeartRate,
+  heartTrace,
+  buildHeartReport,
+  heartSummaryFromReport,
+} from '../src/core/heart.ts';
 import { StepDetector, calibrateStride, estimateStride } from '../src/core/steps.ts';
 import {
   startOfWeek,
@@ -40,6 +47,43 @@ import {
   FootpodTracker,
   calibrateAgainst,
 } from '../src/core/footpod.ts';
+import {
+  estimateCalories,
+  estimateCaloriesFromPace,
+  estimateCaloriesKcal,
+  formatCalories,
+  keytelKjPerMin,
+} from '../src/core/calories.ts';
+import { autoPauseAction, nextStillMs, STILL_DURATION_MS } from '../src/core/autoPause.ts';
+import { makeSnapshot, pendingCues, cueSpeech } from '../src/core/cues.ts';
+import {
+  WORKOUT_PRESETS,
+  WorkoutRunner,
+  customIntervals,
+  expandRecipe,
+} from '../src/core/workout.ts';
+import {
+  addDistanceToShoe,
+  createShoe,
+  shoeNeedsWarning,
+  shoeWearFraction,
+  updateShoe,
+} from '../src/core/shoes.ts';
+import { pathDistance, reverseSegments, thinSegment, routeFromActivity } from '../src/core/routes.ts';
+import { activityToGpx } from '../src/core/gpx.ts';
+import {
+  filterActivities,
+  groupActivities,
+  startOfWeek as historyWeekStart,
+} from '../src/core/history.ts';
+import {
+  caloriesGoal,
+  distanceGoal,
+  formatGoalTarget,
+  goalMet,
+  goalProgress,
+  timeGoalMinutes,
+} from '../src/core/goal.ts';
 
 let passed = 0;
 const failures = [];
@@ -120,8 +164,15 @@ function activityFrom(segments, extra = {}) {
     distanceSource: 'gps',
     segments,
     heart: [],
+    heartReport: null,
     steps: null,
     inclinePercent: null,
+    caloriesKcal: null,
+    goal: null,
+    manualLaps: [],
+    shoeId: null,
+    workoutId: null,
+    workoutName: null,
     note: '',
     ...extra,
   };
@@ -270,6 +321,9 @@ check('durations format as a stopwatch', () => {
   equal(formatDuration(3_600_000), '1:00:00');
   equal(formatDuration(3_845_000), '1:04:05');
   equal(formatDuration(-500), '0:00', 'negative clamps');
+  equal(formatDuration(1_250, { tenths: true }), '0:01.2');
+  equal(formatDuration(65_340, { tenths: true }), '1:05.3');
+  equal(formatDuration(3_845_900, { tenths: true }), '1:04:05.9');
 });
 
 check('pace formatting carries 60 seconds into a minute', () => {
@@ -394,6 +448,33 @@ check('a treadmill session turns steps into distance', () => {
   equal(activity.distanceSource, 'steps');
   equal(activity.steps, 1000);
   equal(activity.segments.length, 0, 'no route indoors');
+  assert(typeof activity.caloriesKcal === 'number', 'calories saved on the activity');
+  equal(activity.goal, null, 'free run has no goal');
+});
+
+check('a session with a distance goal records it and reports progress', () => {
+  const t0 = 1_700_000_000_000;
+  const goal = distanceGoal(5, 'metric');
+  const session = new RunSession(
+    { mode: 'treadmill', strideM: 1, weightKg: 70, goal },
+    t0,
+  );
+  session.start(t0);
+  session.addSteps(3000); // 3 km
+  session.finish(t0 + 1_200_000); // 20 min
+  const activity = session.toActivity();
+  equal(activity.goal?.kind, 'distance');
+  equal(activity.goal?.target, 5000);
+  assert(!goalMet(activity.goal, {
+    distanceM: activity.distanceM,
+    durationMs: activity.durationMs,
+    caloriesKcal: activity.caloriesKcal,
+  }), '3 km is short of a 5 km goal');
+  near(goalProgress(activity.goal, {
+    distanceM: activity.distanceM,
+    durationMs: activity.durationMs,
+    caloriesKcal: activity.caloriesKcal,
+  }), 0.6, 0.02, '60% of a 5k');
 });
 
 check('a treadmill distance can be overridden from the console', () => {
@@ -750,11 +831,18 @@ check('a missing max heart rate is seeded from the age given', () => {
   equal(profile.maxHeartRate, 170, '220 minus 50');
 });
 
+check('weight defaults and clamps', () => {
+  equal(sanitise({}).weightKg, DEFAULTS.weightKg);
+  equal(sanitise({ weightKg: 5 }).weightKg, 30, 'floor');
+  equal(sanitise({ weightKg: 400 }).weightKg, 250, 'ceiling');
+});
+
 check('sanitise copes with nothing at all', () => {
   for (const input of [null, undefined, 'nonsense', 42, []]) {
     const profile = sanitise(input);
     equal(profile.units, 'metric');
     assert(Number.isFinite(profile.strideM), 'usable stride');
+    assert(Number.isFinite(profile.weightKg), 'usable weight');
   }
 });
 
@@ -1171,6 +1259,386 @@ check('outdoors the pod gives cadence but not distance', () => {
   equal(session.cadence(), 182, 'cadence is still useful');
   session.finish(t0 + 2000);
   equal(session.toActivity().distanceSource, 'gps');
+});
+
+// --- calories & goals -----------------------------------------------------
+
+check('pace calorie estimate scales with distance and weight', () => {
+  // 5 km in 30 min at 70 kg — a steady jog, a few hundred kcal.
+  const base = estimateCaloriesFromPace(5000, 30 * 60_000, 70);
+  assert(base > 200 && base < 500, `sensible range, got ${base}`);
+  const heavier = estimateCaloriesFromPace(5000, 30 * 60_000, 90);
+  assert(heavier > base, 'more mass burns more');
+  const longer = estimateCaloriesFromPace(10000, 60 * 60_000, 70);
+  assert(longer > base * 1.5, 'twice the work costs more');
+  equal(estimateCaloriesFromPace(0, 0, 70), 0, 'nothing done');
+  equal(formatCalories(base), String(Math.round(base)));
+});
+
+check('Keytel rises with heart rate', () => {
+  const easy = keytelKjPerMin(120, 70, 35, 'male');
+  const hard = keytelKjPerMin(170, 70, 35, 'male');
+  assert(hard > easy, 'higher HR costs more');
+  assert(easy > 0 && hard > 0, 'positive rates');
+});
+
+check('HR samples drive calories when a strap was worn', () => {
+  const t0 = 1_700_000_000_000;
+  const durationMs = 20 * 60_000;
+  // 1 Hz-ish samples at a hard effort.
+  const heart = [];
+  for (let i = 0; i <= 20 * 60; i += 2) {
+    heart.push({ t: t0 + i * 1000, bpm: 165 });
+  }
+
+  const withHr = estimateCalories({
+    distanceM: 3000,
+    durationMs,
+    weightKg: 70,
+    age: 35,
+    sex: 'male',
+    heart,
+  });
+  equal(withHr.source, 'heart');
+
+  const without = estimateCalories({
+    distanceM: 3000,
+    durationMs,
+    weightKg: 70,
+    age: 35,
+    sex: 'male',
+    heart: [],
+  });
+  equal(without.source, 'pace');
+
+  // Same distance/time but hard HR should not collapse to the easy pace number.
+  assert(withHr.kcal > 0, 'HR path produces a number');
+  // Convenience wrapper still works.
+  near(
+    estimateCaloriesKcal({
+      distanceM: 3000,
+      durationMs,
+      weightKg: 70,
+      age: 35,
+      sex: 'male',
+      heart,
+    }),
+    withHr.kcal,
+    1e-9,
+  );
+});
+
+check('heart report freezes zone times on the activity', () => {
+  const t0 = 1_700_000_000_000;
+  const samples = [];
+  // 2 min easy (~60% of 200 = 120) then 2 min hard (~85% = 170)
+  for (let i = 0; i < 120; i++) samples.push({ t: t0 + i * 1000, bpm: 120 });
+  for (let i = 0; i < 120; i++) samples.push({ t: t0 + (120 + i) * 1000, bpm: 170 });
+
+  const report = buildHeartReport(samples, 200);
+  assert(report, 'report built');
+  equal(report.maxHeartRate, 200);
+  assert(report.zones.some((z) => z.zoneIndex === 2 && z.ms > 0), 'time in Z2');
+  assert(report.zones.some((z) => z.zoneIndex === 4 && z.ms > 0), 'time in Z4');
+
+  const session = new RunSession(
+    { mode: 'treadmill', strideM: 1, weightKg: 70, age: 35, sex: 'male', maxHeartRate: 200 },
+    t0,
+  );
+  session.start(t0);
+  for (const s of samples) session.addHeart(s.bpm, s.t);
+  session.finish(t0 + 240_000);
+  const activity = session.toActivity();
+  assert(activity.heartReport, 'saved on activity');
+  equal(activity.heartReport.maxBpm, 170);
+  const revived = heartSummaryFromReport(activity.heartReport);
+  equal(revived.zones.length, 5);
+  near(
+    revived.zones.reduce((s, z) => s + z.ms, 0),
+    activity.heartReport.measuredMs,
+    1,
+  );
+});
+
+check('session calories prefer HR once samples land', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession(
+    { mode: 'treadmill', strideM: 1, weightKg: 70, age: 35, sex: 'male' },
+    t0,
+  );
+  session.start(t0);
+  session.addSteps(2000);
+  // Before any HR, pace model.
+  equal(session.caloriesEstimate(t0 + 600_000).source, 'pace');
+  for (let i = 0; i < 120; i++) {
+    session.addHeart(160, t0 + i * 1000);
+  }
+  const est = session.caloriesEstimate(t0 + 120_000);
+  equal(est.source, 'heart');
+  assert(est.kcal > 0);
+  session.finish(t0 + 120_000);
+  assert(session.toActivity().caloriesKcal > 0);
+});
+
+check('auto-pause triggers after sustained stillness', () => {
+  let still = 0;
+  still = nextStillMs(still, 0.1, true, 2000);
+  equal(autoPauseAction({
+    speedMps: 0.1,
+    running: true,
+    paused: false,
+    autoPaused: false,
+    stillMs: still,
+    enabled: true,
+    supported: true,
+  }), 'none', 'not long enough yet');
+  still = nextStillMs(still, 0.1, true, STILL_DURATION_MS);
+  equal(autoPauseAction({
+    speedMps: 0.1,
+    running: true,
+    paused: false,
+    autoPaused: false,
+    stillMs: still,
+    enabled: true,
+    supported: true,
+  }), 'pause');
+  equal(autoPauseAction({
+    speedMps: 1.5,
+    running: false,
+    paused: true,
+    autoPaused: true,
+    stillMs: 0,
+    enabled: true,
+    supported: true,
+  }), 'resume');
+  equal(autoPauseAction({
+    speedMps: 0,
+    running: true,
+    paused: false,
+    autoPaused: false,
+    stillMs: STILL_DURATION_MS,
+    enabled: false,
+    supported: true,
+  }), 'none', 'disabled');
+});
+
+check('cues fire for distance units and goal met', () => {
+  const units = 'metric';
+  const goal = distanceGoal(2, units);
+  const base = {
+    distanceM: 0,
+    durationMs: 0,
+    caloriesKcal: 0,
+    state: 'running',
+    goal,
+    lapCount: 0,
+    autoPaused: false,
+    units,
+  };
+  const first = makeSnapshot(base);
+  const startEvents = pendingCues(null, first, { units, distanceCues: true, goalCues: true });
+  equal(startEvents[0]?.type, 'started');
+
+  const mid = makeSnapshot({ ...base, distanceM: 1000, durationMs: 300_000 });
+  const midEvents = pendingCues(first, mid, { units, distanceCues: true, goalCues: true });
+  assert(midEvents.some((e) => e.type === 'distance_unit' && e.unit === 1), '1 km cue');
+  assert(midEvents.some((e) => e.type === 'goal_half'), 'halfway on a 2 km goal');
+
+  const done = makeSnapshot({ ...base, distanceM: 2000, durationMs: 600_000 });
+  const doneEvents = pendingCues(mid, done, { units, distanceCues: true, goalCues: true });
+  assert(doneEvents.some((e) => e.type === 'goal_met'), 'goal met');
+  assert(doneEvents.some((e) => e.type === 'distance_unit' && e.unit === 2), '2 km cue');
+
+  const speech = cueSpeech({ type: 'distance_unit', unit: 1 }, {
+    units,
+    distanceM: 1000,
+    durationMs: 300_000,
+    formatDistance: () => '1.00',
+    formatDuration: () => '5:00',
+  });
+  assert(speech.includes('kilometer'), speech);
+});
+
+check('manual laps record split distance and time', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill', strideM: 1 }, t0);
+  session.start(t0);
+  session.addSteps(500);
+  const lap1 = session.lap(t0 + 120_000);
+  assert(lap1, 'first lap');
+  equal(lap1.index, 1);
+  near(lap1.splitDistanceM, 500, 1e-9);
+  equal(lap1.splitDurationMs, 120_000);
+  session.addSteps(300);
+  const lap2 = session.lap(t0 + 200_000);
+  equal(lap2.index, 2);
+  near(lap2.splitDistanceM, 300, 1e-9);
+  equal(session.toActivity().manualLaps.length, 2);
+});
+
+check('goal builders and progress', () => {
+  const dist = distanceGoal(5, 'metric');
+  equal(dist?.target, 5000);
+  equal(formatGoalTarget(dist, 'metric'), '5.00 km');
+
+  const time = timeGoalMinutes(30);
+  equal(time?.target, 30 * 60_000);
+  equal(formatGoalTarget(time, 'metric'), '30:00');
+
+  const cal = caloriesGoal(300);
+  equal(cal?.target, 300);
+
+  const snap = { distanceM: 2500, durationMs: 15 * 60_000, caloriesKcal: 150 };
+  near(goalProgress(dist, snap), 0.5, 1e-9);
+  assert(!goalMet(dist, snap));
+  assert(goalMet(dist, { ...snap, distanceM: 5000 }));
+  near(goalProgress(time, snap), 0.5, 1e-9);
+  near(goalProgress(cal, snap), 0.5, 1e-9);
+  equal(distanceGoal(0, 'metric'), null);
+  equal(timeGoalMinutes(-1), null);
+  equal(caloriesGoal(0), null);
+});
+
+// --- workouts / shoes / routes / gpx (Phase B & C) ------------------------
+
+check('workout presets expand and advance by time', () => {
+  assert(WORKOUT_PRESETS.length >= 8, 'enough presets');
+  const easy = WORKOUT_PRESETS.find((w) => w.id === 'easy-30');
+  assert(easy && easy.phases.length >= 3, 'easy-30 has phases');
+  const runner = new WorkoutRunner(easy);
+  runner.begin(0, 0);
+  equal(runner.current()?.kind, 'warmup');
+  // 5 min warm-up
+  runner.tick(0, 5 * 60_000);
+  equal(runner.current()?.kind, 'steady');
+  runner.tick(0, 5 * 60_000 + 20 * 60_000);
+  equal(runner.current()?.kind, 'cooldown');
+  runner.tick(0, 5 * 60_000 + 20 * 60_000 + 5 * 60_000);
+  assert(runner.done, 'workout finished');
+});
+
+check('distance-based intervals advance on metres', () => {
+  const recipe = expandRecipe({
+    id: 'test-400',
+    name: 'Test',
+    blurb: 'x',
+    steps: [
+      {
+        kind: 'repeat',
+        times: 2,
+        work: { label: '400', distanceM: 400 },
+        rest: { label: 'rest', timeMs: 60_000 },
+      },
+    ],
+  });
+  const runner = new WorkoutRunner(recipe);
+  runner.begin(0, 0);
+  equal(runner.current()?.target.type, 'distance');
+  runner.tick(400, 90_000);
+  equal(runner.current()?.kind, 'rest');
+  runner.tick(400, 150_000);
+  equal(runner.current()?.target.type, 'distance');
+});
+
+check('custom intervals builder', () => {
+  const w = customIntervals({
+    warmupMin: 5,
+    workMin: 2,
+    restMin: 1,
+    repeats: 3,
+    cooldownMin: 5,
+  });
+  // warm + 3*(work+rest) + cool
+  equal(w.phases.length, 1 + 3 * 2 + 1);
+});
+
+check('shoe mileage and wear warning', () => {
+  // Limits are clamped to ≥ 50 km.
+  const shoe = createShoe({ name: 'Pegs', limitM: 50_000 });
+  equal(shoe.distanceM, 0);
+  equal(shoe.limitM, 50_000);
+  const next = addDistanceToShoe([shoe], shoe.id, 50_000);
+  assert(shoeNeedsWarning(next[0]), 'at limit');
+  near(shoeWearFraction(next[0]), 1, 1e-9);
+});
+
+check('shoe edit keeps mileage', () => {
+  const shoe = createShoe({ name: 'Pegs', brand: 'Nike', limitM: 50_000 });
+  const worn = addDistanceToShoe([shoe], shoe.id, 12_000)[0];
+  const edited = updateShoe([worn], worn.id, {
+    name: 'Pegs 2',
+    brand: 'Nike',
+    limitM: 80_000,
+  })[0];
+  equal(edited.name, 'Pegs 2');
+  equal(edited.distanceM, 12_000, 'mileage untouched');
+  equal(edited.limitM, 80_000);
+});
+
+check('profile sex is only male or female', () => {
+  equal(sanitise({ sex: 'female' }).sex, 'female');
+  equal(sanitise({ sex: 'unspecified' }).sex, 'male', 'legacy skip maps to default');
+  equal(sanitise({}).sex, 'male');
+});
+
+check('route thinning and reverse preserve ends', () => {
+  const points = [];
+  for (let i = 0; i < 500; i++) {
+    points.push({ lat: 60 + i * 0.0001, lon: 24, t: i * 1000, accuracy: 5, elevation: null });
+  }
+  const thin = thinSegment(points, 50);
+  equal(thin.length, 50);
+  equal(thin[0].lat, points[0].lat);
+  equal(thin[thin.length - 1].lat, points[points.length - 1].lat);
+  const rev = reverseSegments([points.slice(0, 10)]);
+  equal(rev[0][0].lat, points[9].lat);
+  assert(pathDistance([points.slice(0, 10)]) > 0);
+});
+
+check('route from activity and GPX export', () => {
+  const track = straightTrack({ points: 20, stepM: 50 });
+  const act = activityFrom([track]);
+  const route = routeFromActivity(act, 'Loop');
+  assert(route, 'route built');
+  equal(route.name, 'Loop');
+  const gpx = activityToGpx(act, 'Test run');
+  assert(gpx.includes('<gpx'), 'gpx root');
+  assert(gpx.includes('<trkpt'), 'track points');
+  assert(gpx.includes('Test run'), 'name');
+});
+
+check('display name is sanitised', () => {
+  equal(sanitise({ displayName: '  Alex  ' }).displayName, 'Alex');
+  equal(sanitise({ displayName: 12 }).displayName, '');
+});
+
+check('history filters and groups', () => {
+  const now = Date.now();
+  const weekStart = historyWeekStart(now);
+  const outdoor = {
+    ...activityFrom([straightTrack({ points: 5 })]),
+    id: 'a',
+    mode: 'outdoor',
+    startedAt: weekStart + 3_600_000,
+    heart: [{ t: weekStart, bpm: 140 }],
+  };
+  const treadmill = {
+    ...activityFrom([straightTrack({ points: 3 })]),
+    id: 'b',
+    mode: 'treadmill',
+    startedAt: weekStart - 14 * 86_400_000,
+    heart: [],
+    workoutId: 'easy-30',
+    workoutName: 'Easy 30',
+  };
+  const all = [outdoor, treadmill];
+  equal(filterActivities(all, { mode: 'outdoor', range: 'all', extra: 'all', groupBy: 'none' }).length, 1);
+  equal(filterActivities(all, { mode: 'all', range: 'week', extra: 'all', groupBy: 'none' }, now).length, 1);
+  equal(filterActivities(all, { mode: 'all', range: 'all', extra: 'hr', groupBy: 'none' }).length, 1);
+  equal(filterActivities(all, { mode: 'all', range: 'all', extra: 'workout', groupBy: 'none' }).length, 1);
+  const groups = groupActivities(all, 'month');
+  assert(groups.length >= 1);
+  equal(groups.reduce((n, g) => n + g.activities.length, 0), 2);
 });
 
 // --- report ---------------------------------------------------------------

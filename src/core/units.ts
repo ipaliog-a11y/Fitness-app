@@ -44,14 +44,21 @@ const pad = (n: number): string => String(n).padStart(2, '0');
  *
  * The leading unit is never zero-padded: a stopwatch that reads `01:04:22` looks
  * like a timestamp, and this is a duration.
+ *
+ * Pass `tenths: true` for the live run clock (`12:05.3`). History and stats
+ * keep whole seconds so finished activities do not jitter.
  */
-export function formatDuration(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000));
+export function formatDuration(ms: number, options?: { tenths?: boolean }): string {
+  const clamped = Math.max(0, ms);
+  const total = Math.floor(clamped / 1000);
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
-  if (hours > 0) return `${hours}:${pad(minutes)}:${pad(seconds)}`;
-  return `${minutes}:${pad(seconds)}`;
+  const base =
+    hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+  if (!options?.tenths) return base;
+  const tenths = Math.floor((clamped % 1000) / 100);
+  return `${base}.${tenths}`;
 }
 
 /** Seconds per display unit, or null when nothing has been covered yet. */

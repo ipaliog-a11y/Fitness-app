@@ -21,6 +21,8 @@ import {
 
 interface Props {
   segments: GeoPoint[][];
+  /** Optional ghost / planned route drawn under the live track. */
+  ghostSegments?: GeoPoint[][];
   /** Fetch map tiles. Off gives the bare track on a flat background. */
   tiles?: boolean;
   /** Marks the newest point, for a run in progress. */
@@ -58,7 +60,7 @@ function loadTile(url: string): Promise<HTMLImageElement | null> {
   });
 }
 
-export function RouteMap({ segments, tiles = true, live = false }: Props) {
+export function RouteMap({ segments, ghostSegments, tiles = true, live = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -88,33 +90,46 @@ export function RouteMap({ segments, tiles = true, live = false }: Props) {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const view = fitBounds(segments, size.width, size.height, 22);
+    const allForBounds = [...segments, ...(ghostSegments ?? [])];
+    const view = fitBounds(allForBounds, size.width, size.height, 22);
     // `cancelled` stops a slow tile from painting over a map the user has
     // already navigated away from.
     let cancelled = false;
 
-    const drawTrack = (v: MapView) => {
+    const drawPolyline = (
+      segs: GeoPoint[][],
+      stroke: string,
+      width: number,
+      dash?: number[],
+    ) => {
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-
-      for (const segment of segments) {
+      ctx.setLineDash(dash ?? []);
+      for (const segment of segs) {
         if (segment.length < 2) continue;
-        const points = segment.map((p) => toScreen(p.lat, p.lon, v));
-
-        // A dark casing under the bright line keeps it legible over both pale
-        // streets and dark parkland.
-        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-        ctx.lineWidth = 7;
+        const points = segment.map((p) => toScreen(p.lat, p.lon, view!));
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = width + 3;
         ctx.beginPath();
         points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
         ctx.stroke();
-
-        ctx.strokeStyle = '#4ade80';
-        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = width;
         ctx.beginPath();
         points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
         ctx.stroke();
       }
+      ctx.setLineDash([]);
+    };
+
+    const drawTrack = (v: MapView) => {
+      if (ghostSegments && ghostSegments.length > 0) {
+        drawPolyline(ghostSegments, '#64748b', 3, [8, 6]);
+      }
+
+      // A dark casing under the bright line keeps it legible over both pale
+      // streets and dark parkland.
+      drawPolyline(segments, '#4ade80', 3.5);
 
       const first = segments.find((s) => s.length > 0)?.[0];
       const lastSegment = [...segments].reverse().find((s) => s.length > 0);
@@ -181,7 +196,7 @@ export function RouteMap({ segments, tiles = true, live = false }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [segments, size, tiles, live]);
+  }, [segments, ghostSegments, size, tiles, live]);
 
   return (
     <div className="map" ref={containerRef}>
