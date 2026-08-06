@@ -102,6 +102,39 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
         </div>
 
         <div className="field">
+          <label htmlFor="podcal">Foot pod correction</label>
+          <input
+            id="podcal"
+            type="number"
+            step="0.01"
+            inputMode="decimal"
+            value={profile.footpodCalibration.toFixed(3)}
+            onChange={(e) => {
+              const factor = Number(e.target.value);
+              if (Number.isFinite(factor) && factor >= 0.5 && factor <= 2) {
+                set('footpodCalibration', factor);
+              }
+            }}
+          />
+          <p className="hint">
+            {profile.footpodCalibration === 1
+              ? 'No correction — the pod is believed as-is. Finish a treadmill run with the console distance typed in and this sets itself.'
+              : `The pod reads ${(
+                  (1 / profile.footpodCalibration - 1) * 100
+                ).toFixed(1)}% off; distances are corrected by ${(
+                  (profile.footpodCalibration - 1) * 100
+                ).toFixed(1)}%.`}{' '}
+            <button
+              className="pill"
+              onClick={() => set('footpodCalibration', 1)}
+              style={{ cursor: 'pointer' }}
+            >
+              Reset
+            </button>
+          </p>
+        </div>
+
+        <div className="field">
           <label htmlFor="stride">Treadmill stride (m per step)</label>
           <input
             id="stride"
@@ -115,8 +148,8 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             }}
           />
           <p className="hint">
-            Used to turn counted steps into distance. Finish a treadmill run with the console's
-            distance typed in and this calibrates itself.{' '}
+            Used to turn counted steps into distance when no foot pod is connected. Finish a
+            treadmill run with the console's distance typed in and this calibrates itself.{' '}
             <button
               className="pill"
               onClick={() => set('strideM', estimateStride(profile.heightCm))}

@@ -35,6 +35,11 @@ import {
 import { sanitise, DEFAULTS } from '../src/core/settings.ts';
 import { tipsForRun, tipsForWeek } from '../src/core/coach.ts';
 import { project, fitBounds, toScreen, visibleTiles, TILE_SIZE } from '../src/core/mercator.ts';
+import {
+  parseRscMeasurement,
+  FootpodTracker,
+  calibrateAgainst,
+} from '../src/core/footpod.ts';
 
 let passed = 0;
 const failures = [];
@@ -887,6 +892,285 @@ check('the tile grid covers the viewport', () => {
   // The grid reaches past both edges, so there are no gaps.
   assert(Math.min(...tiles.map((t) => t.left)) <= 0, 'covers the left edge');
   assert(Math.max(...tiles.map((t) => t.left + TILE_SIZE)) >= 320, 'covers the right edge');
+});
+
+
+// --- foot pod -------------------------------------------------------------
+
+/**
+ * Build an RSC Measurement packet the way a pod would.
+ *
+ * Written independently of the parser — laying the bytes out by hand from the
+ * specification is the only way this tests anything. A shared helper would
+ * agree with the parser's mistakes.
+ */
+function rscPacket({ speedMps, cadenceSpm, strideCm = null, totalM = null, running = true }) {
+  const bytes = [];
+  let flags = 0;
+  if (strideCm !== null) flags |= 0x01;
+  if (totalM !== null) flags |= 0x02;
+  if (running) flags |= 0x04;
+  bytes.push(flags);
+
+  const speed = Math.round(speedMps * 256);
+  bytes.push(speed & 0xff, (speed >> 8) & 0xff);
+  bytes.push(cadenceSpm & 0xff);
+
+  if (strideCm !== null) bytes.push(strideCm & 0xff, (strideCm >> 8) & 0xff);
+  if (totalM !== null) {
+    const dm = Math.round(totalM * 10);
+    bytes.push(dm & 0xff, (dm >> 8) & 0xff, (dm >> 16) & 0xff, (dm >> 24) & 0xff);
+  }
+
+  return new DataView(new Uint8Array(bytes).buffer);
+}
+
+check('a minimal pod packet decodes', () => {
+  const m = parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, running: true }));
+  near(m.speedMps, 3, 1e-6, 'speed');
+  equal(m.cadenceSpm, 180, 'cadence');
+  equal(m.strideLengthM, null, 'no stride');
+  equal(m.totalDistanceM, null, 'no odometer');
+  equal(m.running, true);
+});
+
+check('optional fields shift the layout', () => {
+  // Total distance with no stride length sits four bytes earlier than it would
+  // otherwise. Reading at a fixed offset gets this wrong and looks plausible.
+  const withTotalOnly = parseRscMeasurement(
+    rscPacket({ speedMps: 2.5, cadenceSpm: 168, totalM: 1234.5 }),
+  );
+  near(withTotalOnly.totalDistanceM, 1234.5, 0.05, 'total without stride');
+  equal(withTotalOnly.strideLengthM, null);
+
+  const withBoth = parseRscMeasurement(
+    rscPacket({ speedMps: 2.5, cadenceSpm: 168, strideCm: 118, totalM: 1234.5 }),
+  );
+  near(withBoth.strideLengthM, 1.18, 1e-6, 'stride');
+  near(withBoth.totalDistanceM, 1234.5, 0.05, 'total with stride');
+});
+
+check('the walking flag is read', () => {
+  const walking = parseRscMeasurement(rscPacket({ speedMps: 1.2, cadenceSpm: 110, running: false }));
+  equal(walking.running, false);
+});
+
+check('a large odometer survives the 32-bit field', () => {
+  const m = parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 400000 }));
+  near(m.totalDistanceM, 400000, 0.5, '400 km');
+});
+
+check('a truncated packet is refused rather than misread', () => {
+  equal(parseRscMeasurement(new DataView(new Uint8Array([0x04, 0x00]).buffer)), null, 'too short');
+  // Claims a stride length but stops before it.
+  equal(
+    parseRscMeasurement(new DataView(new Uint8Array([0x01, 0x00, 0x03, 0xb4]).buffer)),
+    null,
+    'stride promised, absent',
+  );
+  // Claims an odometer but only supplies two of its four bytes.
+  equal(
+    parseRscMeasurement(new DataView(new Uint8Array([0x02, 0x00, 0x03, 0xb4, 0x10, 0x27]).buffer)),
+    null,
+    'odometer truncated',
+  );
+});
+
+check('the first pod reading only sets a baseline', () => {
+  const tracker = new FootpodTracker();
+  // The pod has been counting since it was last charged; none of that is ours.
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 50000 })), 1000);
+  equal(tracker.distanceM, 0, 'nothing inherited from the odometer');
+});
+
+check('the pod odometer drives distance', () => {
+  const tracker = new FootpodTracker();
+  let total = 8000;
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: total })), 0);
+  for (let i = 1; i <= 100; i++) {
+    total += 3; // 3 m per second at 3 m/s
+    tracker.update(
+      parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: total })),
+      i * 1000,
+    );
+  }
+  near(tracker.distanceM, 300, 0.2, '100 seconds at 3 m/s');
+  near(tracker.speedMps, 3, 1e-6, 'speed');
+});
+
+check('a dropped packet costs nothing when the pod has an odometer', () => {
+  const tracker = new FootpodTracker();
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 100 })), 0);
+  // Thirty seconds of silence, then a reading that has moved on by 90 m.
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 190 })), 30_000);
+  near(tracker.distanceM, 90, 0.2, 'the gap is still counted');
+});
+
+check('a pod that resets mid-run does not subtract distance', () => {
+  const tracker = new FootpodTracker();
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 5000 })), 0);
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 5100 })), 1000);
+  near(tracker.distanceM, 100, 0.2, 'before the reset');
+  // Battery blip: the odometer restarts from nothing.
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 20 })), 2000);
+  near(tracker.distanceM, 120, 0.2, 'counts forward, never backward');
+});
+
+check('a pod without an odometer is integrated from speed', () => {
+  const tracker = new FootpodTracker();
+  for (let i = 0; i <= 60; i++) {
+    tracker.update(parseRscMeasurement(rscPacket({ speedMps: 2.5, cadenceSpm: 170 })), i * 1000);
+  }
+  near(tracker.distanceM, 150, 1, '60 seconds at 2.5 m/s');
+});
+
+check('integration refuses to invent distance across a long gap', () => {
+  const tracker = new FootpodTracker();
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180 })), 0);
+  // An hour later. Assuming 3 m/s throughout would fabricate 10 km.
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180 })), 3_600_000);
+  equal(tracker.distanceM, 0, 'nothing invented');
+});
+
+check('suspending rebases instead of donating the paused distance', () => {
+  const tracker = new FootpodTracker();
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 1000 })), 0);
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 1100 })), 1000);
+  near(tracker.distanceM, 100, 0.2, 'before the pause');
+
+  tracker.suspend();
+  // The belt kept running for a kilometre while the run was paused.
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 2100 })), 9000);
+  near(tracker.distanceM, 100, 0.2, 'the paused kilometre is not counted');
+
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 2150 })), 10_000);
+  near(tracker.distanceM, 150, 0.2, 'counting resumes cleanly');
+});
+
+check('calibration scales the pod', () => {
+  const tracker = new FootpodTracker();
+  tracker.calibration = 1.05;
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 0 })), 0);
+  tracker.update(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 180, totalM: 100 })), 1000);
+  near(tracker.distanceM, 105, 0.2, 'five percent up');
+  near(tracker.speedMps, 3.15, 1e-6, 'speed scales too');
+});
+
+check('calibration factors are sanity-checked', () => {
+  near(calibrateAgainst(5000, 5250), 1.05, 1e-9, 'a believable correction');
+  equal(calibrateAgainst(5000, 5), null, 'kilometres typed as metres');
+  equal(calibrateAgainst(0, 5000), null, 'pod reported nothing');
+  equal(calibrateAgainst(5000, 0), null, 'no reference');
+});
+
+// --- foot pod through a session -------------------------------------------
+
+check('a treadmill run takes its distance from the pod', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill', strideM: 0.8 }, t0);
+  session.start(t0);
+
+  let total = 0;
+  session.addFootpod(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: total })), t0);
+  for (let i = 1; i <= 200; i++) {
+    total += 3;
+    session.addFootpod(
+      parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: total })),
+      t0 + i * 1000,
+    );
+  }
+  session.finish(t0 + 200_000);
+
+  near(session.distanceM, 600, 1, '200 seconds at 3 m/s');
+  equal(session.toActivity().distanceSource, 'sensor');
+  equal(session.cadence(), 176, 'cadence from the pod');
+});
+
+check('the pod outranks the pedometer', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill', strideM: 0.8 }, t0);
+  session.start(t0);
+
+  // The phone thinks 1000 steps happened, which its stride model calls 800 m.
+  session.addSteps(1000);
+  near(session.distanceM, 800, 1e-9, 'pedometer while it is alone');
+
+  session.addFootpod(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 0 })), t0);
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 500 })),
+    t0 + 1000,
+  );
+  near(session.distanceM, 500, 0.2, 'the pod takes over');
+
+  // More steps must not drag the distance back to the estimate.
+  session.addSteps(500);
+  near(session.distanceM, 500, 0.2, 'steps no longer own the distance');
+  equal(session.steps, 1500, 'but they are still counted');
+});
+
+check('a typed distance still beats the pod', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill' }, t0);
+  session.start(t0);
+  session.addFootpod(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 0 })), t0);
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 4800 })),
+    t0 + 1000,
+  );
+  session.setDistance(5000);
+  // Further readings must not overwrite the console's figure.
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 4900 })),
+    t0 + 2000,
+  );
+  equal(session.distanceM, 5000);
+  equal(session.toActivity().distanceSource, 'manual');
+});
+
+check('pausing stops the pod counting', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill' }, t0);
+  session.start(t0);
+  session.addFootpod(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 0 })), t0);
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 300 })),
+    t0 + 1000,
+  );
+  session.pause(t0 + 1000);
+
+  // Readings during the pause are ignored outright.
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 900 })),
+    t0 + 2000,
+  );
+  near(session.distanceM, 300, 0.2, 'nothing added while paused');
+
+  session.resume(t0 + 60_000);
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 1500 })),
+    t0 + 61_000,
+  );
+  near(session.distanceM, 300, 0.2, 'the first reading back only rebases');
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 1560 })),
+    t0 + 62_000,
+  );
+  near(session.distanceM, 360, 0.2, 'then counts again');
+});
+
+check('outdoors the pod gives cadence but not distance', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'outdoor' }, t0);
+  session.start(t0);
+  session.addFootpod(parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 182, totalM: 0 })), t0);
+  session.addFootpod(
+    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 182, totalM: 500 })),
+    t0 + 1000,
+  );
+  equal(session.distanceM, 0, 'GPS owns distance outdoors');
+  equal(session.cadence(), 182, 'cadence is still useful');
+  session.finish(t0 + 2000);
+  equal(session.toActivity().distanceSource, 'gps');
 });
 
 // --- report ---------------------------------------------------------------

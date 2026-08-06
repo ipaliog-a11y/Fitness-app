@@ -1,9 +1,10 @@
 # RunLog
 
 A running tracker for one person, built as an installable web app. Outdoors it
-follows you by GPS and draws the route; indoors it counts your steps or takes the
-treadmill console's number. It reads a Bluetooth heart-rate strap directly, works
-with no signal, and keeps every run on your own device.
+follows you by GPS and draws the route; indoors it reads a Bluetooth foot pod,
+counts your steps, or takes the treadmill console's number. It talks to a
+heart-rate strap directly, works with no signal, and keeps every run on your own
+device.
 
 There is no server, no account and no upload. That is a deliberate constraint,
 not a missing feature — but it does mean the data is one cleared browser away
@@ -31,8 +32,16 @@ other host needs a certificate.
 
 **Tracking.** Distance, time and pace on every run, live and afterwards.
 Outdoors that comes from GPS, with the route drawn on an OpenStreetMap
-background. Indoors it comes from the phone's accelerometer counting footfalls,
-or from typing in what the treadmill says.
+background. Indoors it comes from a Bluetooth foot pod, or failing that the
+phone's own accelerometer counting footfalls, or from typing in what the
+treadmill console says.
+
+**Foot pods.** Any pod speaking the standard Running Speed and Cadence profile
+— Zwift RunPod, Stryd, Garmin, Polar — connects the same way the heart-rate
+strap does. On a treadmill it is the best instrument available short of the
+console itself: it measures at the shoe rather than inferring from a phone
+bouncing in a pocket, and it reports cadence and live speed as well as
+distance.
 
 **Heart rate.** Connects to any strap or watch speaking the standard Bluetooth
 Heart Rate Service — no vendor app in between. During the run you get live bpm;
@@ -51,14 +60,15 @@ whether this week is a big jump on last. It is deliberately not a training plan.
 
 ```
 src/core/       Pure logic. No DOM, no browser APIs — all of it unit-tested.
-src/platform/   The browser: geolocation, Web Bluetooth, motion, wake lock.
+src/platform/   The browser: geolocation, Web Bluetooth (strap and pod),
+                motion, wake lock.
 src/ui/         React components.
 tests/          core.test.mjs runs on node; browser.test.mjs drives Chromium.
 tools/          The icon generator.
 ```
 
 The split is what makes the arithmetic testable. `RunSession` is fed fixes,
-heart readings and steps by whoever is holding it; in the app that is the
+heart readings, pod measurements and steps by whoever is holding it; in the app that is the
 Geolocation API, and in the tests it is a loop. A whole run replays in about a
 millisecond, which matters, because the other way to check that a 5 km run
 measures 5 km is to go and run one.
@@ -81,33 +91,41 @@ A few decisions worth knowing about:
 
 ## Browser support
 
-| | GPS | Heart rate | Step counting | Install |
-|---|---|---|---|---|
-| Chrome, Android | yes | yes | yes | yes |
-| Safari, iOS | yes | **no** | yes, after a permission prompt | yes |
-| Desktop Chrome | yes | yes | no sensor | yes |
+| | GPS | Heart rate | Foot pod | Step counting | Install |
+|---|---|---|---|---|---|
+| Chrome, Android | yes | yes | yes | yes | yes |
+| Safari, iOS | yes | **no** | **no** | yes, after a permission prompt | yes |
+| Desktop Chrome | yes | yes | yes | no sensor | yes |
 
 Web Bluetooth is Chromium-only; Apple has declined to ship it. On an iPhone the
-app works fully except for the strap, and the interface degrades to saying so
-rather than offering a button that cannot work.
+app works fully except for the strap and the pod, and the interface degrades to
+saying so rather than offering a button that cannot work.
 
-## The treadmill sensor
+## Measuring a treadmill
 
-The plan for a home-made belt sensor — an IR reflector counting revolutions for
-distance, and an accelerometer or potentiometer for incline — is not built here,
-and this repository is the software side only.
+There are four ways to get a distance out of an indoor run, and the app prefers
+them in this order:
 
-The app is ready for it. Every run records a `distanceSource`, which already
-distinguishes `gps`, `steps` and `manual`, and has `sensor` reserved. Feeding a
-microcontroller's readings in means implementing one more module under
-`src/platform/` that calls `session.setDistance()` and `session.setIncline()`;
-nothing in `src/core/` needs to change. If the microcontroller exposes a
-Bluetooth GATT service, `src/platform/heartRate.ts` is a worked example of
-talking to one from the browser.
+1. **The console's own figure**, typed in at the end. It comes from belt
+   revolutions, so it is the closest thing to ground truth in the room, and it
+   overrides everything else.
+2. **A foot pod**, live over Bluetooth. Accurate to a percent or two once
+   calibrated, and needs no attention during the run.
+3. **The phone's pedometer**, counting footfalls through the accelerometer.
+   Free, but it depends on where the phone is and on a stride estimate.
+4. **Nothing at all** — type the distance and be done.
 
-Until then, treadmill runs are covered by step counting plus the console's own
-figure — and typing that figure in calibrates your stride, so the estimate gets
-better each time.
+Typing the console figure at the end of a run does double duty: whichever
+instrument was being used gets calibrated against it. A foot pod's correction
+factor and the pedometer's stride length are both learned this way, so each
+indoor run makes the next one's live numbers better.
+
+That ordering is also why the project no longer needs a home-made belt sensor.
+An IR reflector counting belt revolutions would reconstruct exactly the number
+the console already displays; it would buy automation, not accuracy — and a foot
+pod delivers live distance without any of the soldering. `distanceSource` still
+reserves a `sensor` value, and it is what a pod records, so a purpose-built
+device could take the same path later without touching `src/core/`.
 
 ## What is not here
 

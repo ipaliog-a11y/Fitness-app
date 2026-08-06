@@ -19,8 +19,13 @@ export interface Profile {
   heightCm: number;
   /** Beats per minute. Seeded from age, overwritable with a tested figure. */
   maxHeartRate: number;
-  /** Metres per step on the treadmill. */
+  /** Metres per step on the treadmill, used when there is no foot pod. */
   strideM: number;
+  /**
+   * Correction factor for a foot pod's readings. 1 means "believe the pod".
+   * Set by finishing a treadmill run with the console's distance typed in.
+   */
+  footpodCalibration: number;
   /** Weekly distance target in metres; 0 turns the goal off. */
   weeklyGoalM: number;
   /** Keep the screen awake while a run is in progress. */
@@ -33,6 +38,7 @@ export const DEFAULTS: Profile = {
   heightCm: 175,
   maxHeartRate: estimateMaxHeartRate(35),
   strideM: estimateStride(175),
+  footpodCalibration: 1,
   weeklyGoalM: 20000,
   keepAwake: true,
 };
@@ -63,6 +69,10 @@ export function sanitise(raw: unknown): Profile {
     // profile with an age but no tested max still gets a sensible number.
     maxHeartRate: clamp(num(input.maxHeartRate, estimateMaxHeartRate(age)), 100, 230),
     strideM: clamp(num(input.strideM, estimateStride(heightCm)), 0.3, 2.5),
+    // Clamped hard: a pod is never wrong by more than a factor of two, so a
+    // value outside this came from a mistyped calibration and would silently
+    // corrupt every treadmill run that followed.
+    footpodCalibration: clamp(num(input.footpodCalibration, 1), 0.5, 2),
     weeklyGoalM: clamp(num(input.weeklyGoalM, DEFAULTS.weeklyGoalM), 0, 500_000),
     keepAwake: typeof input.keepAwake === 'boolean' ? input.keepAwake : DEFAULTS.keepAwake,
   };

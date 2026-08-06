@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Activity, RunMode } from '../core/activity';
 import { RunSession } from '../core/session';
+import { calibrateAgainst } from '../core/footpod';
 import { calibrateStride } from '../core/steps';
 import type { Profile } from '../core/settings';
 import {
@@ -22,6 +23,7 @@ import {
 } from '../core/units';
 import { watchPosition, type GeoStatus, type GeoWatcher } from '../platform/geolocation';
 import { connectHeartRate, bluetoothSupported, type HeartConnection, type HeartStatus } from '../platform/heartRate';
+import { connectFootpod, type FootpodConnection, type FootpodStatus } from '../platform/footpod';
 import { countSteps, requestMotionPermission, type MotionStatus, type MotionWatcher } from '../platform/motion';
 import { keepScreenAwake, type ScreenLock } from '../platform/wakeLock';
 import { RouteMap } from './RouteMap';
@@ -41,6 +43,7 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
   const geoRef = useRef<GeoWatcher | null>(null);
   const heartRef = useRef<HeartConnection | null>(null);
   const motionRef = useRef<MotionWatcher | null>(null);
+  const podRef = useRef<FootpodConnection | null>(null);
   const lockRef = useRef<ScreenLock | null>(null);
 
   const [geoStatus, setGeoStatus] = useState<GeoStatus>('idle');
@@ -48,6 +51,8 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
   const [heartStatus, setHeartStatus] = useState<HeartStatus>('disconnected');
   const [heartName, setHeartName] = useState<string>();
   const [motionStatus, setMotionStatus] = useState<MotionStatus>('idle');
+  const [podStatus, setPodStatus] = useState<FootpodStatus>('disconnected');
+  const [podName, setPodName] = useState<string>();
   const [bpm, setBpm] = useState<number | null>(null);
   const [cadence, setCadence] = useState<number | null>(null);
   const [manualDistance, setManualDistance] = useState('');
@@ -74,18 +79,23 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
     lockRef.current = null;
   }, []);
 
-  // The heart strap deliberately survives this: it is disconnected only on
-  // unmount, so it stays paired between back-to-back runs.
+  // Bluetooth devices deliberately survive this: they are disconnected only on
+  // unmount, so they stay paired between back-to-back runs.
   useEffect(
     () => () => {
       stopSensors();
       heartRef.current?.disconnect();
+      podRef.current?.disconnect();
     },
     [stopSensors],
   );
 
   const start = async () => {
-    const created = new RunSession({ mode, strideM: profile.strideM });
+    const created = new RunSession({
+      mode,
+      strideM: profile.strideM,
+      footpodCalibration: profile.footpodCalibration,
+    });
     sessionRef.current = created;
     created.start();
 
@@ -99,6 +109,10 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
           setGeoDetail(detail);
         },
       });
+    } else if (podRef.current) {
+      // A pod on the shoe measures better than a phone in an armband, and
+      // running both would only drain the battery to be overruled.
+      setMotionStatus('idle');
     } else {
       const granted = await requestMotionPermission();
       if (granted) {
@@ -121,6 +135,21 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
     }
 
     setTick((t) => t + 1);
+  };
+
+  const connectPod = async () => {
+    const connection = await connectFootpod({
+      onMeasurement: (measurement) => {
+        sessionRef.current?.addFootpod(measurement);
+        setCadence(measurement.cadenceSpm > 0 ? measurement.cadenceSpm : null);
+      },
+      onStatus: (status, detail) => {
+        setPodStatus(status);
+        if (status === 'connected') setPodName(detail);
+        else if (detail) onToast(detail);
+      },
+    });
+    if (connection) podRef.current = connection;
   };
 
   const connectStrap = async () => {
@@ -146,18 +175,30 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
     current.finish();
     stopSensors();
 
-    // A typed-in distance is the treadmill console's number, and it beats a
-    // stride estimate. It also calibrates the stride for next time.
+    // A typed-in distance is the treadmill console's own figure, measured from
+    // belt revolutions. That outranks anything worn, so it both wins and
+    // calibrates whichever instrument was being used.
     const typed = Number(manualDistance);
     if (current.mode === 'treadmill' && Number.isFinite(typed) && typed > 0) {
       const metres = typed * (profile.units === 'metric' ? 1000 : 1609.344);
-      if (current.steps > 0) {
+
+      if (current.footpod.distanceM > 0) {
+        const factor = calibrateAgainst(current.footpod.distanceM, metres);
+        if (factor) {
+          // The pod's reading already includes the old factor, so the new one
+          // multiplies rather than replaces it.
+          const calibration = profile.footpodCalibration * factor;
+          onProfileChange({ ...profile, footpodCalibration: calibration });
+          onToast(`Foot pod calibrated — now ${((calibration - 1) * 100).toFixed(1)}% adjusted.`);
+        }
+      } else if (current.steps > 0) {
         const stride = calibrateStride(current.steps, metres);
         if (stride) {
           onProfileChange({ ...profile, strideM: stride });
           onToast(`Stride calibrated to ${stride.toFixed(2)} m.`);
         }
       }
+
       current.setDistance(metres);
     }
 
@@ -198,8 +239,41 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
           </button>
           <button aria-pressed={mode === 'treadmill'} onClick={() => setMode('treadmill')}>
             <span className="name">🎽 Treadmill</span>
-            <span className="blurb">Counts steps, or type the distance in afterwards.</span>
+            <span className="blurb">Foot pod, step counting, or type the distance in.</span>
           </button>
+        </div>
+
+        <div className="card">
+          <h2>Foot pod</h2>
+          {podStatus === 'connected' ? (
+            <div className="row">
+              <span>
+                <span className="pill good">
+                  <span className="dot live" /> {podName}
+                </span>
+              </span>
+              <button
+                className="btn"
+                onClick={() => {
+                  podRef.current?.disconnect();
+                  podRef.current = null;
+                }}
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <>
+              <button className="btn wide" onClick={connectPod} disabled={!bluetoothSupported()}>
+                {podStatus === 'connecting' ? 'Connecting…' : 'Connect a foot pod'}
+              </button>
+              <p className="hint">
+                {bluetoothSupported()
+                  ? 'Any pod using the standard running speed and cadence profile — a Zwift RunPod, Stryd, Garmin or Polar pod. On a treadmill it measures speed at the shoe, which beats counting the phone bouncing in your pocket. Give it a shake first; most pods only advertise once they are moving.'
+                  : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="card">
@@ -277,6 +351,12 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
           </span>
         )}
 
+        {session.mode === 'treadmill' && podStatus === 'connected' && (
+          <span className="pill good">
+            <span className="dot live" /> Foot pod
+          </span>
+        )}
+
         {bpm !== null && (
           <span className="pill bad">
             <span className="dot live" /> {bpm} bpm
@@ -332,7 +412,9 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
               onChange={(e) => setManualDistance(e.target.value)}
             />
             <p className="hint">
-              Overrides the step estimate, and calibrates your stride for next time.
+              {podStatus === 'connected'
+                ? 'The console measures the belt itself, so it overrides the pod — and calibrates it for next time.'
+                : 'Overrides the step estimate, and calibrates your stride for next time.'}
             </p>
           </div>
           <div className="field">
@@ -348,6 +430,12 @@ export function RunScreen({ profile, onFinish, onProfileChange, onToast }: Props
             />
           </div>
         </div>
+      )}
+
+      {session.mode === 'treadmill' && podStatus !== 'connected' && (
+        <button className="btn wide" style={{ marginBottom: 10 }} onClick={connectPod} disabled={!bluetoothSupported()}>
+          Connect a foot pod
+        </button>
       )}
 
       {heartStatus !== 'connected' && (

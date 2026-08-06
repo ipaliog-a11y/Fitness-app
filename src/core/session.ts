@@ -21,14 +21,17 @@ import {
   type GeoPoint,
   DEFAULT_FILTER,
 } from './geo';
+import { FootpodTracker, type RscMeasurement } from './footpod';
 import { distanceFromSteps } from './steps';
 
 export type SessionState = 'idle' | 'running' | 'paused' | 'finished';
 
 export interface SessionOptions {
   mode: RunMode;
-  /** Metres per step, for treadmill runs. */
+  /** Metres per step, for treadmill runs without a pod. */
   strideM: number;
+  /** Correction factor applied to a foot pod's readings. */
+  footpodCalibration: number;
   filter: FilterOptions;
 }
 
@@ -54,6 +57,17 @@ export class RunSession {
   steps = 0;
   inclinePercent: number | null = null;
 
+  /**
+   * The foot pod, when one is connected.
+   *
+   * A pod measures the foot; the pedometer infers from a bouncing phone. When
+   * both are present the pod wins, and the step count carries on purely as a
+   * cadence readout.
+   */
+  readonly footpod = new FootpodTracker();
+  private usingFootpod = false;
+  private manualDistance = false;
+
   /** Metres accumulated from accepted fixes (outdoor) or steps (treadmill). */
   distanceM = 0;
 
@@ -67,6 +81,7 @@ export class RunSession {
   constructor(options: Partial<SessionOptions> & { mode: RunMode }, startedAt = Date.now()) {
     this.mode = options.mode;
     this.strideM = options.strideM ?? 0.75;
+    this.footpod.calibration = options.footpodCalibration ?? 1;
     this.filter = options.filter ?? DEFAULT_FILTER;
     this.startedAt = startedAt;
   }
@@ -86,6 +101,8 @@ export class RunSession {
     // athlete may have walked somewhere in between, and a straight line across
     // that gap is distance nobody ran.
     this.lastAccepted = null;
+    // Same reasoning for the pod: it keeps counting if the belt keeps moving.
+    this.footpod.suspend();
   }
 
   resume(t = Date.now()): void {
@@ -149,7 +166,31 @@ export class RunSession {
   addSteps(count: number): void {
     if (this.state !== 'running' || this.mode !== 'treadmill') return;
     this.steps += count;
-    this.distanceM = distanceFromSteps(this.steps, this.strideM);
+    // Steps still count for cadence, but a pod on the shoe is the better
+    // instrument and keeps ownership of the distance.
+    if (!this.usingFootpod && !this.manualDistance) {
+      this.distanceM = distanceFromSteps(this.steps, this.strideM);
+    }
+  }
+
+  /**
+   * A reading from the foot pod.
+   *
+   * Accepted in both modes: outdoors the pod is ignored for distance, since GPS
+   * is better over the ground, but its cadence is still worth having.
+   */
+  addFootpod(measurement: RscMeasurement, t = Date.now()): void {
+    if (this.state !== 'running') return;
+    this.footpod.update(measurement, t);
+    if (this.mode !== 'treadmill') return;
+    this.usingFootpod = true;
+    if (!this.manualDistance) this.distanceM = this.footpod.distanceM;
+  }
+
+  /** Steps per minute, from the pod if there is one. */
+  cadence(): number | null {
+    if (this.footpod.cadenceSpm > 0) return this.footpod.cadenceSpm;
+    return null;
   }
 
   /**
@@ -158,6 +199,7 @@ export class RunSession {
    */
   setDistance(metres: number): void {
     if (this.mode !== 'treadmill') return;
+    this.manualDistance = true;
     this.distanceM = Math.max(0, metres);
   }
 
@@ -165,9 +207,13 @@ export class RunSession {
     this.inclinePercent = percent;
   }
 
-  /** Current pace over the last `windowMs`, in seconds per metre. */
+  /** Current speed in metres per second, or null when unknown. */
   recentSpeed(windowMs = 30_000, now = Date.now()): number | null {
-    if (this.mode !== 'outdoor') return null;
+    // Indoors the pod reports speed directly, which is both more responsive and
+    // more honest than anything derived from a distance it also supplied.
+    if (this.mode === 'treadmill') {
+      return this.usingFootpod && this.footpod.speedMps > 0 ? this.footpod.speedMps : null;
+    }
     const segment = this.segments[this.segments.length - 1];
     if (!segment || segment.length < 2) return null;
 
@@ -188,6 +234,9 @@ export class RunSession {
 
   private distanceSource(): DistanceSource {
     if (this.mode === 'outdoor') return 'gps';
+    // Ordered by what actually produced the number that will be saved.
+    if (this.manualDistance) return 'manual';
+    if (this.usingFootpod) return 'sensor';
     return this.steps > 0 ? 'steps' : 'manual';
   }
 

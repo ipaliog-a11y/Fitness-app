@@ -181,7 +181,16 @@ await page.click('text=Start treadmill run');
 await page.waitForSelector('.metric-hero');
 check('the treadmill run offers a manual distance', await page.isVisible('text=From the console'));
 
-await page.fill('#manual-distance', '3');
+// Typed as keystrokes rather than set with fill().
+//
+// fill() assigns the value straight to the DOM node, which React's value
+// tracker can treat as "unchanged" and skip the handler for — intermittently,
+// depending on whether the screen's once-a-second clock re-render lands in
+// between. The field then reads 3 while the component state is still empty,
+// and the run finishes with no distance. Real keystrokes always reach the
+// handler, and are what a person does anyway.
+await page.locator('#manual-distance').click();
+await page.locator('#manual-distance').pressSequentially('3', { delay: 60 });
 await page.waitForTimeout(1200);
 await page.click('button:has-text("Finish")');
 await page.waitForSelector('.screen h1', { timeout: 5000 });
