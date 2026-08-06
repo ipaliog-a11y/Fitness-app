@@ -170,9 +170,9 @@ await page.click('.tabs button:has-text("History")');
 await page.waitForSelector('.run-item', { timeout: 5000 });
 check('the run is still there after a reload', (await page.locator('.run-item').count()) === 1);
 
-await page.click('.tabs button:has-text("Dashboard")');
-await page.waitForSelector('text=Dashboard', { timeout: 5000 });
-check('the dashboard renders', await page.isVisible('text=This week'));
+await page.click('.tabs button:has-text("Coach")');
+await page.waitForSelector('text=Coach', { timeout: 5000 });
+check('the coach screen renders', await page.isVisible('text=Recovery'));
 check('the weekly chart renders', (await page.locator('.bars .bar').count()) >= 12);
 
 // --- Treadmill ------------------------------------------------------------

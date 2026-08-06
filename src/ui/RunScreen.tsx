@@ -157,6 +157,9 @@ export function RunScreen({
   /** Pause was triggered by stillness, not the Pause button. */
   const [autoPaused, setAutoPaused] = useState(false);
   const [goalFlash, setGoalFlash] = useState(false);
+  /** Expand long help text under compact sensor chips on the idle screen. */
+  const [podInfoOpen, setPodInfoOpen] = useState(false);
+  const [hrInfoOpen, setHrInfoOpen] = useState(false);
 
   const stillMsRef = useRef(0);
   const lastTickAtRef = useRef<number | null>(null);
@@ -839,69 +842,121 @@ export function RunScreen({
           )}
         </div>
 
-        <div className="card">
-          <h2>Foot pod</h2>
-          {podStatus === 'connected' ? (
-            <div className="row">
-              <span>
-                <span className="pill good">
-                  <span className="dot live" /> {podName}
-                </span>
-              </span>
-              <button
-                className="btn"
-                onClick={() => {
+        <div className="card sensor-compact">
+          <h2>Sensors</h2>
+          <div className="sensor-chip-row">
+            <button
+              type="button"
+              className={`sensor-chip${podStatus === 'connected' ? ' on' : ''}${podStatus === 'connecting' ? ' busy' : ''}`}
+              disabled={!bluetoothSupported() && podStatus !== 'connected'}
+              onClick={() => {
+                if (podStatus === 'connected') {
                   podRef.current?.disconnect();
                   podRef.current = null;
-                }}
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <>
-              <button className="btn wide" onClick={connectPod} disabled={!bluetoothSupported()}>
-                {podStatus === 'connecting' ? 'Connecting…' : 'Connect a foot pod'}
-              </button>
-              <p className="hint">
-                {bluetoothSupported()
-                  ? 'Any pod using the standard running speed and cadence profile — a Zwift RunPod, Stryd, Garmin or Polar pod. On a treadmill it measures speed at the shoe, which beats counting the phone bouncing in your pocket. Give it a shake first; most pods only advertise once they are moving.'
-                  : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="card">
-          <h2>Heart rate</h2>
-          {heartStatus === 'connected' ? (
-            <div className="row">
-              <span>
-                <span className="pill good">
-                  <span className="dot live" /> {heartName}
+                  setPodStatus('disconnected');
+                  setPodName(undefined);
+                } else {
+                  void connectPod();
+                }
+              }}
+            >
+              <span
+                className={`dot${podStatus === 'connected' ? ' live' : ''}`}
+                data-state={
+                  podStatus === 'connected'
+                    ? 'good'
+                    : podStatus === 'connecting'
+                      ? 'warn'
+                      : 'idle'
+                }
+              />
+              <span className="sensor-chip-text">
+                <span className="sensor-chip-title">Foot pod</span>
+                <span className="sensor-chip-status">
+                  {podStatus === 'connected'
+                    ? podName ?? 'Connected'
+                    : podStatus === 'connecting'
+                      ? 'Connecting…'
+                      : bluetoothSupported()
+                        ? 'Tap to connect'
+                        : 'Unavailable'}
                 </span>
               </span>
-              <button
-                className="btn"
-                onClick={() => {
+            </button>
+            <button
+              type="button"
+              className={`sensor-info${podInfoOpen ? ' open' : ''}`}
+              aria-label="Foot pod information"
+              aria-expanded={podInfoOpen}
+              onClick={() => setPodInfoOpen((v) => !v)}
+            >
+              i
+            </button>
+          </div>
+          {podInfoOpen && (
+            <p className="hint sensor-info-body">
+              {bluetoothSupported()
+                ? 'Any pod using the standard running speed and cadence profile — Zwift RunPod, Stryd, Garmin or Polar. On a treadmill it measures speed at the shoe. Give it a shake first; most pods only advertise once they are moving. Tap the button again to disconnect.'
+                : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
+            </p>
+          )}
+
+          <div className="sensor-chip-row" style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              className={`sensor-chip${heartStatus === 'connected' ? ' on' : ''}${heartStatus === 'connecting' ? ' busy' : ''}`}
+              disabled={!bluetoothSupported() && heartStatus !== 'connected'}
+              onClick={() => {
+                if (heartStatus === 'connected') {
                   heartRef.current?.disconnect();
                   heartRef.current = null;
-                }}
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <>
-              <button className="btn wide" onClick={connectStrap} disabled={!bluetoothSupported()}>
-                {heartStatus === 'connecting' ? 'Connecting…' : 'Connect a strap'}
-              </button>
-              <p className="hint">
-                {bluetoothSupported()
-                  ? 'Any Bluetooth chest strap or watch using the standard heart rate service. Connect before you start and the zones come with the run.'
-                  : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
-              </p>
-            </>
+                  setHeartStatus('disconnected');
+                  setHeartName(undefined);
+                  setBpm(null);
+                } else {
+                  void connectStrap();
+                }
+              }}
+            >
+              <span
+                className={`dot${heartStatus === 'connected' ? ' live' : ''}`}
+                data-state={
+                  heartStatus === 'connected'
+                    ? 'good'
+                    : heartStatus === 'connecting'
+                      ? 'warn'
+                      : 'idle'
+                }
+              />
+              <span className="sensor-chip-text">
+                <span className="sensor-chip-title">Heart rate</span>
+                <span className="sensor-chip-status">
+                  {heartStatus === 'connected'
+                    ? heartName ?? 'Connected'
+                    : heartStatus === 'connecting'
+                      ? 'Connecting…'
+                      : bluetoothSupported()
+                        ? 'Tap to connect'
+                        : 'Unavailable'}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`sensor-info${hrInfoOpen ? ' open' : ''}`}
+              aria-label="Heart rate information"
+              aria-expanded={hrInfoOpen}
+              onClick={() => setHrInfoOpen((v) => !v)}
+            >
+              i
+            </button>
+          </div>
+          {hrInfoOpen && (
+            <p className="hint sensor-info-body">
+              {bluetoothSupported()
+                ? 'Any Bluetooth chest strap or watch using the standard heart rate service. Connect before you start so zones and the HR calorie model come with the run. Tap the button again to disconnect.'
+                : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
+            </p>
           )}
         </div>
 

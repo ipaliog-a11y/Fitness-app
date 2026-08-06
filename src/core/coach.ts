@@ -18,6 +18,7 @@ import {
   paceLabel,
   type UnitSystem,
 } from './units';
+import { loadSnapshot, recoveryBlurb, recoveryLabel } from './load';
 import {
   activitiesBetween,
   addWeeks,
@@ -228,5 +229,45 @@ export function tipsForWeek(activities: Activity[], ctx: CoachContext): Tip[] {
     }
   }
 
+  // Load / recovery (Phase D) — conservative, based on acute:chronic style score.
+  const load = loadSnapshot(activities, ctx.now, ctx.maxHeartRate);
+  if (load.status === 'high' || load.status === 'loaded') {
+    tips.push({
+      tone: 'caution',
+      title: recoveryLabel(load.status),
+      body: recoveryBlurb(load),
+    });
+  } else if (load.status === 'fresh' && load.chronic >= 15) {
+    tips.push({
+      tone: 'note',
+      title: recoveryLabel(load.status),
+      body: recoveryBlurb(load),
+    });
+  } else if (load.lastWeek > 0 && load.thisWeek > load.lastWeek * 1.25) {
+    tips.push({
+      tone: 'caution',
+      title: 'Week-on-week load jump',
+      body: 'This week’s training load is already well above last week. Keep remaining sessions easy unless you planned a quality day.',
+    });
+  }
+
   return tips;
+}
+
+/** Dedicated recovery note for the Coach screen. */
+export function tipsForRecovery(activities: Activity[], ctx: CoachContext): Tip[] {
+  const load = loadSnapshot(activities, ctx.now, ctx.maxHeartRate);
+  const tone: TipTone =
+    load.status === 'high' || load.status === 'loaded'
+      ? 'caution'
+      : load.status === 'fresh'
+        ? 'praise'
+        : 'note';
+  return [
+    {
+      tone,
+      title: `Recovery: ${recoveryLabel(load.status)}`,
+      body: recoveryBlurb(load),
+    },
+  ];
 }

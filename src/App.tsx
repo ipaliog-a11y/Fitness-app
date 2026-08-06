@@ -2,8 +2,7 @@
  * The shell: which screen is showing, and the one copy of the data they share.
  *
  * State lives here rather than in a store library. There is one user, five
- * screens and a single list of runs; anything more elaborate would be
- * scaffolding around a problem this app does not have.
+ * screens (Run, History, Coach, Profile, Settings) and a single list of runs.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -12,19 +11,19 @@ import { byNewest } from './core/activity';
 import { allActivities, deleteActivity, saveActivity } from './core/db';
 import { loadProfile, saveProfile, sanitise, type Profile } from './core/settings';
 import { addDistanceToShoe, loadShoes, saveShoes, shoeNeedsWarning } from './core/shoes';
+import { CoachScreen } from './ui/CoachScreen';
 import { DetailScreen } from './ui/DetailScreen';
 import { HistoryScreen } from './ui/HistoryScreen';
 import { ProfileScreen } from './ui/ProfileScreen';
 import { RunScreen } from './ui/RunScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
-import { StatsScreen } from './ui/StatsScreen';
 
-type Tab = 'run' | 'history' | 'stats' | 'profile' | 'settings';
+type Tab = 'run' | 'history' | 'coach' | 'profile' | 'settings';
 
 const TABS: Array<{ id: Tab; label: string; glyph: string }> = [
   { id: 'run', label: 'Run', glyph: '▶' },
   { id: 'history', label: 'History', glyph: '☰' },
-  { id: 'stats', label: 'Dashboard', glyph: '◴' },
+  { id: 'coach', label: 'Coach', glyph: '◔' },
   { id: 'profile', label: 'Profile', glyph: '◉' },
   { id: 'settings', label: 'Settings', glyph: '⚙' },
 ];
@@ -99,7 +98,7 @@ export function App() {
   const open = activities.find((a) => a.id === openId) ?? null;
   const showRun = !open && tab === 'run';
   const showHistory = !open && tab === 'history';
-  const showStats = !open && tab === 'stats';
+  const showCoach = !open && tab === 'coach';
   const showProfile = !open && tab === 'profile';
   const showSettings = !open && tab === 'settings';
 
@@ -140,10 +139,12 @@ export function App() {
         <HistoryScreen activities={activities} profile={profile} onOpen={setOpenId} />
       )}
 
-      {showStats && (
-        <StatsScreen
+      {showCoach && (
+        <CoachScreen
           activities={activities}
           profile={profile}
+          onToast={showToast}
+          onStartRun={() => setTab('run')}
           onOpen={(id) => {
             setOpenId(id);
             setTab('history');

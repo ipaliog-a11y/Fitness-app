@@ -76,6 +76,17 @@ import {
   groupActivities,
   startOfWeek as historyWeekStart,
 } from '../src/core/history.ts';
+import { activityLoad, loadSnapshot } from '../src/core/load.ts';
+import {
+  PLAN_TEMPLATES,
+  currentPlanWeek,
+  planById,
+  planSessionKey,
+  sessionsForWeek,
+  startPlan,
+  toggleSessionComplete,
+  weekProgress,
+} from '../src/core/plans.ts';
 import {
   caloriesGoal,
   distanceGoal,
@@ -1639,6 +1650,61 @@ check('history filters and groups', () => {
   const groups = groupActivities(all, 'month');
   assert(groups.length >= 1);
   equal(groups.reduce((n, g) => n + g.activities.length, 0), 2);
+});
+
+check('training load rises with harder effort', () => {
+  const now = Date.now();
+  const easy = activityFrom([straightTrack({ points: 10 })], {
+    startedAt: now - 3_600_000,
+    durationMs: 30 * 60_000,
+    distanceM: 4000,
+    heartReport: {
+      averageBpm: 120,
+      maxBpm: 130,
+      minBpm: 110,
+      measuredMs: 30 * 60_000,
+      maxHeartRate: 180,
+      zones: [],
+    },
+  });
+  const hard = activityFrom([straightTrack({ points: 10 })], {
+    startedAt: now - 1_800_000,
+    durationMs: 30 * 60_000,
+    distanceM: 4000,
+    heartReport: {
+      averageBpm: 165,
+      maxBpm: 175,
+      minBpm: 150,
+      measuredMs: 30 * 60_000,
+      maxHeartRate: 180,
+      zones: [],
+    },
+  });
+  assert(activityLoad(hard, 180) > activityLoad(easy, 180), 'harder HR ⇒ more load');
+  const snap = loadSnapshot([easy, hard], now, 180);
+  assert(snap.acute > 0, `acute load expected > 0, got ${snap.acute}`);
+  assert(['fresh', 'balanced', 'loaded', 'high', 'unknown'].includes(snap.status));
+});
+
+check('plans have weekly sessions and progress', () => {
+  assert(PLAN_TEMPLATES.length >= 3, 'several plans');
+  const plan = planById('first-5k');
+  assert(plan, 'first-5k exists');
+  equal(sessionsForWeek(plan, 0).length, 3);
+  const first = sessionsForWeek(plan, 0)[0];
+  const state = {
+    id: 't',
+    planId: plan.id,
+    startedWeekAt: Date.now(),
+    completed: [],
+  };
+  const next = toggleSessionComplete(state, first);
+  assert(next.completed.includes(planSessionKey(first)), 'session marked complete');
+  equal(currentPlanWeek(state, plan), 0);
+  const prog = weekProgress(next, plan, 0);
+  equal(prog.done, 1);
+  assert(prog.total >= 1);
+  equal(startPlan('missing-plan'), null);
 });
 
 // --- report ---------------------------------------------------------------

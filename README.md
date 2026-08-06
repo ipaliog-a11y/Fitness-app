@@ -67,6 +67,9 @@ countdown and voice prompts when a phase changes.
 **Shoes, GPX, routes (Phase C).** Track shoe mileage, export/import GPX, and save
 outdoor routes as a ghost path for the next run.
 
+**Coach (Phase D).** Its own tab: recovery/load, multi-week training plans with
+check-offs, weekly coach notes, volume and personal records.
+
 Roadmap and feature tiers live in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## How it is put together

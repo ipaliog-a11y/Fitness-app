@@ -84,10 +84,13 @@ Last updated from product discussion (2026).
 | GPX export/import | Done — Detail export GPX; Settings import GPX; JSON backup still available |
 | Saved routes | Done — save from detail; ghost overlay on next outdoor run; reverse; manage in Settings |
 
-### Phase D — Training
+### Phase D — Training ✅ *shipped*
 
-- Lightweight plans
-- Load/recovery tips on dashboard/detail
+| Item | Status |
+|------|--------|
+| Coach tab | Done — own place (replaces Dashboard); recovery, plans, notes, volume, PRs |
+| Lightweight plans | Done — Start to run, First 5K, Base builder, Return to run; check-off sessions |
+| Load / recovery | Done — acute:chronic style load + coach cautions |
 
 ### Phase E — Optional edges
 
@@ -116,7 +119,7 @@ Last updated from product discussion (2026).
 1. **Phase A** — audio, auto-pause, goal alert, laps  
 2. **Phase B** — intervals  
 3. **Phase C** — shoes, GPX, routes  
-4. **Phase D** — plans + load  
+4. **Phase D** — plans + load ✅  
 5. **Phase E** — polish / export  
 
 Strongest pitch to keep:
