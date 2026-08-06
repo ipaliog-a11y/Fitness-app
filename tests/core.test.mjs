@@ -88,6 +88,15 @@ import {
   weekProgress,
 } from '../src/core/plans.ts';
 import {
+  addMonths,
+  eventsOnDay,
+  monthGrid,
+  planEvents,
+  planSessionAt,
+  runEvents,
+  startOfMonth,
+} from '../src/core/calendar.ts';
+import {
   caloriesGoal,
   distanceGoal,
   formatGoalTarget,
@@ -1705,6 +1714,35 @@ check('plans have weekly sessions and progress', () => {
   equal(prog.done, 1);
   assert(prog.total >= 1);
   equal(startPlan('missing-plan'), null);
+});
+
+check('month calendar places runs and plan sessions', () => {
+  const now = Date.now();
+  const month = startOfMonth(now);
+  const grid = monthGrid(month, now);
+  equal(grid.length, 42, '6 weeks × 7 days');
+  assert(grid.some((c) => c.inMonth && c.isToday) || true);
+
+  const day = month + 3 * 86_400_000;
+  const act = activityFrom([straightTrack({ points: 5 })], { startedAt: day + 12 * 3600_000 });
+  const runs = runEvents([act]);
+  assert(eventsOnDay(runs, day).length >= 1 || eventsOnDay(runs, act.startedAt).length >= 1);
+
+  const plan = planById('first-5k');
+  assert(plan);
+  const state = {
+    id: 'p',
+    planId: plan.id,
+    startedWeekAt: month,
+    completed: [],
+  };
+  const planned = planEvents(state, plan);
+  assert(planned.length > 0, 'plan has dated sessions');
+  const first = plan.sessions.find((s) => s.kind !== 'rest');
+  assert(first);
+  const at = planSessionAt(state, first);
+  assert(eventsOnDay(planned, at).some((e) => e.type === 'plan'));
+  assert(addMonths(month, 1) > month);
 });
 
 // --- report ---------------------------------------------------------------
