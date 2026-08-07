@@ -20,6 +20,7 @@ import {
   type SetStateAction,
 } from 'react';
 import type { Activity, RunMode } from '../core/activity';
+import type { GeoPoint } from '../core/geo';
 import { autoPauseAction, nextStillMs } from '../core/autoPause';
 import { formatCalories } from '../core/calories';
 import { cueSpeech, makeSnapshot, pendingCues, type CueSnapshot } from '../core/cues';
@@ -174,6 +175,8 @@ export function RunScreen({
 
   const [geoStatus, setGeoStatus] = useState<GeoStatus>('idle');
   const [geoDetail, setGeoDetail] = useState<string>();
+  /** Latest GPS reading for the live map (even before two track points exist). */
+  const [lastGeo, setLastGeo] = useState<GeoPoint | null>(null);
   const [heartStatus, setHeartStatus] = useState<HeartStatus>('disconnected');
   const [heartName, setHeartName] = useState<string>();
   const [motionStatus, setMotionStatus] = useState<MotionStatus>('idle');
@@ -204,6 +207,8 @@ export function RunScreen({
     avg: 0,
     cadence: 0,
   });
+  /** Confirm before ending a run so Finish / Discard are not one-tap accidents. */
+  const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'discard'>(null);
 
   const stillMsRef = useRef(0);
   const lastTickAtRef = useRef<number | null>(null);
@@ -414,7 +419,8 @@ export function RunScreen({
     geoRef.current?.stop();
     geoRef.current = watchPosition({
       onPoint: (point) => {
-        // Fixes before the clock starts are status only — not distance.
+        // Always keep a position for the map; distance only counts while running.
+        setLastGeo(point);
         if (sessionRef.current?.state === 'running') target.addPoint(point);
       },
       onStatus: (status, detail) => {
@@ -535,6 +541,7 @@ export function RunScreen({
     cuePrevRef.current = null;
     setGeoStatus('idle');
     setGeoDetail(undefined);
+    setLastGeo(null);
     setCadence(null);
     setShoes(loadShoes());
     setRoutes(loadRoutes());
@@ -621,6 +628,7 @@ export function RunScreen({
     setManualDistance('');
     setIncline('');
     setCadence(null);
+    setLastGeo(null);
     setAutoPaused(false);
     setGoalFlash(false);
     cuesReadyRef.current = false;
@@ -643,6 +651,7 @@ export function RunScreen({
     workoutRef.current = null;
     setGeoStatus('idle');
     setGeoDetail(undefined);
+    setLastGeo(null);
     setShoes(loadShoes());
     setRoutes(loadRoutes());
     setTick((t) => t + 1);
@@ -1314,6 +1323,25 @@ export function RunScreen({
           )}
         </div>
 
+        {mode === 'outdoor' && (
+          <div className="map-slot map-slot-arming">
+            <RouteMap
+              segments={[]}
+              ghostSegments={ghostRoute}
+              position={lastGeo}
+              tiles={false}
+              live
+              emptyLabel={
+                gpsBad
+                  ? geoDetail || 'GPS unavailable'
+                  : lastGeo
+                    ? 'GPS lock'
+                    : 'Waiting for GPS…'
+              }
+            />
+          </div>
+        )}
+
         <button className="btn wide" style={{ marginTop: 10 }} onClick={cancelArming}>
           Cancel
         </button>
@@ -1600,18 +1628,26 @@ export function RunScreen({
         );
       })()}
 
-      {session.mode === 'outdoor' &&
-        (session.segments.some((s) => s.length > 1) || (ghostRoute && ghostRoute.length > 0)) && (
-          <div className="map-slot">
-            {/* Tiles off mid-run: glanceable shape only, no map-tile data. */}
-            <RouteMap
-              segments={session.segments}
-              ghostSegments={ghostRoute}
-              tiles={false}
-              live
-            />
-          </div>
-        )}
+      {session.mode === 'outdoor' && (
+        <div className="map-slot">
+          {/* Always mount mid-run — do not wait for two track points.
+              Tiles off: glanceable shape only, no map-tile data mid-run. */}
+          <RouteMap
+            segments={session.segments}
+            ghostSegments={ghostRoute}
+            position={lastGeo}
+            tiles={false}
+            live
+            emptyLabel={
+              geoStatus === 'denied' || geoStatus === 'unavailable' || geoStatus === 'error'
+                ? geoDetail || 'GPS unavailable'
+                : geoStatus === 'acquiring' || !lastGeo
+                  ? 'Waiting for GPS…'
+                  : 'Recording route…'
+            }
+          />
+        </div>
+      )}
 
       {session.mode === 'treadmill' && (
         <div className="card live-console">
@@ -1687,7 +1723,11 @@ export function RunScreen({
             Resume
           </button>
         )}
-        <button type="button" className="btn danger run-action-finish" onClick={finish}>
+        <button
+          type="button"
+          className="btn danger run-action-finish"
+          onClick={() => setConfirmAction('finish')}
+        >
           Finish
         </button>
       </div>
@@ -1737,9 +1777,55 @@ export function RunScreen({
         </div>
       )}
 
-      <button className="btn discard-link" type="button" onClick={discard}>
+      <button
+        className="btn discard-link"
+        type="button"
+        onClick={() => setConfirmAction('discard')}
+      >
         Discard run
       </button>
+
+      {confirmAction && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setConfirmAction(null)}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="run-confirm-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="run-confirm-title">
+              {confirmAction === 'finish' ? 'Finish this run?' : 'Discard this run?'}
+            </h2>
+            <p className="hint" style={{ marginTop: 0, marginBottom: 16 }}>
+              {confirmAction === 'finish'
+                ? 'Save the run to history and stop tracking.'
+                : 'The run will not be saved. This cannot be undone.'}
+            </p>
+            <div className="btn-row">
+              <button type="button" className="btn" onClick={() => setConfirmAction(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`btn${confirmAction === 'discard' ? ' danger' : ' primary'}`}
+                onClick={() => {
+                  const action = confirmAction;
+                  setConfirmAction(null);
+                  if (action === 'finish') finish();
+                  else discard();
+                }}
+              >
+                {confirmAction === 'finish' ? 'Finish' : 'Discard'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

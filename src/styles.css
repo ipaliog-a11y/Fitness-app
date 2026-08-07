@@ -2457,7 +2457,17 @@ button.cal-event {
   background: var(--surface-2);
 }
 
-.map-slot .route-map,
+.map-slot-arming {
+  margin-top: 12px;
+}
+
+/* Live / arming map: shorter than detail history maps so it appears fast. */
+.map.map-live {
+  aspect-ratio: 16 / 10;
+  min-height: 140px;
+}
+
+.map-slot .map,
 .map-slot canvas,
 .map-slot svg {
   display: block;
