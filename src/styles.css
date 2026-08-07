@@ -5,8 +5,13 @@
  * Dark by default: this is looked at outdoors at dawn and in a dim gym, and a
  * white screen at either is unpleasant.
  *
- * Themes: Soft Emerald (default) and Athletic HUD. Chosen in Settings → Theme;
- * tokens live on <html data-theme="soft|hud">.
+ * Themes: Soft Emerald (default), Athletic HUD, and Daylight. Chosen in
+ * Settings → Theme; tokens live on <html data-theme="soft|hud|day">.
+ *
+ * Heart-rate zone colours are tokens too (--zone-1..5), because a light ground
+ * needs a much darker ladder than a dark one — amber #d8a13a on white is a
+ * 2.3:1 contrast, which nobody can read. core/heart.ts keeps the dark hexes as
+ * fallbacks via zoneSwatch().
  */
 
 :root,
@@ -21,7 +26,9 @@
   --line-soft: rgba(148, 163, 184, 0.12);
   --text: #f1f5f9;
   --muted: #94a3b8;
-  --muted-2: #64748b;
+  /* 5.3:1 on the ground. The old #64748b was 4.1:1, and it is the colour of
+     the inactive tab labels at 10px — under AA on the app used in sunlight. */
+  --muted-2: #7787a0;
   --accent: #34d399;
   --accent-bright: #6ee7b7;
   --accent-dim: rgba(16, 185, 129, 0.22);
@@ -43,6 +50,18 @@
   --metric-font: inherit;
   --letter-label: 0.07em;
 
+  /* The canvas map reads these; it cannot use variables directly, so
+     RouteMap samples them per paint. */
+  --map-casing: rgba(0, 0, 0, 0.45);
+  --map-tile-dim: 0.72;
+
+  /* Effort ladder, tuned for a dark ground. */
+  --zone-1: #6b7f9e;
+  --zone-2: #3fa66a;
+  --zone-3: #d8a13a;
+  --zone-4: #e2703a;
+  --zone-5: #d2453f;
+
   /* Kept in variables because the run screen has to stay clear of the home
      indicator on iOS and the gesture bar on Android. */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -62,7 +81,8 @@
   --line-soft: #1a1a1a;
   --text: #fafafa;
   --muted: #a3a3a3;
-  --muted-2: #6b6b6b;
+  /* 5.0:1 on pure black; #6b6b6b was 3.8:1. */
+  --muted-2: #7d7d7d;
   --accent: #c8ff00;
   --accent-bright: #d8ff4a;
   --accent-dim: rgba(200, 255, 0, 0.12);
@@ -83,6 +103,73 @@
   --chip-radius: 4px;
   --metric-font: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   --letter-label: 0.12em;
+
+  --map-casing: rgba(0, 0, 0, 0.6);
+  --map-tile-dim: 0.6;
+
+  /* Pushed a little hotter so the ladder still separates against pure black. */
+  --zone-1: #7d90ad;
+  --zone-2: #4ac47e;
+  --zone-3: #f0b53f;
+  --zone-4: #ff8140;
+  --zone-5: #ff4d4d;
+}
+
+[data-theme='day'] {
+  /*
+   * Daylight — for running in direct sun.
+   *
+   * The other two themes are dark because dawn and a dim gym are unpleasant on
+   * a white screen. Bright midday is the opposite problem: a dark screen is
+   * mostly reflections, and a phone hits peak luminance on white. So this is
+   * not a tint of the others — the accent had to be replaced outright, because
+   * emerald on white measures 1.9:1 and volt lime 1.2:1. Neither is legible.
+   */
+  --bg: #ffffff;
+  --bg-elev: #f2f5f8;
+  --surface: #ffffff;
+  --surface-2: #eef2f6;
+  --surface-3: #e0e6ee;
+  --line: #b3bfcc;
+  --line-soft: rgba(11, 15, 20, 0.14);
+  --text: #0b0f14;
+  --muted: #3f4a56;
+  --muted-2: #55616e;
+  --accent: #0b6b3a;
+  --accent-bright: #08512c;
+  --accent-dim: rgba(11, 107, 58, 0.14);
+  --accent-solid: #0b6b3a;
+  --accent-ink: #ffffff;
+  --warn: #7a4a00;
+  --danger: #a4231d;
+  --info: #0b5cad;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 18px;
+  /* Edge-to-edge and opaque: a floating, blurred bar is invisible in sun. */
+  --tab-bg: #ffffff;
+  --tab-inset: 0px;
+  --tab-radius: 0px;
+  --tab-border: #b3bfcc;
+  --btn-radius: 12px;
+  --chip-radius: 999px;
+  --metric-font: inherit;
+  --letter-label: 0.06em;
+
+  /* A white casing under the route, and undimmed tiles — OSM's own style is
+     already light, and dimming it on a white page just makes mud. */
+  --map-casing: rgba(255, 255, 255, 0.85);
+  --map-tile-dim: 1;
+
+  /* Every rung clears 5:1 on white; the dark ladder manages barely 2:1. */
+  --zone-1: #4a5f80;
+  --zone-2: #1f7a46;
+  --zone-3: #8a6200;
+  --zone-4: #a94b17;
+  --zone-5: #a4231d;
+
+  color-scheme: light;
 }
 
 * {
@@ -2953,4 +3040,67 @@ button.cal-event {
   [data-theme='soft'] .run-action-finish {
     background: transparent;
   }
+}
+
+/* --- Daylight structural overrides --------------------------------------- *
+ *
+ * Sun destroys two things the dark themes lean on: translucency and shadow.
+ * A frosted bar over a white page is just a slightly different white, and a
+ * drop shadow is invisible at high ambient light. So Daylight trades both for
+ * solid fills and heavier edges, and leans on weight rather than glow.
+ */
+
+[data-theme='day'] .tabs {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  border-top: 2px solid var(--line);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* The base fill is a gradient ending in a bright green, and --accent-bright is
+   *darker* than --accent here — inherited, it would read as a lit button on a
+   lit page. Flat fill with a ring instead. */
+[data-theme='day'] .start-control-face {
+  background: var(--accent);
+  border: 3px solid var(--accent-bright);
+  box-shadow: none;
+}
+
+[data-theme='day'] .start-control-label,
+[data-theme='day'] .start-control-sub {
+  color: var(--accent-ink);
+}
+
+/* Hairlines wash out; give the structural edges something to hold on to. */
+[data-theme='day'] .card,
+[data-theme='day'] .metric,
+[data-theme='day'] .run-item,
+[data-theme='day'] .goal-track {
+  border-width: 2px;
+  box-shadow: none;
+}
+
+[data-theme='day'] .screen h1,
+[data-theme='day'] .metric .value,
+[data-theme='day'] .metric-hero .value {
+  font-weight: 800;
+}
+
+[data-theme='day'] .card h2 {
+  color: var(--muted);
+}
+
+/* Toast is a floating chip over content; on white it needs to invert to stay
+   distinguishable from the page it sits on. */
+[data-theme='day'] .toast {
+  background: var(--text);
+  color: #ffffff;
+  border-color: var(--text);
 }
