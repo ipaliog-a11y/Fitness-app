@@ -6,7 +6,7 @@
  */
 
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
-import { estimateMaxHeartRate, ZONES, zoneBounds } from '../core/heart';
+import { estimateMaxHeartRate, ZONES, zoneBounds, zoneSwatch } from '../core/heart';
 import {
   createShoe,
   DEFAULT_SHOE_LIMIT_M,
@@ -371,7 +371,7 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
             const range = zoneBounds(zone, profile.maxHeartRate);
             return (
               <div className="zone-row" key={zone.index}>
-                <span className="swatch" style={{ background: zone.colour }} />
+                <span className="swatch" style={{ background: zoneSwatch(zone) }} />
                 <span className="name">
                   Z{zone.index} {zone.name}
                 </span>

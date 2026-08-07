@@ -19,7 +19,7 @@ export type { BiologicalSex };
  * Visual shell. Tokens + a few layout variants live in styles.css under
  * `[data-theme="…"]`. Soft Emerald is the default (closest to the original app).
  */
-export type ThemeId = 'soft' | 'hud';
+export type ThemeId = 'soft' | 'hud' | 'day';
 
 export const THEME_OPTIONS: Array<{
   id: ThemeId;
@@ -35,6 +35,11 @@ export const THEME_OPTIONS: Array<{
     id: 'hud',
     label: 'Athletic HUD',
     blurb: 'Pure black, volt lime, mono numbers, solid dock.',
+  },
+  {
+    id: 'day',
+    label: 'Daylight',
+    blurb: 'Paper white, deep green, solid chrome — built for direct sun.',
   },
 ];
 
@@ -106,12 +111,14 @@ export function applyTheme(theme: ThemeId): void {
   // Status bar / PWA chrome roughly matches the page background.
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', theme === 'hud' ? '#050505' : '#0a0d12');
+    const bg = theme === 'hud' ? '#050505' : theme === 'day' ? '#ffffff' : '#0a0d12';
+    meta.setAttribute('content', bg);
   }
 }
 
 export function parseTheme(value: unknown): ThemeId {
   if (value === 'hud' || value === 'athletic' || value === 'athletic-hud') return 'hud';
+  if (value === 'day' || value === 'light' || value === 'daylight') return 'day';
   if (value === 'soft' || value === 'emerald' || value === 'soft-emerald') return 'soft';
   return DEFAULTS.theme;
 }

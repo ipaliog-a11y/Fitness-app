@@ -29,8 +29,7 @@ import {
   estimateMaxHeartRate,
   heartTrace,
   buildHeartReport,
-  heartSummaryFromReport,
-} from '../src/core/heart.ts';
+  heartSummaryFromReport, zoneSwatch, ZONES } from '../src/core/heart.ts';
 import { StepDetector, calibrateStride, estimateStride } from '../src/core/steps.ts';
 import {
   startOfWeek,
@@ -39,7 +38,7 @@ import {
   personalRecords,
   totals,
 } from '../src/core/stats.ts';
-import { sanitise, DEFAULTS } from '../src/core/settings.ts';
+import { sanitise, DEFAULTS, parseTheme } from '../src/core/settings.ts';
 import { tipsForRun, tipsForWeek } from '../src/core/coach.ts';
 import { project, fitBounds, toScreen, visibleTiles, TILE_SIZE } from '../src/core/mercator.ts';
 import {
@@ -1757,6 +1756,49 @@ check('month calendar places runs and plan sessions', () => {
   const at = planSessionAt(state, first);
   assert(eventsOnDay(planned, at).some((e) => e.type === 'plan'));
   assert(addMonths(month, 1) > month);
+});
+
+// --- themes ---------------------------------------------------------------
+
+check('a zone paints through a themeable variable', () => {
+  const zone = ZONES[2];
+  const swatch = zoneSwatch(zone);
+  // The variable lets a theme retint the ladder; the literal is the fallback
+  // so a theme that defines nothing still renders the dark palette.
+  equal(swatch, `var(--zone-3, ${zone.colour})`, 'zone 3');
+  assert(
+    ZONES.every((z) => zoneSwatch(z) === `var(--zone-${z.index}, ${z.colour})`),
+    'every zone follows the same shape',
+  );
+});
+
+check('every zone still carries a real colour to fall back to', () => {
+  for (const zone of ZONES) {
+    assert(/^#[0-9a-f]{6}$/i.test(zone.colour), `zone ${zone.index} has a hex literal`);
+  }
+});
+
+check('the theme parser accepts the three themes and their aliases', () => {
+  equal(parseTheme('soft'), 'soft');
+  equal(parseTheme('hud'), 'hud');
+  equal(parseTheme('day'), 'day');
+  // Aliases, so a value stored by an earlier build still resolves.
+  equal(parseTheme('emerald'), 'soft');
+  equal(parseTheme('athletic-hud'), 'hud');
+  equal(parseTheme('light'), 'day');
+  equal(parseTheme('daylight'), 'day');
+});
+
+check('an unknown theme falls back rather than breaking the shell', () => {
+  for (const bad of [null, undefined, '', 'neon', 42, {}]) {
+    const parsed = parseTheme(bad);
+    assert(['soft', 'hud', 'day'].includes(parsed), `"${String(bad)}" resolved to a real theme`);
+  }
+});
+
+check('a profile round-trips the new theme', () => {
+  equal(sanitise({ theme: 'day' }).theme, 'day', 'kept');
+  assert(['soft', 'hud', 'day'].includes(sanitise({ theme: 'nonsense' }).theme), 'garbage falls back');
 });
 
 // --- pace band ------------------------------------------------------------

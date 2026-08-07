@@ -17,7 +17,7 @@ import {
 } from '../core/calendar';
 import { estimateCalories, formatCalories } from '../core/calories';
 import { goalMet } from '../core/goal';
-import { ZONES } from '../core/heart';
+import { ZONES, zoneSwatch } from '../core/heart';
 import {
   DEFAULT_HISTORY_FILTERS,
   filterActivities,
@@ -141,7 +141,7 @@ function RunRow({
                   key={zone.index}
                   style={{
                     flex: Math.max(fraction, 0.02),
-                    background: zone.colour,
+                    background: zoneSwatch(zone),
                   }}
                   title={`Z${zone.index} ${Math.round(fraction * 100)}%`}
                 />

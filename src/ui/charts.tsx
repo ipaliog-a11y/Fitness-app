@@ -15,7 +15,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { distanceBetween, type GeoPoint } from '../core/geo';
-import { zoneBounds, type HeartSummary } from '../core/heart';
+import { zoneBounds, type HeartSummary, zoneSwatch } from '../core/heart';
 import type { HeartSample } from '../core/activity';
 import type { Split } from '../core/activity';
 import type { WeekBucket } from '../core/stats';
@@ -51,7 +51,7 @@ export function ZoneBars({
         const pct = Math.round(fraction * 100);
         return (
           <div className="zone-row" key={zone.index}>
-            <span className="swatch" style={{ background: zone.colour }} />
+            <span className="swatch" style={{ background: zoneSwatch(zone) }} />
             <span className="name">
               Z{zone.index} {zone.name}
             </span>
@@ -59,7 +59,7 @@ export function ZoneBars({
               <span
                 style={{
                   width: `${Math.max(fraction * 100, fraction > 0 ? 1.5 : 0)}%`,
-                  background: zone.colour,
+                  background: zoneSwatch(zone),
                 }}
               />
             </span>

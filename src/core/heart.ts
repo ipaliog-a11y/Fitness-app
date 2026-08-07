@@ -18,7 +18,24 @@ export interface Zone {
   /** Exclusive upper bound, except zone 5 which has no ceiling. */
   to: number;
   blurb: string;
+  /**
+   * The zone's colour on a dark ground. Kept as a literal because it is the
+   * fallback when no theme has defined `--zone-N`, and because tests and any
+   * non-CSS consumer need a real value rather than a variable reference.
+   */
   colour: string;
+}
+
+/**
+ * What to paint a zone with, as a CSS value.
+ *
+ * Returns a custom property so a theme can retint the whole ladder — a light
+ * ground needs much darker zone colours than a dark one, and amber at
+ * `#d8a13a` on white is a 2.3:1 contrast, which is unreadable. The dark hex
+ * stays as the fallback so a theme that defines nothing still looks right.
+ */
+export function zoneSwatch(zone: Zone): string {
+  return `var(--zone-${zone.index}, ${zone.colour})`;
 }
 
 /**
