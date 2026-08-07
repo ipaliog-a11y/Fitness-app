@@ -1,6 +1,9 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
+    // Use 2.4.10 to match the metadata in capacitor-health and other modern plugins.
+    // This prevents falling back to AGP 9.3's older embedded Kotlin compiler (2.2.x).
+    ext.kotlin_version = project.findProperty('kotlinVersion') ?: '2.4.10'
     
     repositories {
         google()
@@ -9,9 +12,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:9.3.1'
         classpath 'com.google.gms:google-services:4.4.4'
-
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -21,6 +22,36 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+    
+    // Force all modules to use the same Kotlin stdlib version to match the compiler.
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.jetbrains.kotlin') {
+                details.useVersion rootProject.ext.kotlin_version
+            }
+        }
+    }
+}
+
+// Override subproject buildscript classpaths to ensure they use the correct Kotlin and AGP versions.
+subprojects { sub ->
+    sub.afterEvaluate {
+        if (sub.hasProperty('kotlinVersion')) {
+            sub.ext.kotlinVersion = rootProject.ext.kotlin_version
+        }
+    }
+    sub.buildscript {
+        configurations.named("classpath").configure {
+            resolutionStrategy.eachDependency { details ->
+                if (details.requested.group == 'org.jetbrains.kotlin') {
+                    details.useVersion rootProject.ext.kotlin_version
+                }
+                if (details.requested.group == 'com.android.tools.build' && details.requested.name == 'gradle') {
+                    details.useVersion '9.3.1'
+                }
+            }
+        }
     }
 }
 

@@ -130,6 +130,21 @@ If connect fails: forget the device in Android Bluetooth settings, toggle BT off
 
 ---
 
+## Live run notification & home widget
+
+While a run is **running or paused**, the Android app:
+
+1. Starts a **foreground service** with an ongoing notification (time · distance · pace · HR).  
+2. Updates a **home-screen widget** (“RunLog live”) with the same snapshot.  
+
+**Add the widget:** long-press home screen → Widgets → **RunLog live**.  
+**Minimize the app** during a run to see the notification. Tap it to return to RunLog.  
+Notification permission may be requested on first start (Android 13+).
+
+Finish / discard / cancel stops the service and clears the notification.
+
+---
+
 ## Import runs from Samsung Health
 
 Samsung does not talk to RunLog directly. Use **Health Connect** as the bridge:

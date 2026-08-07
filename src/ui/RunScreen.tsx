@@ -77,6 +77,11 @@ import { connectFootpod, type FootpodConnection, type FootpodStatus } from '../p
 import { countSteps, requestMotionPermission, type MotionStatus, type MotionWatcher } from '../platform/motion';
 import { pulse, speak, warmSpeech } from '../platform/speech';
 import { keepScreenAwake, type ScreenLock } from '../platform/wakeLock';
+import {
+  startLiveRunNotification,
+  stopLiveRunNotification,
+  updateLiveRunNotification,
+} from '../platform/liveRunNative';
 import { resolveMapBasemap } from '../core/mercator';
 import { RouteMap } from './RouteMap';
 
@@ -259,6 +264,32 @@ export function RunScreen({
   useEffect(() => {
     onLiveChange?.(live);
   }, [live, onLiveChange]);
+
+  // Android: ongoing notification + home widget while the clock is live.
+  useEffect(() => {
+    if (!active || !session) {
+      void stopLiveRunNotification();
+      return;
+    }
+    const elapsedMs = session.elapsedMs();
+    const distanceM = session.distanceM;
+    const paceSec = paceSecondsPerUnit(distanceM, elapsedMs, profile.units);
+    const distLabel = `${formatDistance(distanceM, profile.units)} ${distanceLabel(profile.units)}`;
+    const paceStr = `${formatPace(paceSec)} ${paceLabel(profile.units)}`;
+    const timeStr = formatDuration(elapsedMs);
+    const hrStr = bpm !== null ? `${bpm} bpm` : '';
+    const title = session.mode === 'treadmill' ? 'Treadmill' : 'Outdoor run';
+    const snapshot = {
+      active: true,
+      paused: session.state === 'paused',
+      title,
+      time: timeStr,
+      distance: distLabel,
+      pace: paceStr,
+      hr: hrStr,
+    };
+    void updateLiveRunNotification(snapshot);
+  }, [active, running, tick, session, bpm, profile.units]);
 
   // RunScreen stays mounted across tabs — reload shoes/routes whenever the
   // tab is shown again so Settings changes appear without a full reload.
@@ -551,6 +582,15 @@ export function RunScreen({
       speak(`${phaseKindLabel(phase.kind)}. ${phase.label}.`);
     }
 
+    void startLiveRunNotification({
+      title: current.mode === 'treadmill' ? 'Treadmill' : 'Outdoor run',
+      time: '0:00',
+      distance: `0.00 ${distanceLabel(profile.units)}`,
+      pace: `--:-- ${paceLabel(profile.units)}`,
+      hr: bpm !== null ? `${bpm} bpm` : '',
+      paused: false,
+    });
+
     setTick((t) => t + 1);
   };
 
@@ -567,6 +607,7 @@ export function RunScreen({
     setGeoDetail(undefined);
     setLastGeo(null);
     setCadence(null);
+    void stopLiveRunNotification();
     setShoes(loadShoes());
     setRoutes(loadRoutes());
     setTick((t) => t + 1);
@@ -614,6 +655,7 @@ export function RunScreen({
     current.finish();
     stopSensors();
     setArming(false);
+    void stopLiveRunNotification();
 
     // A typed-in distance is the treadmill console's own figure, measured from
     // belt revolutions. That outranks anything worn, so it both wins and
@@ -676,6 +718,7 @@ export function RunScreen({
     setGeoStatus('idle');
     setGeoDetail(undefined);
     setLastGeo(null);
+    void stopLiveRunNotification();
     setShoes(loadShoes());
     setRoutes(loadRoutes());
     setTick((t) => t + 1);

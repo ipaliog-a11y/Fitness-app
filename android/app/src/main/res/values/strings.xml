@@ -4,4 +4,5 @@
     <string name="title_activity_main">RunLog</string>
     <string name="package_name">app.runlog.local</string>
     <string name="custom_url_scheme">app.runlog.local</string>
+    <string name="widget_live_run_description">Live run time, distance and pace</string>
 </resources>

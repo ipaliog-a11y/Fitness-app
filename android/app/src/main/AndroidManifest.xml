@@ -12,8 +12,12 @@
     <!-- GPS / outdoor tracking -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Bluetooth LE: heart rate + foot pod (Web Bluetooth or future native) -->
+    <!-- Bluetooth LE: heart rate + foot pod -->
     <uses-permission
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -61,6 +65,23 @@
             </intent-filter>
 
         </activity>
+
+        <service
+            android:name=".live.LiveRunService"
+            android:exported="false"
+            android:foregroundServiceType="location|health" />
+
+        <receiver
+            android:name=".live.LiveRunWidgetProvider"
+            android:exported="true"
+            android:label="RunLog live">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_live_run_info" />
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
