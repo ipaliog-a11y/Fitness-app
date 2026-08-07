@@ -26,6 +26,8 @@ interface Props {
   onToast(message: string): void;
   /** Bump when calendar should refresh weight dots. */
   onLogChange?(): void;
+  /** When opened from Profile, show a back control instead of a main tab. */
+  onBack?(): void;
 }
 
 function formatDay(ts: number): string {
@@ -122,7 +124,13 @@ function WeightChart({
   );
 }
 
-export function WeightScreen({ profile, onProfileChange, onToast, onLogChange }: Props) {
+export function WeightScreen({
+  profile,
+  onProfileChange,
+  onToast,
+  onLogChange,
+  onBack,
+}: Props) {
   const [store, setStore] = useState<WeightStore>(() => loadWeightStore());
   const unit = weightUnitLabel(profile.units);
   const latest = latestWeightKg(store);
@@ -201,6 +209,11 @@ export function WeightScreen({ profile, onProfileChange, onToast, onLogChange }:
 
   return (
     <div className="screen">
+      {onBack && (
+        <button type="button" className="back" onClick={onBack}>
+          ‹ Back to profile
+        </button>
+      )}
       <h1>Weight</h1>
       <p className="subtitle">
         Log weigh-ins, set a goal, and watch the trend. Readings also show on the History

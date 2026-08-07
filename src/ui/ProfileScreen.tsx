@@ -28,13 +28,17 @@ import {
   latestWeightKg,
   loadWeightStore,
   toDisplayWeight,
+  weightToGoalKg,
+  weightTrendKg,
   weightUnitLabel,
 } from '../core/weight';
+import { WeightScreen } from './WeightScreen';
 
 interface Props {
   profile: Profile;
   onChange(profile: Profile): void;
   onToast(message: string): void;
+  onWeightLogChange?(): void;
 }
 
 /** Catch render crashes so the tab never goes fully blank. */
@@ -84,7 +88,12 @@ export function ProfileScreen(props: Props) {
   );
 }
 
-function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
+function ProfileScreenInner({
+  profile: rawProfile,
+  onChange,
+  onToast,
+  onWeightLogChange,
+}: Props) {
   // Never trust a half-written profile from storage/HMR.
   const profile = sanitise(rawProfile);
 
@@ -164,13 +173,20 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
   const [nameDraft, setNameDraft] = useState(displayName);
   const [birthDraft, setBirthDraft] = useState(profile.birthDate || '');
   const [heightDraft, setHeightDraft] = useState(String(profile.heightCm || ''));
+  const [sexDraft, setSexDraft] = useState<'male' | 'female'>(
+    profile.sex === 'female' ? 'female' : 'male',
+  );
+  const [weightOpen, setWeightOpen] = useState(false);
+  /** Local bump so Body overview refreshes after logging without leaving Profile. */
+  const [weightTick, setWeightTick] = useState(0);
 
   useEffect(() => {
     setNameDraft(displayName);
     setBirthDraft(profile.birthDate || '');
     setHeightDraft(String(profile.heightCm || ''));
+    setSexDraft(profile.sex === 'female' ? 'female' : 'male');
     if (!displayName.trim() || !profile.birthDate) setEditingIdentity(true);
-  }, [displayName, profile.birthDate, profile.heightCm]);
+  }, [displayName, profile.birthDate, profile.heightCm, profile.sex]);
 
   const saveIdentity = () => {
     const nextName = nameDraft.trim().slice(0, 40);
@@ -198,6 +214,7 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
       birthDate: ageFromDob !== null ? birth : '',
       age,
       heightCm,
+      sex: sexDraft,
       maxHeartRate: reseed ? estimateMaxHeartRate(age) : profile.maxHeartRate,
       strideM:
         Math.abs(heightCm - profile.heightCm) > 0.5
@@ -205,24 +222,39 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
           : profile.strideM,
     });
     setEditingIdentity(false);
-    onToast(nextName ? `Profile saved${nextName ? ` · ${nextName}` : ''}.` : 'Profile saved.');
+    onToast(nextName ? `Profile saved · ${nextName}.` : 'Profile saved.');
   };
 
-  const sex = profile.sex === 'female' ? 'female' : 'male';
   const weightLog = loadWeightStore();
+  void weightTick;
   const latestKg = latestWeightKg(weightLog) ?? profile.weightKg;
   const weightDisplay = toDisplayWeight(latestKg, profile.units);
+  const unit = weightUnitLabel(profile.units);
+  const trend = weightTrendKg(weightLog);
+  const toGoal = weightToGoalKg(weightLog);
   const [maxHrDraft, setMaxHrDraft] = useState(String(profile.maxHeartRate));
-  const [strideDraft, setStrideDraft] = useState(
-    Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75',
-  );
 
   useEffect(() => {
     setMaxHrDraft(String(profile.maxHeartRate));
   }, [profile.maxHeartRate]);
-  useEffect(() => {
-    setStrideDraft(Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75');
-  }, [profile.strideM]);
+
+  if (weightOpen) {
+    return (
+      <WeightScreen
+        profile={profile}
+        onProfileChange={onChange}
+        onToast={onToast}
+        onBack={() => {
+          setWeightOpen(false);
+          setWeightTick((t) => t + 1);
+        }}
+        onLogChange={() => {
+          setWeightTick((t) => t + 1);
+          onWeightLogChange?.();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="screen">
@@ -273,6 +305,26 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
               />
               <p className="hint">You can clear the field while typing — nothing is saved until Save.</p>
             </div>
+            <div className="field">
+              <label>Sex (for calorie estimate)</label>
+              <div className="segmented" style={{ marginTop: 6 }}>
+                <button
+                  type="button"
+                  aria-pressed={sexDraft === 'female'}
+                  onClick={() => setSexDraft('female')}
+                >
+                  Female
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={sexDraft === 'male'}
+                  onClick={() => setSexDraft('male')}
+                >
+                  Male
+                </button>
+              </div>
+              <p className="hint">Used by the HR-based calorie model (Keytel).</p>
+            </div>
             <div className="name-edit-row" style={{ marginTop: 8 }}>
               <button type="button" className="btn name-action primary-soft" onClick={saveIdentity}>
                 Save
@@ -285,6 +337,7 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
                     setNameDraft(displayName);
                     setBirthDraft(profile.birthDate || '');
                     setHeightDraft(String(profile.heightCm || ''));
+                    setSexDraft(profile.sex === 'female' ? 'female' : 'male');
                     setEditingIdentity(false);
                   }}
                 >
@@ -319,6 +372,12 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
               <span className="kv-k">Height</span>
               <span className="kv-v">{profile.heightCm} cm</span>
             </div>
+            <div className="identity-row">
+              <span className="kv-k">Sex</span>
+              <span className="kv-v">
+                {profile.sex === 'female' ? 'Female' : 'Male'}
+              </span>
+            </div>
             <button
               type="button"
               className="btn name-action"
@@ -327,6 +386,7 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
                 setNameDraft(displayName);
                 setBirthDraft(profile.birthDate || '');
                 setHeightDraft(String(profile.heightCm || ''));
+                setSexDraft(profile.sex === 'female' ? 'female' : 'male');
                 setEditingIdentity(true);
               }}
             >
@@ -337,66 +397,54 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
       </div>
 
       <div className="card">
-        <h2>Body</h2>
-        <div className="identity-row" style={{ marginBottom: 12 }}>
-          <span className="kv-k">Weight</span>
-          <span className="kv-v">
-            {weightDisplay.toFixed(1)} {weightUnitLabel(profile.units)}
-            {weightLog.entries.length > 0 ? ' · from log' : ''}
-          </span>
-        </div>
-        <p className="hint" style={{ marginTop: 0 }}>
-          Log weigh-ins and a goal under the <strong>Weight</strong> tab. Values update calorie
-          estimates and appear on the History calendar.
-        </p>
-
-        <div className="field">
-          <label>Sex (for calorie estimate)</label>
-          <div className="segmented" style={{ marginTop: 6 }}>
-            <button
-              type="button"
-              aria-pressed={sex === 'female'}
-              onClick={() => set('sex', 'female')}
-            >
-              Female
-            </button>
-            <button
-              type="button"
-              aria-pressed={sex === 'male'}
-              onClick={() => set('sex', 'male')}
-            >
-              Male
-            </button>
+        <h2>Weight</h2>
+        <div className="metric-grid" style={{ marginBottom: 12 }}>
+          <div className="metric">
+            <div className="value">{weightDisplay.toFixed(1)}</div>
+            <div className="label">Current {unit}</div>
           </div>
-          <p className="hint">Used by the HR-based calorie model (Keytel).</p>
+          <div className="metric">
+            <div className="value">
+              {weightLog.goalKg !== null
+                ? toDisplayWeight(weightLog.goalKg, profile.units).toFixed(1)
+                : '—'}
+            </div>
+            <div className="label">Goal {unit}</div>
+          </div>
+          <div className="metric">
+            <div className="value">
+              {trend === null
+                ? '—'
+                : `${trend > 0 ? '+' : trend < 0 ? '−' : ''}${toDisplayWeight(
+                    Math.abs(trend),
+                    profile.units,
+                  ).toFixed(1)}`}
+            </div>
+            <div className="label">Since first</div>
+          </div>
         </div>
-
-        <div className="field">
-          <label htmlFor="stride">Treadmill stride (m per step)</label>
-          <input
-            id="stride"
-            type="text"
-            inputMode="decimal"
-            value={strideDraft}
-            onChange={(e) => setStrideDraft(e.target.value)}
-            onBlur={() => {
-              const stride = Number(strideDraft.replace(',', '.'));
-              if (Number.isFinite(stride) && stride > 0) set('strideM', stride);
-              else setStrideDraft(profile.strideM.toFixed(2));
-            }}
-          />
-          <p className="hint">
-            For step counting without a foot pod.{' '}
-            <button
-              type="button"
-              className="pill"
-              onClick={() => set('strideM', estimateStride(profile.heightCm))}
-              style={{ cursor: 'pointer' }}
-            >
-              Reset from height
-            </button>
+        {toGoal !== null && weightLog.goalKg !== null && (
+          <p className="hint" style={{ marginTop: 0 }}>
+            {Math.abs(toGoal) < 0.05
+              ? 'At your goal weight.'
+              : toGoal > 0
+                ? `${toDisplayWeight(toGoal, profile.units).toFixed(1)} ${unit} above goal.`
+                : `${toDisplayWeight(-toGoal, profile.units).toFixed(1)} ${unit} below goal.`}
           </p>
-        </div>
+        )}
+        <p className="hint" style={{ marginTop: 0 }}>
+          Weigh-ins update calorie estimates and appear on the History calendar.
+          {weightLog.entries.length === 0
+            ? ' No log yet — add your starting weight.'
+            : ` ${weightLog.entries.length} logged reading${weightLog.entries.length === 1 ? '' : 's'}.`}
+        </p>
+        <button
+          type="button"
+          className="btn primary wide"
+          onClick={() => setWeightOpen(true)}
+        >
+          {weightLog.entries.length === 0 ? 'Set up weight log' : 'Open weight log'}
+        </button>
       </div>
 
       <div className="card">

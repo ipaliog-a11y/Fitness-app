@@ -6,6 +6,7 @@ import { saveActivity } from '../core/db';
 import { activityFromGpx } from '../core/gpx';
 import { loadRoutes, saveRoutes } from '../core/routes';
 import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
+import { estimateStride } from '../core/steps';
 import { distanceLabel, formatDistance, fromDisplayDistance, toDisplayDistance } from '../core/units';
 
 interface Props {
@@ -20,6 +21,9 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
   const gpxRef = useRef<HTMLInputElement | null>(null);
   const [confirmingWipe, setConfirmingWipe] = useState(false);
   const [routesTick, setRoutesTick] = useState(0);
+  const [strideDraft, setStrideDraft] = useState(
+    Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75',
+  );
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value });
@@ -154,6 +158,46 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             }}
           />
           <p className="hint">Set to 0 to turn the goal off. Body &amp; shoes live under Profile.</p>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Treadmill</h2>
+        <div className="field">
+          <label htmlFor="settings-stride">Stride length (m per step)</label>
+          <input
+            id="settings-stride"
+            type="text"
+            inputMode="decimal"
+            value={strideDraft}
+            onChange={(e) => setStrideDraft(e.target.value)}
+            onBlur={() => {
+              const stride = Number(strideDraft.replace(',', '.'));
+              if (Number.isFinite(stride) && stride > 0) {
+                set('strideM', stride);
+                setStrideDraft(stride.toFixed(2));
+              } else {
+                setStrideDraft(profile.strideM.toFixed(2));
+              }
+            }}
+          />
+          <p className="hint">
+            Used when counting steps without a foot pod. Finish a treadmill run with the console
+            distance typed in to auto-calibrate.{' '}
+            <button
+              type="button"
+              className="pill"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const next = estimateStride(profile.heightCm);
+                set('strideM', next);
+                setStrideDraft(next.toFixed(2));
+                onToast(`Stride reset from height → ${next.toFixed(2)} m.`);
+              }}
+            >
+              Reset from height
+            </button>
+          </p>
         </div>
       </div>
 
