@@ -2384,7 +2384,7 @@ button.cal-event {
 }
 
 .map-slot-arming {
-  margin-top: 4px;
+  margin-top: 12px;
 }
 
 /* Live / arming map: shorter than detail history maps so it appears fast. */

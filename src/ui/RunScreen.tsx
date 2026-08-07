@@ -207,6 +207,8 @@ export function RunScreen({
     avg: 0,
     cadence: 0,
   });
+  /** Confirm before ending a run so Finish / Discard are not one-tap accidents. */
+  const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'discard'>(null);
 
   const stillMsRef = useRef(0);
   const lastTickAtRef = useRef<number | null>(null);
@@ -1284,25 +1286,6 @@ export function RunScreen({
           )}
         </div>
 
-        {mode === 'outdoor' && (
-          <div className="map-slot map-slot-arming">
-            <RouteMap
-              segments={[]}
-              ghostSegments={ghostRoute}
-              position={lastGeo}
-              tiles={false}
-              live
-              emptyLabel={
-                gpsBad
-                  ? geoDetail || 'GPS unavailable'
-                  : lastGeo
-                    ? 'GPS lock'
-                    : 'Waiting for GPS…'
-              }
-            />
-          </div>
-        )}
-
         {mode === 'treadmill' && !podReady && (
           <button
             className="btn wide"
@@ -1339,6 +1322,25 @@ export function RunScreen({
             <p className="hint run-hero-hint">Or wait until GPS shows Ready.</p>
           )}
         </div>
+
+        {mode === 'outdoor' && (
+          <div className="map-slot map-slot-arming">
+            <RouteMap
+              segments={[]}
+              ghostSegments={ghostRoute}
+              position={lastGeo}
+              tiles={false}
+              live
+              emptyLabel={
+                gpsBad
+                  ? geoDetail || 'GPS unavailable'
+                  : lastGeo
+                    ? 'GPS lock'
+                    : 'Waiting for GPS…'
+              }
+            />
+          </div>
+        )}
 
         <button className="btn wide" style={{ marginTop: 10 }} onClick={cancelArming}>
           Cancel
@@ -1721,7 +1723,11 @@ export function RunScreen({
             Resume
           </button>
         )}
-        <button type="button" className="btn danger run-action-finish" onClick={finish}>
+        <button
+          type="button"
+          className="btn danger run-action-finish"
+          onClick={() => setConfirmAction('finish')}
+        >
           Finish
         </button>
       </div>
@@ -1771,9 +1777,55 @@ export function RunScreen({
         </div>
       )}
 
-      <button className="btn discard-link" type="button" onClick={discard}>
+      <button
+        className="btn discard-link"
+        type="button"
+        onClick={() => setConfirmAction('discard')}
+      >
         Discard run
       </button>
+
+      {confirmAction && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setConfirmAction(null)}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="run-confirm-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="run-confirm-title">
+              {confirmAction === 'finish' ? 'Finish this run?' : 'Discard this run?'}
+            </h2>
+            <p className="hint" style={{ marginTop: 0, marginBottom: 16 }}>
+              {confirmAction === 'finish'
+                ? 'Save the run to history and stop tracking.'
+                : 'The run will not be saved. This cannot be undone.'}
+            </p>
+            <div className="btn-row">
+              <button type="button" className="btn" onClick={() => setConfirmAction(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`btn${confirmAction === 'discard' ? ' danger' : ' primary'}`}
+                onClick={() => {
+                  const action = confirmAction;
+                  setConfirmAction(null);
+                  if (action === 'finish') finish();
+                  else discard();
+                }}
+              >
+                {confirmAction === 'finish' ? 'Finish' : 'Discard'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
