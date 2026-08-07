@@ -312,9 +312,10 @@ export function HeartChart({
     [samples, segments, distanceM, durationMs, units],
   );
 
-  const [showHr, setShowHr] = useState(true);
+  // HR off by default when there are no samples so GPS-only runs show pace first.
+  const [showHr, setShowHr] = useState(() => samples.length > 1);
   const [showPace, setShowPace] = useState(true);
-  const [showSpeed, setShowSpeed] = useState(false);
+  const [showSpeed, setShowSpeed] = useState(() => samples.length < 2);
   const [cursor, setCursor] = useState<number | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);

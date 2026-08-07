@@ -304,19 +304,29 @@ export function DetailScreen({
             </div>
           </div>
           <ZoneBars summary={heart} maxHeartRate={reportMaxHr} showPercent />
-          {(activity.heart.length > 1 ||
-            activity.segments.some((s) => s.length > 1)) && (
-            <div style={{ marginTop: 14 }}>
-              <HeartChart
-                samples={activity.heart}
-                maxHeartRate={reportMaxHr}
-                segments={activity.segments}
-                distanceM={activity.distanceM}
-                durationMs={activity.durationMs}
-                units={profile.units}
-              />
-            </div>
-          )}
+        </div>
+      )}
+
+      {(activity.heart.length > 1 || activity.segments.some((s) => s.length > 1)) && (
+        <div className="card">
+          <h2>
+            {activity.heart.length > 1
+              ? 'Heart rate, pace & speed'
+              : 'Pace & speed'}
+          </h2>
+          <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
+            {activity.heart.length > 1
+              ? 'By distance. Tap series to hide; drag the chart to read values.'
+              : 'From GPS — no heart-rate strap on this run. Pace is on by default; turn on Speed if you want both.'}
+          </p>
+          <HeartChart
+            samples={activity.heart}
+            maxHeartRate={reportMaxHr}
+            segments={activity.segments}
+            distanceM={activity.distanceM}
+            durationMs={activity.durationMs}
+            units={profile.units}
+          />
         </div>
       )}
 
