@@ -101,6 +101,11 @@ import {
   weightToGoalKg,
 } from '../src/core/weight.ts';
 import {
+  activityFromWorkout,
+  planHealthImport,
+  stableHealthImportId,
+} from '../src/core/healthImport.ts';
+import {
   filterActivities,
   groupActivities,
   startOfWeek as historyWeekStart,
@@ -1815,6 +1820,51 @@ check('an unknown theme falls back rather than breaking the shell', () => {
 check('a profile round-trips the new theme', () => {
   equal(sanitise({ theme: 'day' }).theme, 'day', 'kept');
   assert(['soft', 'hud', 'day'].includes(sanitise({ theme: 'nonsense' }).theme), 'garbage falls back');
+});
+
+// --- health connect import mapping ----------------------------------------
+
+check('health workout maps to a stable activity id', () => {
+  const w = {
+    workoutType: 'running',
+    duration: 1800,
+    totalDistance: 5000,
+    totalEnergyBurned: 320,
+    startDate: '2026-08-01T07:00:00.000Z',
+    endDate: '2026-08-01T07:30:00.000Z',
+    sourceName: 'Samsung Health',
+    platformId: 'session-abc-123',
+  };
+  equal(stableHealthImportId(w), 'hc-session-abc-123');
+  const act = activityFromWorkout(w);
+  assert(act, 'activity built');
+  equal(act.distanceM, 5000);
+  equal(act.durationMs, 30 * 60 * 1000);
+  equal(act.mode, 'outdoor');
+  assert(act.note.includes('Samsung'));
+});
+
+check('health import plan skips duplicates and non-runs', () => {
+  const run = {
+    workoutType: 'running',
+    duration: 600,
+    totalDistance: 1000,
+    startDate: '2026-08-01T08:00:00.000Z',
+    endDate: '2026-08-01T08:10:00.000Z',
+    platformId: 'run-1',
+  };
+  const yoga = {
+    workoutType: 'yoga',
+    duration: 600,
+    totalDistance: 0,
+    startDate: '2026-08-01T09:00:00.000Z',
+    endDate: '2026-08-01T09:10:00.000Z',
+    platformId: 'yoga-1',
+  };
+  const plan = planHealthImport([run, yoga, run], new Set(['hc-run-1']));
+  equal(plan.toImport.length, 0);
+  equal(plan.skippedDuplicate, 2); // existing + second copy of same id in list
+  equal(plan.skippedNotRun, 1);
 });
 
 // --- map styles -----------------------------------------------------------

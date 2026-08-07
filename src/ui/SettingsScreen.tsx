@@ -13,6 +13,11 @@ import {
 import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
 import { estimateStride } from '../core/steps';
 import { distanceLabel, formatDistance, fromDisplayDistance, toDisplayDistance } from '../core/units';
+import {
+  healthConnectSupported,
+  importRunsFromHealthConnect,
+  openHealthConnectSettings,
+} from '../platform/healthConnect';
 
 interface Props {
   profile: Profile;
@@ -29,9 +34,35 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
   const [strideDraft, setStrideDraft] = useState(
     Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75',
   );
+  const [healthImporting, setHealthImporting] = useState(false);
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value });
+
+  const importHealth = async () => {
+    if (!healthConnectSupported()) {
+      onToast('Health Connect import works in the Android app only.');
+      return;
+    }
+    setHealthImporting(true);
+    try {
+      const result = await importRunsFromHealthConnect({ days: 90 });
+      onReload();
+      onToast(
+        result.imported > 0
+          ? `Imported ${result.imported} run${result.imported === 1 ? '' : 's'}` +
+              (result.skippedDuplicate ? ` · ${result.skippedDuplicate} already saved` : '') +
+              '.'
+          : result.skippedDuplicate > 0
+            ? `No new runs · ${result.skippedDuplicate} already in history.`
+            : 'No running workouts found in Health Connect (last 90 days).',
+      );
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'Health Connect import failed.');
+    } finally {
+      setHealthImporting(false);
+    }
+  };
 
   const routes = loadRoutes();
   void routesTick;
@@ -367,6 +398,35 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             </button>
           </div>
         ))}
+      </div>
+
+      <div className="card">
+        <h2>Health Connect</h2>
+        <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
+          Pull runs that <strong>Samsung Health</strong> (or other apps) has shared into Health
+          Connect. Enable Samsung Health → Health Connect write access first. Routes may be empty
+          if only session totals were shared.
+        </p>
+        <button
+          type="button"
+          className="btn primary wide"
+          style={{ marginBottom: 8 }}
+          disabled={healthImporting}
+          onClick={() => void importHealth()}
+        >
+          {healthImporting ? 'Importing…' : 'Import runs from Health Connect'}
+        </button>
+        {healthConnectSupported() ? (
+          <button
+            type="button"
+            className="btn wide"
+            onClick={() => void openHealthConnectSettings()}
+          >
+            Open Health Connect settings
+          </button>
+        ) : (
+          <p className="hint">Available in the installed Android app, not in the browser.</p>
+        )}
       </div>
 
       <div className="card">

@@ -130,6 +130,21 @@ If connect fails: forget the device in Android Bluetooth settings, toggle BT off
 
 ---
 
+## Import runs from Samsung Health
+
+Samsung does not talk to RunLog directly. Use **Health Connect** as the bridge:
+
+1. **Samsung Health** → Settings → **Health Connect** → allow **write** for exercise / distance / heart rate.  
+2. Confirm a recent run exists in **Health Connect** (browse data).  
+3. In RunLog (this APK): **Settings → Health Connect → Import runs from Health Connect**.  
+4. Grant read access when prompted.  
+
+Imported sessions appear in History. **GPS maps may be empty** if Samsung only shared totals. Re-import skips the same sessions (stable ids).
+
+Privacy policy for the Health Connect dialog lives at `public/privacypolicy.html` (copied into the app assets).
+
+---
+
 ## Moving data from the phone browser
 
 Storage is **per origin**. Chrome PWA data is **not** the Capacitor app’s IndexedDB.
