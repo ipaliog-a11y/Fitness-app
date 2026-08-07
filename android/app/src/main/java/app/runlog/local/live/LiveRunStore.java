@@ -47,10 +47,12 @@ public final class LiveRunStore {
                 .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
                 .apply();
 
-        LiveRunWidgetProvider.requestUpdate(context);
-        if (active) {
-            LiveRunService.refreshNotification(context);
+        try {
+            LiveRunWidgetProvider.requestUpdate(context);
+        } catch (Exception ignored) {
         }
+        // Notification refresh is done by the plugin/service — not here —
+        // to avoid double-notify and startForeground races.
     }
 
     public static void clear(Context context) {
