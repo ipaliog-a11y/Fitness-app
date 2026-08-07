@@ -1105,10 +1105,6 @@ textarea:focus-visible {
   background: var(--info, #38bdf8);
 }
 
-.cal-cell.has-weight .cal-daynum {
-  /* subtle mark — dot carries the weight signal */
-}
-
 .cal-daynum {
   line-height: 1;
 }
