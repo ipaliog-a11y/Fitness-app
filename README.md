@@ -82,6 +82,13 @@ Data contract: [`docs/DATA.md`](docs/DATA.md).
 
 Roadmap and feature tiers live in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
+**Android (Capacitor).** Native shell around the same web build — see
+[`docs/ANDROID.md`](docs/ANDROID.md). Quick open:
+
+```bash
+npm run android:studio   # build + sync + Android Studio
+```
+
 ## How it is put together
 
 ```

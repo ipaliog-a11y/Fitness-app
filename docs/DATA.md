@@ -148,6 +148,7 @@ Display conversion happens at the UI edge (`src/core/units.ts`).
 ## Android port notes
 
 1. Treat this document as the **canonical interchange**.
-2. Reimplement `src/platform/*` only (geo, BLE HR, BLE RSC, motion, speech, wake lock).
-3. Prefer keeping `src/core/*` logic (or a TypeScript/Kotlin port of the same formulae).
-4. First-class restore path: **import full backup JSON** into native storage.
+2. **Current shipping path:** Capacitor wraps the web UI (`docs/ANDROID.md`). Storage is still IndexedDB + localStorage inside the WebView — not a second schema.
+3. Chrome PWA and the Capacitor APK are **different origins** — use **Export full backup / Import** to move data.
+4. Reimplement `src/platform/*` with native plugins only where the WebView is weak (especially **Bluetooth LE**).
+5. Prefer keeping `src/core/*` as TypeScript shared logic until a full Kotlin rewrite is justified.

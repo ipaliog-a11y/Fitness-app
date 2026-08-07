@@ -11,10 +11,21 @@
     "test": "npm run test:core",
     "icons": "node tools/make-icons.mjs",
     "test:browser": "node tests/browser.test.mjs",
-    "test:core": "esbuild tests/core.test.mjs --bundle --platform=node --format=esm --outfile=node_modules/.cache/core.test.bundle.mjs --log-level=error && node node_modules/.cache/core.test.bundle.mjs"
+    "test:core": "esbuild tests/core.test.mjs --bundle --platform=node --format=esm --outfile=node_modules/.cache/core.test.bundle.mjs --log-level=error && node node_modules/.cache/core.test.bundle.mjs",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:studio": "npm run build && npm run android:sync && npx cap open android",
+    "android:run": "npm run build && npx cap run android"
   },
   "license": "ISC",
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
