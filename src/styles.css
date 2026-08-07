@@ -749,46 +749,129 @@ textarea:focus-visible {
   margin-bottom: 12px;
 }
 
-.history-calendar {
-  padding-bottom: 12px;
+/* History shell: header + compact List/Cal */
+.history-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
 }
 
-.cal-nav {
+.history-header h1 {
+  margin: 0 0 4px;
+}
+
+.history-header .subtitle {
+  margin: 0 0 12px;
+}
+
+.view-toggle-compact {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft, var(--line));
+  border-radius: 10px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.view-toggle-compact button {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+}
+
+.view-toggle-compact button[aria-pressed='true'] {
+  background: var(--surface-3, var(--surface-2));
+  color: var(--text);
+}
+
+[data-theme='hud'] .view-toggle-compact {
+  border-radius: 4px;
+  padding: 2px;
+}
+
+[data-theme='hud'] .view-toggle-compact button {
+  border-radius: 2px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+[data-theme='hud'] .view-toggle-compact button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Horizontal quick filter bar (mockup) */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.filter-bar .chip {
+  padding: 7px 11px;
+  font-size: 12px;
+}
+
+.history-calendar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-calendar {
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+.cal-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 10px;
-}
-
-.cal-nav .btn {
-  min-width: 44px;
-  padding: 10px 12px;
-  font-size: 20px;
-  line-height: 1;
+  margin-bottom: 12px;
 }
 
 .cal-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  text-align: center;
-  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text);
 }
 
-.cal-legend {
+.cal-nav-btns {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 12px;
+  gap: 4px;
 }
 
-.cal-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.cal-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+[data-theme='hud'] .cal-nav-btn {
+  border-radius: 2px;
 }
 
 .cal-weekdays {
@@ -797,11 +880,11 @@ textarea:focus-visible {
   gap: 4px;
   margin-bottom: 4px;
   text-align: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted-2, var(--muted));
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .cal-grid {
@@ -812,46 +895,114 @@ textarea:focus-visible {
 
 .cal-cell {
   aspect-ratio: 1;
-  max-height: 52px;
+  max-height: 48px;
   border-radius: 10px;
   border: 1px solid transparent;
-  background: var(--surface-2);
-  color: var(--text);
+  background: transparent;
+  color: var(--muted);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
   padding: 4px 2px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 650;
+  position: relative;
 }
 
 .cal-cell.empty {
   background: transparent;
   pointer-events: none;
+  opacity: 0.3;
 }
 
-.cal-cell.today {
-  border-color: var(--accent-dim);
+/* Soft: filled run days (emerald tint — high outdoor contrast) */
+.cal-cell.has-run {
+  background: var(--accent-dim);
+  color: var(--accent-bright, var(--accent));
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.cal-cell.has-plan:not(.has-run) {
+  color: var(--text);
+}
+
+.cal-cell.today:not(.has-run) {
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text);
 }
 
 .cal-cell.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.cal-plan-dot {
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--info, #38bdf8);
+}
+
+.cal-cell.has-run .cal-plan-dot {
+  background: var(--info, #38bdf8);
 }
 
 .cal-daynum {
   line-height: 1;
 }
 
-.cal-marks {
-  display: flex;
-  gap: 3px;
-  min-height: 6px;
-  align-items: center;
+/* HUD calendar: solid volt run fills, hard squares */
+[data-theme='hud'] .cal-cell {
+  border-radius: 2px;
+  font-family: var(--metric-font);
 }
 
+[data-theme='hud'] .cal-cell.has-run {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+[data-theme='hud'] .cal-cell.selected {
+  box-shadow: inset 0 0 0 2px var(--text);
+}
+
+[data-theme='hud'] .cal-plan-dot {
+  background: var(--info, #5ac8ff);
+}
+
+.cal-day-detail {
+  margin-top: 4px;
+}
+
+.cal-day-heading {
+  margin: 8px 0 10px;
+}
+
+.cal-plan-row {
+  cursor: default;
+}
+
+.cal-plan-row .run-item-day.plan {
+  background: color-mix(in srgb, var(--info, #38bdf8) 14%, transparent);
+  border-color: color-mix(in srgb, var(--info, #38bdf8) 35%, transparent);
+  color: var(--info, #38bdf8);
+}
+
+.cal-plan-row .run-item-bar.plan {
+  background: var(--info, #38bdf8);
+}
+
+.run-item.cal-run-row .run-item-day.run {
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent-bright, var(--accent));
+}
+
+/* legacy dots kept for any remaining markup */
 .cal-dot {
   width: 6px;
   height: 6px;
@@ -2019,20 +2170,184 @@ button.cal-event {
   font-family: var(--metric-font, inherit);
 }
 
-/* --- Live run actions ---------------------------------------------------- */
+/* --- Live run layout ----------------------------------------------------- */
 
-.run-actions {
-  display: grid;
-  grid-template-columns: 0.8fr 1fr 1.1fr;
+.run-live .live-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
-.run-actions .btn {
+.live-top-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.live-status-pill,
+.live-hr-pill,
+.live-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.live-status-pill.ok,
+.live-meta-pill.ok {
+  color: var(--accent-bright, var(--accent));
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.live-status-pill.warn,
+.live-meta-pill.warn {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+}
+
+.live-hr-pill {
+  color: var(--accent-bright, var(--accent));
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.live-rec {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 0 rgba(255, 45, 85, 0.5);
+  animation: live-rec-pulse 1.2s ease-out infinite;
+}
+
+@keyframes live-rec-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+[data-theme='hud'] .live-status-pill,
+[data-theme='hud'] .live-hr-pill,
+[data-theme='hud'] .live-meta-pill {
+  border-radius: 2px;
+  font-family: var(--metric-font);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+[data-theme='hud'] .live-status-pill {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+[data-theme='hud'] .live-hr-pill {
+  color: var(--info, #5ac8ff);
+  background: color-mix(in srgb, var(--info, #5ac8ff) 12%, transparent);
+  border-color: color-mix(in srgb, var(--info, #5ac8ff) 35%, transparent);
+}
+
+.run-live .metric-hero .value {
+  font-size: clamp(52px, 18vw, 88px);
+}
+
+.run-live .live-goal {
+  margin: 10px 0 12px;
+}
+
+.run-live .live-goal .goal-track-head strong {
+  color: var(--accent-bright, var(--accent));
+  font-weight: 700;
+}
+
+.live-calorie-hint {
+  margin: -4px 0 12px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.map-slot {
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm, 12px);
+  overflow: hidden;
+  border: 1px solid var(--line-soft, var(--line));
+  min-height: 100px;
+  background: var(--surface-2);
+}
+
+.map-slot .route-map,
+.map-slot canvas,
+.map-slot svg {
+  display: block;
   width: 100%;
-  min-height: 48px;
 }
 
-[data-theme='hud'] .run-actions {
+.run-actions,
+.run-actions-primary {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.run-actions .btn,
+.run-actions-primary .btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.run-actions-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.run-actions-secondary .btn {
+  flex: 1;
+  min-width: 5rem;
+  min-height: 40px;
+  font-size: 13px;
+}
+
+.discard-link {
+  width: 100%;
+  margin-top: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 40px;
+}
+
+.discard-link:hover {
+  color: var(--danger);
+}
+
+[data-theme='hud'] .run-actions-primary {
   gap: 6px;
 }
 
@@ -2040,9 +2355,9 @@ button.cal-event {
 [data-theme='hud'] .run-action-lap {
   border-radius: 4px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 [data-theme='soft'] .run-action-finish {
@@ -2051,9 +2366,19 @@ button.cal-event {
   border-color: color-mix(in srgb, var(--danger) 40%, transparent);
 }
 
-/* Soft live metrics stay as a compact 3-up; HUD stacks (existing rule) */
-[data-theme='soft'] .metric-grid-live {
-  grid-template-columns: repeat(3, 1fr);
+[data-theme='hud'] .run-action-finish {
+  min-height: 52px;
+}
+
+/* Soft live metrics: 2×2 tiles; HUD stacks rows (existing rule) */
+[data-theme='soft'] .metric-grid-live.metric-grid-2x2 {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+[data-theme='hud'] .metric-grid-live.metric-grid-2x2 {
+  /* keep stacked instrument rows from metric-grid hud rule */
+  grid-template-columns: 1fr;
 }
 
 /* --- History row variants ------------------------------------------------ */
@@ -2167,19 +2492,6 @@ button.cal-event {
 [data-theme='hud'] .run-item-chev {
   display: none;
 }
-
-[data-theme='hud'] .cal-cell:has(.cal-dot.run),
-[data-theme='hud'] .cal-cell.today {
-  border-radius: 2px;
-}
-
-[data-theme='hud'] .cal-dot.run {
-  background: var(--accent);
-  width: 6px;
-  height: 6px;
-}
-
-/* Soft calendar slightly rounder fill feel via selected state already */
 
 /* --- Coach recovery hero ------------------------------------------------- */
 

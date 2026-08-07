@@ -38,6 +38,7 @@ import {
 import { loadRoutes, type SavedRoute } from '../core/routes';
 import { RunSession } from '../core/session';
 import type { Profile } from '../core/settings';
+import { zoneOf } from '../core/heart';
 import { calibrateStride } from '../core/steps';
 import {
   distanceLabel,
@@ -1300,52 +1301,52 @@ export function RunScreen({
   const met = goal ? goalMet(goal, snap) : false;
   const phaseProgress = workoutRef.current?.progress(distance, elapsed) ?? null;
 
-  return (
-    <div className="screen">
-      <div className="pills">
-        {session.mode === 'outdoor' ? (
-          <span
-            className={`pill ${
-              geoStatus === 'tracking' ? 'good' : geoStatus === 'denied' ? 'bad' : 'warn'
-            }`}
-          >
-            <span className={`dot${geoStatus === 'tracking' ? ' live' : ''}`} />
-            {geoStatus === 'tracking'
-              ? 'GPS'
-              : geoStatus === 'denied'
-                ? 'No location permission'
-                : geoDetail ?? 'Finding GPS…'}
-          </span>
-        ) : podStatus === 'connected' ? (
-          <span className="pill good">
-            <span className="dot live" /> Foot pod
-          </span>
-        ) : (
-          <span className={`pill ${motionStatus === 'counting' ? 'good' : 'warn'}`}>
-            <span className={`dot${motionStatus === 'counting' ? ' live' : ''}`} />
-            {motionStatus === 'counting'
-              ? `${session.steps} steps`
-              : 'No step counter — type the distance at the end'}
-          </span>
-        )}
+  const hrZone = bpm !== null ? zoneOf(bpm, profile.maxHeartRate) : null;
+  const modeReady =
+    session.mode === 'outdoor'
+      ? geoStatus === 'tracking'
+      : podStatus === 'connected' || motionStatus === 'counting';
+  const modeLabel =
+    session.mode === 'outdoor'
+      ? geoStatus === 'tracking'
+        ? 'Outdoor'
+        : geoStatus === 'denied'
+          ? 'No GPS'
+          : geoDetail ?? 'Finding GPS…'
+      : podStatus === 'connected'
+        ? 'Foot pod'
+        : motionStatus === 'counting'
+          ? `${session.steps} steps`
+          : 'Treadmill';
+  const heroLabel =
+    session.state === 'paused' ? (autoPaused ? 'Auto-paused' : 'Paused') : 'Moving';
+  const isHud = profile.theme === 'hud';
 
-        {bpm !== null && (
-          <span className="pill bad">
-            <span className="dot live" /> {bpm} bpm
-          </span>
-        )}
-        {cadence !== null && <span className="pill">{Math.round(cadence)} spm</span>}
-        {session.state === 'paused' && (
-          <span className="pill warn">{autoPaused ? 'Auto-paused' : 'Paused'}</span>
-        )}
-        {(met || goalFlash) && <span className="pill good">Goal met</span>}
+  return (
+    <div className="screen run-live">
+      <div className="live-top">
+        <span className={`live-status-pill${modeReady ? ' ok' : ' warn'}`}>
+          {isHud && running && <i className="live-rec" aria-hidden />}
+          {isHud && running ? `Live · ${modeLabel}` : modeLabel}
+        </span>
+        <div className="live-top-right">
+          {bpm !== null && (
+            <span className="live-hr-pill">
+              ❤ {bpm}
+              {hrZone ? ` · Z${hrZone.index}` : ''}
+            </span>
+          )}
+          {cadence !== null && <span className="live-meta-pill">{Math.round(cadence)} spm</span>}
+          {session.state === 'paused' && (
+            <span className="live-meta-pill warn">{autoPaused ? 'Auto-paused' : 'Paused'}</span>
+          )}
+          {(met || goalFlash) && <span className="live-meta-pill ok">Goal</span>}
+        </div>
       </div>
 
       <div className="metric-hero">
-        <div className="value">{formatDuration(elapsed, { tenths: true })}</div>
-        <div className="label">
-          {session.state === 'paused' ? (autoPaused ? 'Auto-paused' : 'Paused') : 'Moving time'}
-        </div>
+        <div className="value">{formatDuration(elapsed, { tenths: !isHud })}</div>
+        <div className="label">{heroLabel}</div>
       </div>
 
       {phaseProgress && !workoutRef.current?.done && (
@@ -1395,60 +1396,70 @@ export function RunScreen({
       )}
 
       {goal && (
-        <div className={`goal-track${met || goalFlash ? ' met' : ''}${goalFlash ? ' goal-flash' : ''}`}>
+        <div
+          className={`goal-track live-goal${met || goalFlash ? ' met' : ''}${goalFlash ? ' goal-flash' : ''}`}
+        >
           <div className="goal-track-head">
             <span>
-              {goalKindLabel(goal.kind)} goal · {formatGoalProgress(goal, snap, profile.units)}
+              Goal · {goalKindLabel(goal.kind)}
               {(met || goalFlash) ? ' · done' : ''}
             </span>
-            <span>{Math.min(100, Math.round(progress * 100))}%</span>
+            <strong>{formatGoalProgress(goal, snap, profile.units)}</strong>
           </div>
-          <div className="goal-bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+          <div
+            className="goal-bar"
+            role="progressbar"
+            aria-valuenow={Math.round(progress * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
             <span style={{ width: `${Math.min(100, progress * 100)}%` }} />
           </div>
         </div>
       )}
 
-      <div className="metric-grid metric-grid-live" style={{ margin: '18px 0' }}>
+      <div className="metric-grid metric-grid-live metric-grid-2x2">
         <div className="metric">
           <div className="value">{formatDistance(distance, profile.units)}</div>
           <div className="label">{distanceLabel(profile.units)}</div>
         </div>
         <div className="metric">
           <div className="value">{formatPace(current ?? average)}</div>
-          <div className="label">{current ? 'Pace now' : `Avg ${paceLabel(profile.units)}`}</div>
+          <div className="label">
+            {current ? 'pace now' : `avg ${paceLabel(profile.units)}`}
+          </div>
         </div>
         <div className="metric">
           <div className="value">{formatCalories(calories)}</div>
-          <div className="label">
-            kcal
-            {calorieEst.source === 'heart' ? ' · HR' : ''}
-          </div>
+          <div className="label">kcal{calorieEst.source === 'heart' ? ' · hr' : ''}</div>
+        </div>
+        <div className="metric">
+          <div className="value">{hrZone ? `Z${hrZone.index}` : bpm !== null ? '—' : '—'}</div>
+          <div className="label">{hrZone ? hrZone.name : 'HR zone'}</div>
         </div>
       </div>
-      <p className="hint" style={{ marginTop: -10, marginBottom: 14, textAlign: 'center' }}>
+      <p className="hint live-calorie-hint">
         Est. {calorieSourceLabel(calorieEst.source)}
         {calorieEst.source === 'pace' && heartStatus !== 'connected'
-          ? ' — connect a strap for effort-based burn'
+          ? ' — strap for effort-based burn'
           : ''}
       </p>
 
       {session.mode === 'outdoor' &&
         (session.segments.some((s) => s.length > 1) || (ghostRoute && ghostRoute.length > 0)) && (
-        <div style={{ marginBottom: 14 }}>
-          {/* Tiles are off during the run: the map is a glance at the shape of
-              the route, and it should not be pulling images over mobile data. */}
-          <RouteMap
-            segments={session.segments}
-            ghostSegments={ghostRoute}
-            tiles={false}
-            live
-          />
-        </div>
-      )}
+          <div className="map-slot">
+            {/* Tiles off mid-run: glanceable shape only, no map-tile data. */}
+            <RouteMap
+              segments={session.segments}
+              ghostSegments={ghostRoute}
+              tiles={false}
+              live
+            />
+          </div>
+        )}
 
       {session.mode === 'treadmill' && (
-        <div className="card">
+        <div className="card live-console">
           <h2>From the console</h2>
           <div className="field">
             <label htmlFor="manual-distance">
@@ -1466,8 +1477,8 @@ export function RunScreen({
             />
             <p className="hint">
               {podStatus === 'connected'
-                ? 'The console measures the belt itself, so it overrides the pod — and calibrates it for next time.'
-                : 'Overrides the step estimate, and calibrates your stride for next time.'}
+                ? 'Console distance overrides the pod and calibrates it.'
+                : 'Overrides the step estimate and calibrates stride.'}
             </p>
           </div>
           <div className="field">
@@ -1493,23 +1504,7 @@ export function RunScreen({
         </div>
       )}
 
-      {session.mode === 'treadmill' && podStatus !== 'connected' && (
-        <button className="btn wide" style={{ marginBottom: 10 }} onClick={connectPod} disabled={!bluetoothSupported()}>
-          Connect a foot pod
-        </button>
-      )}
-
-      {heartStatus !== 'connected' && (
-        <button className="btn wide" style={{ marginBottom: 10 }} onClick={connectStrap} disabled={!bluetoothSupported()}>
-          Connect a heart rate strap
-        </button>
-      )}
-
-      <div className="run-actions" style={{ marginBottom: 10 }}>
-        <button className="btn run-action-lap" onClick={markLap} type="button">
-          Lap
-          {session.manualLaps.length > 0 ? ` (${session.manualLaps.length})` : ''}
-        </button>
+      <div className="run-actions run-actions-primary">
         {running ? (
           <button
             type="button"
@@ -1542,8 +1537,35 @@ export function RunScreen({
         </button>
       </div>
 
+      <div className="run-actions-secondary">
+        <button className="btn run-action-lap" onClick={markLap} type="button">
+          Lap
+          {session.manualLaps.length > 0 ? ` (${session.manualLaps.length})` : ''}
+        </button>
+        {session.mode === 'treadmill' && podStatus !== 'connected' && (
+          <button
+            className="btn"
+            type="button"
+            onClick={connectPod}
+            disabled={!bluetoothSupported()}
+          >
+            Foot pod
+          </button>
+        )}
+        {heartStatus !== 'connected' && (
+          <button
+            className="btn"
+            type="button"
+            onClick={connectStrap}
+            disabled={!bluetoothSupported()}
+          >
+            HR strap
+          </button>
+        )}
+      </div>
+
       {session.manualLaps.length > 0 && (
-        <div className="card" style={{ marginBottom: 10 }}>
+        <div className="card" style={{ marginBottom: 10, marginTop: 10 }}>
           <h2>Laps</h2>
           <ul className="lap-list">
             {session.manualLaps.map((lap) => (
@@ -1560,8 +1582,8 @@ export function RunScreen({
         </div>
       )}
 
-      <button className="btn danger wide" onClick={discard}>
-        Discard
+      <button className="btn discard-link" type="button" onClick={discard}>
+        Discard run
       </button>
     </div>
   );
