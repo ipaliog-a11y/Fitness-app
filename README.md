@@ -70,6 +70,12 @@ outdoor routes as a ghost path for the next run.
 **Coach (Phase D).** Its own tab: recovery/load, multi-week training plans with
 check-offs, weekly coach notes, volume and personal records.
 
+**Themes.** Three, under Settings → Theme. *Soft Emerald* is the default calm
+dark; *Athletic HUD* is pure black with volt lime and mono numerals; *Daylight*
+is a white, high-contrast theme for running in direct sun, where a dark screen
+is mostly reflections. Heart-rate zone colours are themed alongside everything
+else — the dark ladder is unreadable on white, so Daylight ships its own.
+
 Roadmap and feature tiers live in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## How it is put together
