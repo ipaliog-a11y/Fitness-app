@@ -11,9 +11,11 @@
  * assume it will work.
  */
 
-const HEART_RATE_SERVICE = 'heart_rate';
-const HEART_RATE_MEASUREMENT = 'heart_rate_measurement';
-const BODY_SENSOR_LOCATION = 'body_sensor_location';
+// Full 128-bit UUIDs — some Chromium builds reject short GATT aliases
+// (same class of failure as rsc_feature on the foot pod).
+// SIG: Heart Rate service 0x180D, measurement 0x2A37.
+const HEART_RATE_SERVICE = '0000180d-0000-1000-8000-00805f9b34fb';
+const HEART_RATE_MEASUREMENT = '00002a37-0000-1000-8000-00805f9b34fb';
 
 export type HeartStatus = 'unsupported' | 'disconnected' | 'connecting' | 'connected';
 
@@ -69,8 +71,8 @@ export async function connectHeartRate(handlers: HeartHandlers): Promise<HeartCo
     const bluetooth = (navigator as Navigator & { bluetooth: any }).bluetooth;
     const device = await bluetooth.requestDevice({
       filters: [{ services: [HEART_RATE_SERVICE] }],
-      // Asked for but not required: a strap that does not expose it still works.
-      optionalServices: [BODY_SENSOR_LOCATION],
+      // Measurement lives on the primary HR service; no extra optional UUIDs.
+      optionalServices: [HEART_RATE_SERVICE],
     });
 
     const server = await device.gatt.connect();
