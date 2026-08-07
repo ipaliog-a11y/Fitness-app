@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Activity } from './core/activity';
 import { byNewest } from './core/activity';
 import { allActivities, deleteActivity, saveActivity } from './core/db';
-import { loadProfile, saveProfile, sanitise, type Profile } from './core/settings';
+import { applyTheme, loadProfile, saveProfile, sanitise, type Profile } from './core/settings';
 import { addDistanceToShoe, loadShoes, saveShoes, shoeNeedsWarning } from './core/shoes';
 import { CoachScreen } from './ui/CoachScreen';
 import { DetailScreen } from './ui/DetailScreen';
@@ -55,7 +55,12 @@ export function App() {
     const clean = sanitise(next);
     setProfile(clean);
     saveProfile(clean);
+    applyTheme(clean.theme);
   }, []);
+
+  useEffect(() => {
+    applyTheme(profile.theme);
+  }, [profile.theme]);
 
   const handleFinish = useCallback(
     async (activity: Activity) => {
@@ -103,7 +108,7 @@ export function App() {
   const showSettings = !open && tab === 'settings';
 
   return (
-    <div className="app">
+    <div className="app" data-theme={profile.theme}>
       {/* Always mounted so an in-progress run survives tab switches. Hidden
           rather than unmounted — cleanup would stop GPS and drop the session. */}
       <div className="screen-host" hidden={!showRun} aria-hidden={!showRun}>

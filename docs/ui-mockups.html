@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RunLog — Choose a UI direction</title>
+  <style>
+    :root {
+      --bg: #07090d;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --line: rgba(148, 163, 184, 0.14);
+      --a: #34d399;
+      --b: #c8ff00;
+      --surface: #151b25;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(ellipse 50% 40% at 15% 0%, rgba(52, 211, 153, 0.12), transparent),
+        radial-gradient(ellipse 40% 35% at 90% 10%, rgba(200, 255, 0, 0.08), transparent),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.6rem, 3vw, 2rem);
+      letter-spacing: -0.03em;
+    }
+    .lead {
+      margin: 0 0 28px;
+      color: var(--muted);
+      max-width: 56ch;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    a.card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 20px 18px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    a.card:hover {
+      transform: translateY(-2px);
+    }
+    a.card.a:hover { border-color: rgba(52, 211, 153, 0.5); }
+    a.card.b:hover { border-color: rgba(200, 255, 0, 0.45); }
+    .swatch {
+      height: 72px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-end;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .swatch.a {
+      background:
+        linear-gradient(135deg, #0a0d12, #151b25 50%, #1e5f3c);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+    .swatch.b {
+      background:
+        linear-gradient(135deg, #050505, #111 55%, #2a3300);
+      color: #c8ff00;
+      border: 1px solid rgba(200, 255, 0, 0.3);
+      font-family: ui-monospace, Consolas, monospace;
+    }
+    a.card h2 {
+      margin: 0 0 6px;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+    a.card p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    ul li { margin-bottom: 4px; }
+    ul strong { color: var(--text); font-weight: 650; }
+    .cta {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    a.card.a .cta { color: var(--a); }
+    a.card.b .cta { color: var(--b); }
+    .kit {
+      margin-top: 24px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(21, 27, 37, 0.6);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .kit a { color: var(--a); font-weight: 650; }
+    footer {
+      margin-top: 28px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    code {
+      background: #1c2430;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Choose a UI direction</h1>
+    <p class="lead">
+      Two complete mockups for RunLog. Same features and outdoor-readable dark UI —
+      different personality. Open both, then pick one (or ask for a hybrid).
+    </p>
+
+    <div class="grid">
+      <a class="card a" href="ui-mockup-A-soft-emerald.html">
+        <div class="swatch a">Soft emerald</div>
+        <h2>Direction A</h2>
+        <p>Calm modern product. Soft slate cards, emerald accent, floating pill tabs, circular START.</p>
+        <ul>
+          <li><strong>Accent</strong> #34D399</li>
+          <li><strong>Tabs</strong> floating frosted pill</li>
+          <li><strong>Start</strong> filled circle</li>
+          <li><strong>Metrics</strong> 2×2 soft tiles</li>
+        </ul>
+        <span class="cta">Open mockup A →</span>
+      </a>
+
+      <a class="card b" href="ui-mockup-B-athletic-hud.html">
+        <div class="swatch b">Athletic HUD</div>
+        <h2>Direction B</h2>
+        <p>Race-day instrument panel. Pure black, volt lime, mono numbers, solid dock, ring GO.</p>
+        <ul>
+          <li><strong>Accent</strong> #C8FF00</li>
+          <li><strong>Tabs</strong> solid edge bar</li>
+          <li><strong>Start</strong> readiness ring</li>
+          <li><strong>Metrics</strong> stacked HUD rows</li>
+        </ul>
+        <span class="cta">Open mockup B →</span>
+      </a>
+    </div>
+
+    <div class="kit">
+      All tokens and element specs are saved in
+      <a href="ui-design-kit.md">ui-design-kit.md</a>
+      so nothing is lost when you choose.
+      Original A path still works:
+      <code>ui-mockup-refresh.html</code>
+    </div>
+
+    <footer>
+      Visual only — no app code changed. Project: Fitness-app / docs/
+    </footer>
+  </div>
+</body>
+</html>

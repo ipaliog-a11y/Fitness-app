@@ -1,7 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { applyTheme, loadProfile } from './core/settings';
 import './styles.css';
+
+// Apply the saved theme before React paints so the first frame matches.
+applyTheme(loadProfile().theme);
 
 const root = document.getElementById('root');
 if (root) {

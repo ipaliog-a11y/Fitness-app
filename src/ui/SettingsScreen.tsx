@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { clearAll, exportJson, importJson, saveActivity } from '../core/db';
 import { activityFromGpx } from '../core/gpx';
 import { loadRoutes, saveRoutes } from '../core/routes';
-import type { Profile } from '../core/settings';
+import { THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
 import { distanceLabel, formatDistance, fromDisplayDistance, toDisplayDistance } from '../core/units';
 
 interface Props {
@@ -62,7 +62,43 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
   return (
     <div className="screen">
       <h1>Settings</h1>
-      <p className="subtitle">Units, run behaviour, routes, and backups.</p>
+      <p className="subtitle">Theme, units, run behaviour, routes, and backups.</p>
+
+      <div className="card">
+        <h2>Theme</h2>
+        <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
+          Same app, different look. Pick whichever is easier to read outdoors — you can switch any
+          time.
+        </p>
+        <div className="theme-picker" role="radiogroup" aria-label="App theme">
+          {THEME_OPTIONS.map((opt) => {
+            const selected = profile.theme === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={`theme-option theme-option-${opt.id}${selected ? ' selected' : ''}`}
+                onClick={() => set('theme', opt.id as ThemeId)}
+              >
+                <span className="theme-swatch" aria-hidden>
+                  <span className="theme-swatch-dot" />
+                  <span className="theme-swatch-bar" />
+                  <span className="theme-swatch-bar short" />
+                </span>
+                <span className="theme-option-body">
+                  <span className="theme-option-label">{opt.label}</span>
+                  <span className="theme-option-blurb">{opt.blurb}</span>
+                </span>
+                <span className="theme-option-check" aria-hidden>
+                  {selected ? '✓' : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="card">
         <h2>Units</h2>

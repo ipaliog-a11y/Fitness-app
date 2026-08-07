@@ -15,12 +15,37 @@ const KEY = 'runlog:settings:v1';
 
 export type { BiologicalSex };
 
+/**
+ * Visual shell. Tokens + a few layout variants live in styles.css under
+ * `[data-theme="…"]`. Soft Emerald is the default (closest to the original app).
+ */
+export type ThemeId = 'soft' | 'hud';
+
+export const THEME_OPTIONS: Array<{
+  id: ThemeId;
+  label: string;
+  blurb: string;
+}> = [
+  {
+    id: 'soft',
+    label: 'Soft Emerald',
+    blurb: 'Calm slate cards, green accent, frosted tab bar.',
+  },
+  {
+    id: 'hud',
+    label: 'Athletic HUD',
+    blurb: 'Pure black, volt lime, mono numbers, solid dock.',
+  },
+];
+
 export interface Profile {
   /**
    * Preferred name for greetings and coach copy. Empty until set.
    * Not a login identity — stays on device only.
    */
   displayName: string;
+  /** UI look: Soft Emerald or Athletic HUD. */
+  theme: ThemeId;
   units: UnitSystem;
   /** Years. Used for max HR seed and Keytel calorie estimate. */
   age: number;
@@ -59,6 +84,7 @@ export interface Profile {
 
 export const DEFAULTS: Profile = {
   displayName: '',
+  theme: 'soft',
   units: 'metric',
   age: 35,
   heightCm: 175,
@@ -72,6 +98,23 @@ export const DEFAULTS: Profile = {
   audioCues: true,
   autoPause: true,
 };
+
+/** Push the active theme onto <html> so CSS tokens apply before paint. */
+export function applyTheme(theme: ThemeId): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.theme = theme;
+  // Status bar / PWA chrome roughly matches the page background.
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', theme === 'hud' ? '#050505' : '#0a0d12');
+  }
+}
+
+export function parseTheme(value: unknown): ThemeId {
+  if (value === 'hud' || value === 'athletic' || value === 'athletic-hud') return 'hud';
+  if (value === 'soft' || value === 'emerald' || value === 'soft-emerald') return 'soft';
+  return DEFAULTS.theme;
+}
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -100,6 +143,7 @@ export function sanitise(raw: unknown): Profile {
 
   return {
     displayName,
+    theme: parseTheme(input.theme),
     units: input.units === 'imperial' ? 'imperial' : 'metric',
     age,
     heightCm,

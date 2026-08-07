@@ -4,27 +4,85 @@
  *
  * Dark by default: this is looked at outdoors at dawn and in a dim gym, and a
  * white screen at either is unpleasant.
+ *
+ * Themes: Soft Emerald (default) and Athletic HUD. Chosen in Settings → Theme;
+ * tokens live on <html data-theme="soft|hud">.
  */
 
-:root {
-  --bg: #0e1116;
-  --surface: #161b23;
-  --surface-2: #1e242e;
-  --line: #2a323e;
-  --text: #e8edf4;
-  --muted: #93a0b3;
-  --accent: #4ade80;
-  --accent-dim: #1e5f3c;
+:root,
+[data-theme='soft'] {
+  /* Soft Emerald — calm slate, emerald accent, soft chrome */
+  --bg: #0a0d12;
+  --bg-elev: #0f141c;
+  --surface: #151b25;
+  --surface-2: #1c2430;
+  --surface-3: #242d3b;
+  --line: #2e3848;
+  --line-soft: rgba(148, 163, 184, 0.12);
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+  --accent: #34d399;
+  --accent-bright: #6ee7b7;
+  --accent-dim: rgba(16, 185, 129, 0.22);
+  --accent-solid: #1e5f3c;
+  --accent-ink: #042f1e;
   --warn: #fbbf24;
-  --danger: #f87171;
+  --danger: #fb7185;
+  --info: #38bdf8;
 
-  --radius: 14px;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-lg: 22px;
+  --tab-bg: rgba(15, 20, 28, 0.92);
+  --tab-inset: 10px;
+  --tab-radius: 20px;
+  --tab-border: rgba(255, 255, 255, 0.06);
+  --btn-radius: 12px;
+  --chip-radius: 999px;
+  --metric-font: inherit;
+  --letter-label: 0.07em;
+
   /* Kept in variables because the run screen has to stay clear of the home
      indicator on iOS and the gesture bar on Android. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   color-scheme: dark;
+}
+
+[data-theme='hud'] {
+  /* Athletic HUD — pure black, volt lime, harder edges, mono metrics */
+  --bg: #050505;
+  --bg-elev: #0a0a0a;
+  --surface: #111111;
+  --surface-2: #181818;
+  --surface-3: #222222;
+  --line: #2a2a2a;
+  --line-soft: #1a1a1a;
+  --text: #fafafa;
+  --muted: #a3a3a3;
+  --muted-2: #6b6b6b;
+  --accent: #c8ff00;
+  --accent-bright: #d8ff4a;
+  --accent-dim: rgba(200, 255, 0, 0.12);
+  --accent-solid: #5a6e00;
+  --accent-ink: #0a0f00;
+  --warn: #ffb020;
+  --danger: #ff2d55;
+  --info: #5ac8ff;
+
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-lg: 14px;
+  --tab-bg: #0a0a0a;
+  --tab-inset: 0px;
+  --tab-radius: 0px;
+  --tab-border: #222222;
+  --btn-radius: 4px;
+  --chip-radius: 4px;
+  --metric-font: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --letter-label: 0.12em;
 }
 
 * {
@@ -114,15 +172,32 @@ textarea:focus-visible {
 
 .tabs {
   position: fixed;
+  bottom: var(--tab-inset);
+  left: var(--tab-inset);
+  right: var(--tab-inset);
+  display: flex;
+  background: var(--tab-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--tab-border);
+  border-radius: var(--tab-radius);
+  padding-bottom: var(--safe-bottom);
+  z-index: 20;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+/* HUD: solid edge dock, no float / blur chrome */
+[data-theme='hud'] .tabs {
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
-  background: rgba(16, 20, 27, 0.94);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid var(--line);
-  padding-bottom: var(--safe-bottom);
-  z-index: 20;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 .tabs button {
@@ -133,12 +208,19 @@ textarea:focus-visible {
   align-items: center;
   gap: 3px;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--muted-2, var(--muted));
 }
 
 .tabs-5 button {
   font-size: 10px;
   padding: 10px 2px 12px;
+}
+
+[data-theme='hud'] .tabs button {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .tabs button[aria-current='page'] {
@@ -160,7 +242,11 @@ textarea:focus-visible {
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 2px rgba(16, 20, 27, 0.94);
+  box-shadow: 0 0 0 2px var(--tab-bg);
+}
+
+[data-theme='hud'] .tabs .tab-live {
+  background: var(--danger);
 }
 
 .screen-host {
@@ -215,7 +301,7 @@ textarea:focus-visible {
 }
 
 .chip {
-  border-radius: 999px;
+  border-radius: var(--chip-radius, 999px);
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 600;
@@ -227,7 +313,13 @@ textarea:focus-visible {
 .chip.active {
   background: var(--accent-dim);
   border-color: var(--accent);
-  color: var(--text);
+  color: var(--accent-bright, var(--text));
+}
+
+[data-theme='hud'] .chip.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
 }
 
 .goal-summary {
@@ -878,7 +970,13 @@ button.cal-event {
   color: var(--muted);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--letter-label, 0.06em);
+}
+
+[data-theme='hud'] .card h2 {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
 }
 
 .row {
@@ -913,7 +1011,7 @@ button.cal-event {
 /* --- Buttons ------------------------------------------------------------- */
 
 .btn {
-  border-radius: 12px;
+  border-radius: var(--btn-radius, 12px);
   padding: 13px 18px;
   font-weight: 600;
   background: var(--surface-2);
@@ -923,7 +1021,7 @@ button.cal-event {
 
 .btn.primary {
   background: var(--accent);
-  color: #06210f;
+  color: var(--accent-ink, #06210f);
   border-color: transparent;
 }
 
@@ -931,6 +1029,23 @@ button.cal-event {
   background: transparent;
   color: var(--danger);
   border-color: var(--danger);
+}
+
+[data-theme='hud'] .btn.danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: transparent;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+[data-theme='hud'] .btn.primary {
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 13px;
 }
 
 .btn.wide {
@@ -966,13 +1081,14 @@ button.cal-event {
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.04em;
+  font-family: var(--metric-font, inherit);
 }
 
 .metric-hero .label {
   color: var(--muted);
   font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--letter-label, 0.1em);
   margin-top: 6px;
 }
 
@@ -994,14 +1110,54 @@ button.cal-event {
   font-size: 24px;
   font-weight: 650;
   line-height: 1.15;
+  font-family: var(--metric-font, inherit);
 }
 
 .metric .label {
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: var(--letter-label, 0.07em);
   margin-top: 4px;
+}
+
+/* HUD: stacked instrument rows instead of equal tiles */
+[data-theme='hud'] .metric-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+[data-theme='hud'] .metric {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: baseline;
+  justify-content: space-between;
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  border-top: 1px solid var(--line);
+  padding: 12px 14px;
+  background: transparent;
+}
+
+[data-theme='hud'] .metric:first-child {
+  border-top: none;
+}
+
+[data-theme='hud'] .metric .value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+[data-theme='hud'] .metric .label {
+  margin-top: 0;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted-2);
 }
 
 /* --- Status pills -------------------------------------------------------- */
@@ -1364,6 +1520,164 @@ button.cal-event {
 
 .segmented button[aria-pressed='true'] {
   background: var(--accent);
-  color: #06210f;
+  color: var(--accent-ink, #06210f);
   font-weight: 600;
+}
+
+/* --- Theme picker (Settings) --------------------------------------------- */
+
+.theme-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.theme-option.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-dim);
+  background: var(--accent-dim);
+}
+
+.theme-swatch {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  border: 1px solid var(--line);
+}
+
+.theme-option-soft .theme-swatch {
+  background: linear-gradient(145deg, #0a0d12, #151b25 55%, #1e5f3c);
+  border-radius: 14px;
+}
+
+.theme-option-hud .theme-swatch {
+  background: linear-gradient(145deg, #050505, #111 60%, #2a3300);
+  border-radius: 6px;
+}
+
+.theme-swatch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-bottom: auto;
+}
+
+.theme-option-soft .theme-swatch-dot {
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+}
+
+.theme-option-hud .theme-swatch-dot {
+  background: #c8ff00;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(200, 255, 0, 0.4);
+}
+
+.theme-swatch-bar {
+  display: block;
+  height: 4px;
+  width: 100%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.theme-swatch-bar.short {
+  width: 60%;
+}
+
+.theme-option-soft .theme-swatch-bar {
+  background: rgba(52, 211, 153, 0.45);
+  border-radius: 999px;
+}
+
+.theme-option-hud .theme-swatch-bar {
+  background: rgba(200, 255, 0, 0.55);
+  border-radius: 1px;
+}
+
+.theme-option-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-option-label {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.theme-option-blurb {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.theme-option-check {
+  width: 1.25rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Soft: slightly pillier chips / goal kinds; HUD keeps square controls */
+[data-theme='hud'] .goal-kinds button {
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+[data-theme='hud'] .goal-kinds button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+[data-theme='hud'] .segmented {
+  border-radius: 4px;
+}
+
+[data-theme='hud'] .segmented button[aria-pressed='true'] {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+[data-theme='hud'] .run-item,
+[data-theme='hud'] .plan-card,
+[data-theme='hud'] .plan-session,
+[data-theme='hud'] .next-session {
+  border-radius: var(--radius);
+}
+
+[data-theme='hud'] input,
+[data-theme='hud'] select,
+[data-theme='hud'] textarea,
+[data-theme='hud'] .select {
+  border-radius: 6px;
 }
