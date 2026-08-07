@@ -257,22 +257,24 @@ function CalendarView({
 
         <div className="cal-grid" role="grid" aria-label="Training calendar">
           {cells.map((cell, i) => {
-            if (!cell.inMonth || cell.dayStart === null) {
-              return <div className="cal-cell empty muted" key={`pad-${i}`} />;
+            if (cell.dayStart === null || cell.day === null) {
+              return <div className="cal-cell empty" key={`pad-${i}`} aria-hidden />;
             }
-            const hasRun = dayHasRuns(events, cell.dayStart);
-            const dayEv = eventsOnDay(events, cell.dayStart);
+            const hasRun = cell.inMonth && dayHasRuns(events, cell.dayStart);
+            const dayEv = cell.inMonth ? eventsOnDay(events, cell.dayStart) : [];
             const planOpen = dayEv.some((e) => e.type === 'plan' && !e.done);
             const planDone = dayEv.some((e) => e.type === 'plan' && e.done);
             const hasPlan = planOpen || planDone;
-            const isSelected = cell.dayStart === selected;
+            const isSelected = cell.inMonth && cell.dayStart === selected;
 
             return (
               <button
                 type="button"
-                key={cell.dayStart}
+                key={`${cell.dayStart}-${i}`}
+                disabled={!cell.inMonth}
                 className={[
                   'cal-cell',
+                  cell.inMonth ? '' : 'outside',
                   cell.isToday ? 'today' : '',
                   isSelected ? 'selected' : '',
                   hasRun ? 'has-run' : '',
@@ -281,7 +283,9 @@ function CalendarView({
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                onClick={() => setSelected(cell.dayStart!)}
+                onClick={() => {
+                  if (cell.inMonth) setSelected(cell.dayStart!);
+                }}
               >
                 <span className="cal-daynum">{cell.day}</span>
                 {hasPlan && <span className="cal-plan-dot" aria-hidden />}

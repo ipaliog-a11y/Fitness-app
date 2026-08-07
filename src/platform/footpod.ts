@@ -8,9 +8,10 @@
 
 import { parseRscMeasurement, type RscMeasurement } from '../core/footpod';
 
-const RSC_SERVICE = 'running_speed_and_cadence';
-const RSC_MEASUREMENT = 'rsc_measurement';
-const RSC_FEATURE = 'rsc_feature';
+// Full 128-bit UUIDs — Chrome rejects some short aliases (e.g. rsc_feature).
+// SIG assigned numbers: RSC service 0x1814, measurement 0x2A53.
+const RSC_SERVICE = '00001814-0000-1000-8000-00805f9b34fb';
+const RSC_MEASUREMENT = '00002a53-0000-1000-8000-00805f9b34fb';
 
 export type FootpodStatus = 'unsupported' | 'disconnected' | 'connecting' | 'connected';
 
@@ -46,7 +47,8 @@ export async function connectFootpod(handlers: FootpodHandlers): Promise<Footpod
     const bluetooth = (navigator as Navigator & { bluetooth: any }).bluetooth;
     const device = await bluetooth.requestDevice({
       filters: [{ services: [RSC_SERVICE] }],
-      optionalServices: [RSC_FEATURE],
+      // Measurement is on the primary service; no extra optional services needed.
+      optionalServices: [RSC_SERVICE],
     });
 
     const server = await device.gatt.connect();

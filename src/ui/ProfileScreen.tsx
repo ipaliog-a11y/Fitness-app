@@ -5,7 +5,7 @@
  * numbers that change how runs are measured.
  */
 
-import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
+import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
 import { estimateMaxHeartRate, ZONES, zoneBounds } from '../core/heart';
 import {
   createShoe,
@@ -149,7 +149,24 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
   };
 
   const displayName = typeof profile.displayName === 'string' ? profile.displayName : '';
-  const greeting = displayName.trim() || 'Runner';
+  const savedName = displayName.trim();
+  const hasName = savedName.length > 0;
+  const greeting = savedName || 'Runner';
+  const [editingName, setEditingName] = useState(!hasName);
+  const [nameDraft, setNameDraft] = useState(displayName);
+
+  useEffect(() => {
+    setNameDraft(displayName);
+    if (!displayName.trim()) setEditingName(true);
+  }, [displayName]);
+
+  const saveName = () => {
+    const next = nameDraft.trim().slice(0, 40);
+    set('displayName', next);
+    setEditingName(!next);
+    if (next) onToast(`Name set to ${next}.`);
+  };
+
   const sex = profile.sex === 'female' ? 'female' : 'male';
   const weightDisplay =
     profile.units === 'metric'
@@ -164,21 +181,64 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
 
       <div className="card">
         <h2>Name</h2>
-        <div className="field">
-          <label htmlFor="display-name">What should we call you?</label>
-          <input
-            id="display-name"
-            type="text"
-            autoComplete="nickname"
-            placeholder="e.g. Alex"
-            maxLength={40}
-            value={displayName}
-            onChange={(e) => set('displayName', e.target.value)}
-          />
-          <p className="hint">
-            Used for greetings and future personalised coaching. Not shared anywhere.
-          </p>
-        </div>
+        {editingName || !hasName ? (
+          <div className="field name-field">
+            {!hasName && (
+              <label htmlFor="display-name">What should we call you?</label>
+            )}
+            <div className="name-edit-row">
+              <input
+                id="display-name"
+                type="text"
+                autoComplete="nickname"
+                placeholder="e.g. Alex"
+                maxLength={40}
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveName();
+                  }
+                }}
+              />
+              <button type="button" className="btn name-action primary-soft" onClick={saveName}>
+                Save
+              </button>
+              {hasName && (
+                <button
+                  type="button"
+                  className="btn name-action"
+                  onClick={() => {
+                    setNameDraft(displayName);
+                    setEditingName(false);
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+            {!hasName && (
+              <p className="hint">
+                Used for greetings and future personalised coaching. Not shared anywhere.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="name-display-row">
+            <span className="name-value">{savedName}</span>
+            <button
+              type="button"
+              className="btn name-action"
+              onClick={() => {
+                setNameDraft(displayName);
+                setEditingName(true);
+              }}
+            >
+              Edit
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card">

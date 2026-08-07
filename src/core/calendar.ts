@@ -152,8 +152,10 @@ export function monthGrid(monthStart: number, now = Date.now()): MonthCell[] {
     const dayStart = startOfDay(cursor.getTime());
     const inMonth = cursor.getMonth() === mon;
     cells.push({
-      dayStart: inMonth ? dayStart : null,
-      day: inMonth ? cursor.getDate() : null,
+      // Keep dayStart for padding cells so layout stays a full 6×7 grid with
+      // muted adjacent-month numbers (matches mockups; avoids empty collapse).
+      dayStart,
+      day: cursor.getDate(),
       inMonth,
       isToday: inMonth && dayStart === today,
     });
