@@ -301,9 +301,19 @@ textarea:focus-visible {
   color: var(--muted-2, var(--muted));
 }
 
-.tabs-5 button {
+.tabs-5 button,
+.tabs-6 button {
   font-size: 10px;
   padding: 10px 2px 12px;
+}
+
+.tabs-6 button {
+  font-size: 9px;
+  padding: 10px 1px 12px;
+}
+
+.tabs-6 .tab-label {
+  font-size: 9px;
 }
 
 [data-theme='hud'] .tabs button {
@@ -1081,8 +1091,22 @@ textarea:focus-visible {
   background: var(--info, #38bdf8);
 }
 
+.cal-weight-dot {
+  position: absolute;
+  bottom: 4px;
+  left: 22%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #a78bfa;
+}
+
 .cal-cell.has-run .cal-plan-dot {
   background: var(--info, #38bdf8);
+}
+
+.cal-cell.has-weight .cal-daynum {
+  /* subtle mark — dot carries the weight signal */
 }
 
 .cal-daynum {
@@ -1119,6 +1143,110 @@ textarea:focus-visible {
 
 .cal-plan-row {
   cursor: default;
+}
+
+.cal-weight-row {
+  cursor: default;
+}
+
+.run-item-bar.weight {
+  background: #a78bfa;
+}
+
+.run-item-day.weight b {
+  color: #a78bfa;
+}
+
+.identity-display {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.identity-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.identity-row .kv-k {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.identity-row .kv-v {
+  font-weight: 700;
+  text-align: right;
+}
+
+.weight-chart {
+  margin-top: 4px;
+}
+
+.weight-chart-svg {
+  width: 100%;
+  height: 140px;
+  display: block;
+  border-radius: var(--radius-sm, 10px);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft, var(--line));
+}
+
+.weight-chart-line {
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+
+.weight-chart-dot {
+  fill: var(--accent);
+}
+
+.weight-chart-goal {
+  stroke: var(--info, #5ac8ff);
+  stroke-width: 0.6;
+  stroke-dasharray: 2 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.weight-chart-axis {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.weight-log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weight-log-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft, var(--line));
+}
+
+.weight-log-list li:last-child {
+  border-bottom: none;
+}
+
+.weight-log-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.weight-log-main .meta {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .cal-plan-row .run-item-day.plan {

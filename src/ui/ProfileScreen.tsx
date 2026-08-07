@@ -16,7 +16,7 @@ import {
   updateShoe,
   type Shoe,
 } from '../core/shoes';
-import { sanitise, type Profile } from '../core/settings';
+import { ageFromBirthDate, sanitise, type Profile } from '../core/settings';
 import { estimateStride } from '../core/steps';
 import {
   distanceLabel,
@@ -24,6 +24,12 @@ import {
   fromDisplayDistance,
   toDisplayDistance,
 } from '../core/units';
+import {
+  latestWeightKg,
+  loadWeightStore,
+  toDisplayWeight,
+  weightUnitLabel,
+} from '../core/weight';
 
 interface Props {
   profile: Profile;
@@ -152,27 +158,71 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
   const savedName = displayName.trim();
   const hasName = savedName.length > 0;
   const greeting = savedName || 'Runner';
-  const [editingName, setEditingName] = useState(!hasName);
+  const hasBirth = Boolean(profile.birthDate);
+  const identityComplete = hasName && hasBirth && profile.heightCm > 0;
+  const [editingIdentity, setEditingIdentity] = useState(!identityComplete);
   const [nameDraft, setNameDraft] = useState(displayName);
+  const [birthDraft, setBirthDraft] = useState(profile.birthDate || '');
+  const [heightDraft, setHeightDraft] = useState(String(profile.heightCm || ''));
 
   useEffect(() => {
     setNameDraft(displayName);
-    if (!displayName.trim()) setEditingName(true);
-  }, [displayName]);
+    setBirthDraft(profile.birthDate || '');
+    setHeightDraft(String(profile.heightCm || ''));
+    if (!displayName.trim() || !profile.birthDate) setEditingIdentity(true);
+  }, [displayName, profile.birthDate, profile.heightCm]);
 
-  const saveName = () => {
-    const next = nameDraft.trim().slice(0, 40);
-    set('displayName', next);
-    setEditingName(!next);
-    if (next) onToast(`Name set to ${next}.`);
+  const saveIdentity = () => {
+    const nextName = nameDraft.trim().slice(0, 40);
+    const birth = birthDraft.trim();
+    const ageFromDob = ageFromBirthDate(birth);
+    if (birth && ageFromDob === null) {
+      onToast('Enter a valid date of birth.');
+      return;
+    }
+    const heightRaw = heightDraft.trim();
+    let heightCm = profile.heightCm;
+    if (heightRaw !== '') {
+      const n = Number(heightRaw);
+      if (!Number.isFinite(n) || n < 80 || n > 250) {
+        onToast('Height must be between 80 and 250 cm.');
+        return;
+      }
+      heightCm = n;
+    }
+    const age = ageFromDob ?? profile.age;
+    const reseed = profile.maxHeartRate === estimateMaxHeartRate(profile.age);
+    onChange({
+      ...profile,
+      displayName: nextName,
+      birthDate: ageFromDob !== null ? birth : '',
+      age,
+      heightCm,
+      maxHeartRate: reseed ? estimateMaxHeartRate(age) : profile.maxHeartRate,
+      strideM:
+        Math.abs(heightCm - profile.heightCm) > 0.5
+          ? estimateStride(heightCm)
+          : profile.strideM,
+    });
+    setEditingIdentity(false);
+    onToast(nextName ? `Profile saved${nextName ? ` · ${nextName}` : ''}.` : 'Profile saved.');
   };
 
   const sex = profile.sex === 'female' ? 'female' : 'male';
-  const weightDisplay =
-    profile.units === 'metric'
-      ? profile.weightKg
-      : Math.round(profile.weightKg * 2.20462 * 10) / 10;
-  const strideDisplay = Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75';
+  const weightLog = loadWeightStore();
+  const latestKg = latestWeightKg(weightLog) ?? profile.weightKg;
+  const weightDisplay = toDisplayWeight(latestKg, profile.units);
+  const [maxHrDraft, setMaxHrDraft] = useState(String(profile.maxHeartRate));
+  const [strideDraft, setStrideDraft] = useState(
+    Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75',
+  );
+
+  useEffect(() => {
+    setMaxHrDraft(String(profile.maxHeartRate));
+  }, [profile.maxHeartRate]);
+  useEffect(() => {
+    setStrideDraft(Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75');
+  }, [profile.strideM]);
 
   return (
     <div className="screen">
@@ -180,13 +230,11 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
       <p className="subtitle">Your body, zones, and shoes — all on this device.</p>
 
       <div className="card">
-        <h2>Name</h2>
-        {editingName || !hasName ? (
-          <div className="field name-field">
-            {!hasName && (
-              <label htmlFor="display-name">What should we call you?</label>
-            )}
-            <div className="name-edit-row">
+        <h2>Profile</h2>
+        {editingIdentity ? (
+          <>
+            <div className="field name-field">
+              <label htmlFor="display-name">Name</label>
               <input
                 id="display-name"
                 type="text"
@@ -195,44 +243,91 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
                 maxLength={40}
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveName();
-                  }
-                }}
               />
-              <button type="button" className="btn name-action primary-soft" onClick={saveName}>
+            </div>
+            <div className="field">
+              <label htmlFor="birth-date">Date of birth</label>
+              <input
+                id="birth-date"
+                type="date"
+                value={birthDraft}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setBirthDraft(e.target.value)}
+              />
+              <p className="hint">
+                Age is calculated automatically for max HR and calorie estimates.
+                {birthDraft && ageFromBirthDate(birthDraft) !== null
+                  ? ` Currently ${ageFromBirthDate(birthDraft)} years.`
+                  : ''}
+              </p>
+            </div>
+            <div className="field">
+              <label htmlFor="height">Height (cm)</label>
+              <input
+                id="height"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 175"
+                value={heightDraft}
+                onChange={(e) => setHeightDraft(e.target.value)}
+              />
+              <p className="hint">You can clear the field while typing — nothing is saved until Save.</p>
+            </div>
+            <div className="name-edit-row" style={{ marginTop: 8 }}>
+              <button type="button" className="btn name-action primary-soft" onClick={saveIdentity}>
                 Save
               </button>
-              {hasName && (
+              {identityComplete && (
                 <button
                   type="button"
                   className="btn name-action"
                   onClick={() => {
                     setNameDraft(displayName);
-                    setEditingName(false);
+                    setBirthDraft(profile.birthDate || '');
+                    setHeightDraft(String(profile.heightCm || ''));
+                    setEditingIdentity(false);
                   }}
                 >
                   Cancel
                 </button>
               )}
             </div>
-            {!hasName && (
-              <p className="hint">
-                Used for greetings and future personalised coaching. Not shared anywhere.
-              </p>
-            )}
-          </div>
+          </>
         ) : (
-          <div className="name-display-row">
-            <span className="name-value">{savedName}</span>
+          <div className="identity-display">
+            <div className="identity-row">
+              <span className="kv-k">Name</span>
+              <span className="kv-v">{savedName || '—'}</span>
+            </div>
+            <div className="identity-row">
+              <span className="kv-k">Born</span>
+              <span className="kv-v">
+                {profile.birthDate
+                  ? new Date(profile.birthDate + 'T12:00:00').toLocaleDateString(undefined, {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  : '—'}
+              </span>
+            </div>
+            <div className="identity-row">
+              <span className="kv-k">Age</span>
+              <span className="kv-v">{profile.age}</span>
+            </div>
+            <div className="identity-row">
+              <span className="kv-k">Height</span>
+              <span className="kv-v">{profile.heightCm} cm</span>
+            </div>
             <button
               type="button"
               className="btn name-action"
+              style={{ marginTop: 10 }}
               onClick={() => {
                 setNameDraft(displayName);
-                setEditingName(true);
+                setBirthDraft(profile.birthDate || '');
+                setHeightDraft(String(profile.heightCm || ''));
+                setEditingIdentity(true);
               }}
             >
               Edit
@@ -243,60 +338,17 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
 
       <div className="card">
         <h2>Body</h2>
-        <div className="field">
-          <label htmlFor="age">Age</label>
-          <input
-            id="age"
-            type="number"
-            inputMode="numeric"
-            value={profile.age}
-            onChange={(e) => {
-              const age = Number(e.target.value);
-              if (!Number.isFinite(age)) return;
-              const reseed = profile.maxHeartRate === estimateMaxHeartRate(profile.age);
-              onChange({
-                ...profile,
-                age,
-                maxHeartRate: reseed ? estimateMaxHeartRate(age) : profile.maxHeartRate,
-              });
-            }}
-          />
+        <div className="identity-row" style={{ marginBottom: 12 }}>
+          <span className="kv-k">Weight</span>
+          <span className="kv-v">
+            {weightDisplay.toFixed(1)} {weightUnitLabel(profile.units)}
+            {weightLog.entries.length > 0 ? ' · from log' : ''}
+          </span>
         </div>
-
-        <div className="field">
-          <label htmlFor="height">Height (cm)</label>
-          <input
-            id="height"
-            type="number"
-            inputMode="numeric"
-            value={profile.heightCm}
-            onChange={(e) => {
-              const heightCm = Number(e.target.value);
-              if (!Number.isFinite(heightCm)) return;
-              set('heightCm', heightCm);
-            }}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="weight">Weight ({profile.units === 'metric' ? 'kg' : 'lb'})</label>
-          <input
-            id="weight"
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            value={weightDisplay}
-            onChange={(e) => {
-              const raw = Number(e.target.value);
-              if (!Number.isFinite(raw) || raw <= 0) return;
-              const weightKg = profile.units === 'metric' ? raw : raw / 2.20462;
-              set('weightKg', weightKg);
-            }}
-          />
-          <p className="hint">
-            Used for calorie estimates (HR when a strap is connected, otherwise pace).
-          </p>
-        </div>
+        <p className="hint" style={{ marginTop: 0 }}>
+          Log weigh-ins and a goal under the <strong>Weight</strong> tab. Values update calorie
+          estimates and appear on the History calendar.
+        </p>
 
         <div className="field">
           <label>Sex (for calorie estimate)</label>
@@ -323,13 +375,14 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
           <label htmlFor="stride">Treadmill stride (m per step)</label>
           <input
             id="stride"
-            type="number"
-            step="0.01"
+            type="text"
             inputMode="decimal"
-            value={strideDisplay}
-            onChange={(e) => {
-              const stride = Number(e.target.value);
+            value={strideDraft}
+            onChange={(e) => setStrideDraft(e.target.value)}
+            onBlur={() => {
+              const stride = Number(strideDraft.replace(',', '.'));
               if (Number.isFinite(stride) && stride > 0) set('strideM', stride);
+              else setStrideDraft(profile.strideM.toFixed(2));
             }}
           />
           <p className="hint">
@@ -352,17 +405,19 @@ function ProfileScreenInner({ profile: rawProfile, onChange, onToast }: Props) {
           <label htmlFor="maxhr">Maximum heart rate (bpm)</label>
           <input
             id="maxhr"
-            type="number"
+            type="text"
             inputMode="numeric"
-            value={profile.maxHeartRate}
-            onChange={(e) => {
-              const max = Number(e.target.value);
+            value={maxHrDraft}
+            onChange={(e) => setMaxHrDraft(e.target.value)}
+            onBlur={() => {
+              const max = Number(maxHrDraft);
               if (Number.isFinite(max) && max > 0) set('maxHeartRate', max);
+              else setMaxHrDraft(String(profile.maxHeartRate));
             }}
           />
           <p className="hint">
             Default estimate 220 − age ({estimateMaxHeartRate(profile.age)}). Override with a
-            tested figure if you have one.
+            tested figure if you have one. Clear and retype freely — commits on blur.
           </p>
         </div>
 

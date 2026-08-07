@@ -13,6 +13,7 @@ import {
   runEvents,
   startOfDay,
   startOfMonth,
+  weightEvents,
   type CalendarEvent,
 } from '../core/calendar';
 import { estimateCalories, formatCalories } from '../core/calories';
@@ -38,11 +39,14 @@ import {
   formatPace,
   paceLabel,
 } from '../core/units';
+import { toDisplayWeight, weightUnitLabel } from '../core/weight';
 
 interface Props {
   activities: Activity[];
   profile: Profile;
   onOpen(id: string): void;
+  /** When weight log changes, calendar reloads weigh-in markers. */
+  weightTick?: number;
 }
 
 type ViewMode = 'list' | 'calendar';
@@ -192,19 +196,21 @@ function CalendarView({
   activities,
   profile,
   onOpen,
+  weightTick = 0,
 }: {
   activities: Activity[];
   profile: Profile;
   onOpen(id: string): void;
+  weightTick?: number;
 }) {
   const now = Date.now();
   const [monthStart, setMonthStart] = useState(() => startOfMonth(now));
   const [selected, setSelected] = useState<number>(() => startOfDay(now));
 
-  // Rebuild plan events when activities change (coach may have ticked sessions).
+  // Rebuild plan/weight events when activities or weight log change.
   const events: CalendarEvent[] = useMemo(() => {
-    return [...runEvents(activities), ...loadPlanEvents()];
-  }, [activities]);
+    return [...runEvents(activities), ...loadPlanEvents(), ...weightEvents()];
+  }, [activities, weightTick]);
 
   const cells = useMemo(() => monthGrid(monthStart, now), [monthStart, now]);
 
@@ -265,6 +271,7 @@ function CalendarView({
             const planOpen = dayEv.some((e) => e.type === 'plan' && !e.done);
             const planDone = dayEv.some((e) => e.type === 'plan' && e.done);
             const hasPlan = planOpen || planDone;
+            const hasWeight = dayEv.some((e) => e.type === 'weight');
             const isSelected = cell.inMonth && cell.dayStart === selected;
 
             return (
@@ -279,6 +286,7 @@ function CalendarView({
                   isSelected ? 'selected' : '',
                   hasRun ? 'has-run' : '',
                   hasPlan ? 'has-plan' : '',
+                  hasWeight ? 'has-weight' : '',
                   hasRun && hasPlan ? 'has-both' : '',
                 ]
                   .filter(Boolean)
@@ -289,6 +297,7 @@ function CalendarView({
               >
                 <span className="cal-daynum">{cell.day}</span>
                 {hasPlan && <span className="cal-plan-dot" aria-hidden />}
+                {hasWeight && <span className="cal-weight-dot" aria-hidden />}
               </button>
             );
           })}
@@ -320,6 +329,27 @@ function CalendarView({
                 />
               );
             }
+            if (ev.type === 'weight') {
+              return (
+                <div key={ev.id} className="run-item cal-weight-row">
+                  <span className="run-item-bar weight" aria-hidden />
+                  <span className="run-item-day weight" aria-hidden>
+                    <b>W</b>
+                    <small>kg</small>
+                  </span>
+                  <span className="body">
+                    <span className="headline">
+                      {toDisplayWeight(ev.entry.weightKg, profile.units).toFixed(1)}{' '}
+                      {weightUnitLabel(profile.units)}
+                    </span>
+                    <span className="meta">
+                      Weigh-in
+                      {ev.entry.note ? ` · ${ev.entry.note}` : ''}
+                    </span>
+                  </span>
+                </div>
+              );
+            }
             return (
               <div
                 key={ev.id}
@@ -348,7 +378,7 @@ function CalendarView({
   );
 }
 
-export function HistoryScreen({ activities, profile, onOpen }: Props) {
+export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: Props) {
   const [view, setView] = useState<ViewMode>('list');
   const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
   const [moreFilters, setMoreFilters] = useState(false);
@@ -413,7 +443,12 @@ export function HistoryScreen({ activities, profile, onOpen }: Props) {
       </div>
 
       {view === 'calendar' ? (
-        <CalendarView activities={activities} profile={profile} onOpen={onOpen} />
+        <CalendarView
+          activities={activities}
+          profile={profile}
+          onOpen={onOpen}
+          weightTick={weightTick}
+        />
       ) : activities.length === 0 ? (
         <div className="empty">
           <span className="glyph">🏃</span>

@@ -31,6 +31,7 @@ when shoes/routes/profile wrappers change.
 | Shoes | `localStorage` | `runlog:shoes:v1` |
 | Saved routes | `localStorage` | `runlog:routes:v1` |
 | Active training plan | `localStorage` | `runlog:active-plan:v1` |
+| Weight log + goal | `localStorage` | `runlog:weight:v1` |
 
 There is **no server**. Clearing site data deletes everything unless the user
 exported a backup.
@@ -96,9 +97,19 @@ interface Activity {
   "profile": { /* Profile */ },
   "shoes": [ /* Shoe[] */ ],
   "routes": [ /* SavedRoute[] */ ],
-  "activePlan": null
+  "activePlan": null,
+  "weight": { "entries": [], "goalKg": null }
 }
 ```
+
+### Weight store
+
+```ts
+{ entries: Array<{ id, at /* epoch ms */, weightKg, note }>, goalKg: number | null }
+```
+
+`Profile.weightKg` mirrors the **latest** log entry for calorie maths.  
+`Profile.birthDate` is `YYYY-MM-DD` when set; `age` is derived from it.
 
 **Import rules**
 

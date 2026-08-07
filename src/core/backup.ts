@@ -20,6 +20,12 @@ import {
 import { loadRoutes, saveRoutes, sanitiseRoute, type SavedRoute } from './routes';
 import { loadProfile, saveProfile, sanitise, type Profile } from './settings';
 import { loadShoes, saveShoes, sanitiseShoe, type Shoe } from './shoes';
+import {
+  loadWeightStore,
+  saveWeightStore,
+  sanitiseWeightStore,
+  type WeightStore,
+} from './weight';
 
 /** Version of the backup *file* shape (not the activity record). */
 export const BACKUP_FORMAT_VERSION = 1;
@@ -38,6 +44,7 @@ export interface RunLogBackup {
   shoes: Shoe[];
   routes: SavedRoute[];
   activePlan: ActivePlanState | null;
+  weight: WeightStore;
 }
 
 export interface BackupImportResult {
@@ -47,6 +54,7 @@ export interface BackupImportResult {
   routes: number;
   profileRestored: boolean;
   planRestored: boolean;
+  weightRestored: boolean;
   /** True when the file was a full backup (vs legacy activities-only JSON). */
   fullBackup: boolean;
 }
@@ -63,6 +71,7 @@ export async function collectBackup(): Promise<RunLogBackup> {
     shoes: loadShoes(),
     routes: loadRoutes(),
     activePlan: loadActivePlan(),
+    weight: loadWeightStore(),
   };
 }
 
@@ -183,6 +192,7 @@ export async function importBackup(text: string): Promise<BackupImportResult> {
   let routes = 0;
   let profileRestored = false;
   let planRestored = false;
+  let weightRestored = false;
   let restoredProfile: Profile | null = null;
 
   if (fullBackup) {
@@ -238,6 +248,21 @@ export async function importBackup(text: string): Promise<BackupImportResult> {
       saveActivePlan(plan);
       planRestored = plan !== null || root.activePlan === null;
     }
+
+    if (root.weight !== undefined) {
+      const local = loadWeightStore();
+      const incoming = sanitiseWeightStore(root.weight);
+      const seen = new Set(incoming.entries.map((e) => e.id));
+      const merged = sanitiseWeightStore({
+        goalKg: incoming.goalKg ?? local.goalKg,
+        entries: [
+          ...incoming.entries,
+          ...local.entries.filter((e) => !seen.has(e.id)),
+        ],
+      });
+      saveWeightStore(merged);
+      weightRestored = true;
+    }
   }
 
   void restoredProfile;
@@ -249,6 +274,7 @@ export async function importBackup(text: string): Promise<BackupImportResult> {
     routes,
     profileRestored,
     planRestored,
+    weightRestored,
     fullBackup,
   };
 }
@@ -259,6 +285,7 @@ export async function wipeAllLocalData(): Promise<void> {
   saveShoes([]);
   saveRoutes([]);
   saveActivePlan(null);
+  saveWeightStore({ entries: [], goalKg: null });
   // Profile intentionally kept — body stats are not "runs".
 }
 

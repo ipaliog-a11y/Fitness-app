@@ -52,12 +52,18 @@ export interface Profile {
   /** UI look: Soft Emerald or Athletic HUD. */
   theme: ThemeId;
   units: UnitSystem;
+  /**
+   * ISO date `YYYY-MM-DD` when known. Empty string until set.
+   * Age is derived from this when present.
+   */
+  birthDate: string;
   /** Years. Used for max HR seed and Keytel calorie estimate. */
   age: number;
   heightCm: number;
   /**
    * Body mass in kilograms. Used for estimated calories on each run.
    * Stored in kg regardless of the unit system; the settings screen converts.
+   * Prefer updating via the weight log so history stays consistent.
    */
   weightKg: number;
   /**
@@ -91,6 +97,7 @@ export const DEFAULTS: Profile = {
   displayName: '',
   theme: 'soft',
   units: 'metric',
+  birthDate: '',
   age: 35,
   heightCm: 175,
   weightKg: 70,
@@ -103,6 +110,40 @@ export const DEFAULTS: Profile = {
   audioCues: true,
   autoPause: true,
 };
+
+/**
+ * Whole years from an ISO birth date, or null when the string is unusable.
+ */
+export function ageFromBirthDate(iso: string, now = Date.now()): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const birth = new Date(y, mo - 1, d);
+  if (birth.getFullYear() !== y || birth.getMonth() !== mo - 1 || birth.getDate() !== d) {
+    return null;
+  }
+  const today = new Date(now);
+  if (birth.getTime() > today.getTime()) return null;
+  let age = today.getFullYear() - y;
+  if (
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  ) {
+    age -= 1;
+  }
+  if (age < 0 || age > 120) return null;
+  return age;
+}
+
+/** Accept only a real calendar date as YYYY-MM-DD. */
+export function sanitiseBirthDate(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const t = raw.trim();
+  return ageFromBirthDate(t) !== null ? t : '';
+}
 
 /** Push the active theme onto <html> so CSS tokens apply before paint. */
 export function applyTheme(theme: ThemeId): void {
@@ -138,7 +179,13 @@ export function sanitise(raw: unknown): Profile {
   const num = (value: unknown, fallback: number): number =>
     typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
-  const age = clamp(num(input.age, DEFAULTS.age), 5, 120);
+  const birthDate = sanitiseBirthDate(input.birthDate);
+  const derivedAge = birthDate ? ageFromBirthDate(birthDate) : null;
+  const age = clamp(
+    derivedAge ?? num(input.age, DEFAULTS.age),
+    5,
+    120,
+  );
   const heightCm = clamp(num(input.heightCm, DEFAULTS.heightCm), 80, 250);
 
   // Profile only stores male/female; legacy "unspecified" maps to default.
@@ -152,9 +199,10 @@ export function sanitise(raw: unknown): Profile {
     displayName,
     theme: parseTheme(input.theme),
     units: input.units === 'imperial' ? 'imperial' : 'metric',
+    birthDate,
     age,
     heightCm,
-    weightKg: clamp(num(input.weightKg, DEFAULTS.weightKg), 30, 250),
+    weightKg: clamp(num(input.weightKg, DEFAULTS.weightKg), 25, 250),
     sex,
     // Falls back to the age estimate rather than the constant default, so a
     // profile with an age but no tested max still gets a sensible number.

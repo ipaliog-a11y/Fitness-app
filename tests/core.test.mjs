@@ -84,6 +84,13 @@ import {
   paceBandCueSpeech,
 } from '../src/core/paceBand.ts';
 import { SCHEMA_VERSION } from '../src/core/activity.ts';
+import { ageFromBirthDate, sanitiseBirthDate } from '../src/core/settings.ts';
+import {
+  addWeightEntry,
+  sanitiseWeightStore,
+  weightTrendKg,
+  weightToGoalKg,
+} from '../src/core/weight.ts';
 import {
   filterActivities,
   groupActivities,
@@ -866,7 +873,7 @@ check('a missing max heart rate is seeded from the age given', () => {
 
 check('weight defaults and clamps', () => {
   equal(sanitise({}).weightKg, DEFAULTS.weightKg);
-  equal(sanitise({ weightKg: 5 }).weightKg, 30, 'floor');
+  equal(sanitise({ weightKg: 5 }).weightKg, 25, 'floor');
   equal(sanitise({ weightKg: 400 }).weightKg, 250, 'ceiling');
 });
 
@@ -1799,6 +1806,26 @@ check('an unknown theme falls back rather than breaking the shell', () => {
 check('a profile round-trips the new theme', () => {
   equal(sanitise({ theme: 'day' }).theme, 'day', 'kept');
   assert(['soft', 'hud', 'day'].includes(sanitise({ theme: 'nonsense' }).theme), 'garbage falls back');
+});
+
+// --- weight / birth date --------------------------------------------------
+
+check('age is derived from a valid birth date', () => {
+  // Fixed “today” so the test does not drift on birthdays.
+  const now = new Date(2026, 7, 7).getTime(); // 7 Aug 2026
+  equal(ageFromBirthDate('2003-08-07', now), 23);
+  equal(ageFromBirthDate('2003-08-08', now), 22); // day before birthday
+  equal(ageFromBirthDate('not-a-date', now), null);
+  equal(sanitiseBirthDate('2003-08-07'), '2003-08-07');
+  equal(sanitiseBirthDate('99-01-01'), '');
+});
+
+check('weight log tracks trend and goal distance', () => {
+  let store = sanitiseWeightStore({ entries: [], goalKg: 70 });
+  store = addWeightEntry(store, { weightKg: 75, at: 1_000 });
+  store = addWeightEntry(store, { weightKg: 73, at: 2_000 });
+  equal(weightTrendKg(store), -2);
+  near(weightToGoalKg(store), 3, 1e-9); // latest 73 − goal 70
 });
 
 // --- pace band ------------------------------------------------------------

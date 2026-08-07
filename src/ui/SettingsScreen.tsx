@@ -52,6 +52,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             (result.shoes ? `, ${result.shoes} shoes` : '') +
             (result.routes ? `, ${result.routes} routes` : '') +
             (result.planRestored ? ', plan' : '') +
+            (result.weightRestored ? ', weight log' : '') +
             '.',
         );
       } else {

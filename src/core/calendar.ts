@@ -14,6 +14,7 @@ import {
   type PlanSession,
   type PlanTemplate,
 } from './plans';
+import { loadWeightStore, type WeightEntry } from './weight';
 
 export function startOfDay(ts: number): number {
   const d = new Date(ts);
@@ -61,7 +62,14 @@ export type CalendarPlanEvent = {
   kindLabel: string;
 };
 
-export type CalendarEvent = CalendarRunEvent | CalendarPlanEvent;
+export type CalendarWeightEvent = {
+  type: 'weight';
+  id: string;
+  at: number;
+  entry: WeightEntry;
+};
+
+export type CalendarEvent = CalendarRunEvent | CalendarPlanEvent | CalendarWeightEvent;
 
 export function runEvents(activities: Activity[]): CalendarRunEvent[] {
   return activities.map((a) => ({
@@ -100,13 +108,28 @@ export function loadPlanEvents(): CalendarPlanEvent[] {
   return planEvents(state, planById(state.planId));
 }
 
+export function weightEvents(entries?: WeightEntry[]): CalendarWeightEvent[] {
+  const list = entries ?? loadWeightStore().entries;
+  return list.map((entry) => ({
+    type: 'weight' as const,
+    id: `weight-${entry.id}`,
+    at: startOfDay(entry.at),
+    entry,
+  }));
+}
+
+const TYPE_ORDER: Record<CalendarEvent['type'], number> = {
+  run: 0,
+  weight: 1,
+  plan: 2,
+};
+
 export function eventsOnDay(events: CalendarEvent[], dayStart: number): CalendarEvent[] {
   const start = startOfDay(dayStart);
   return events
     .filter((e) => e.at === start)
     .sort((a, b) => {
-      // Runs first, then planned; completed plans last among plans.
-      if (a.type !== b.type) return a.type === 'run' ? -1 : 1;
+      if (a.type !== b.type) return TYPE_ORDER[a.type] - TYPE_ORDER[b.type];
       if (a.type === 'plan' && b.type === 'plan') {
         if (a.done !== b.done) return a.done ? 1 : -1;
       }

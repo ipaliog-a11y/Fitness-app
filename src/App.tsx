@@ -17,8 +17,9 @@ import { HistoryScreen } from './ui/HistoryScreen';
 import { ProfileScreen } from './ui/ProfileScreen';
 import { RunScreen } from './ui/RunScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
+import { WeightScreen } from './ui/WeightScreen';
 
-type Tab = 'run' | 'history' | 'coach' | 'profile' | 'settings';
+type Tab = 'run' | 'history' | 'coach' | 'weight' | 'profile' | 'settings';
 
 const TABS: Array<{ id: Tab; label: string; short: string; icon: string }> = [
   {
@@ -38,6 +39,12 @@ const TABS: Array<{ id: Tab; label: string; short: string; icon: string }> = [
     label: 'Coach',
     short: 'Coach',
     icon: 'M12 20a8 8 0 1 0-8-8M12 8v4l3 2',
+  },
+  {
+    id: 'weight',
+    label: 'Weight',
+    short: 'Wt',
+    icon: 'M6 8h12M8 8c0-2.2 1.8-4 4-4s4 1.8 4 4M7 8l1.2 12h7.6L17 8',
   },
   {
     id: 'profile',
@@ -86,6 +93,8 @@ export function App() {
   // True while a run is armed or in progress. The Run screen stays mounted so
   // switching tabs does not tear down sensors or the clock.
   const [runLive, setRunLive] = useState(false);
+  /** Bumps History calendar when weight log changes. */
+  const [weightTick, setWeightTick] = useState(0);
 
   const reload = useCallback(() => {
     void allActivities().then(setActivities);
@@ -153,6 +162,7 @@ export function App() {
   const showRun = !open && tab === 'run';
   const showHistory = !open && tab === 'history';
   const showCoach = !open && tab === 'coach';
+  const showWeight = !open && tab === 'weight';
   const showProfile = !open && tab === 'profile';
   const showSettings = !open && tab === 'settings';
 
@@ -190,7 +200,12 @@ export function App() {
       )}
 
       {showHistory && (
-        <HistoryScreen activities={activities} profile={profile} onOpen={setOpenId} />
+        <HistoryScreen
+          activities={activities}
+          profile={profile}
+          onOpen={setOpenId}
+          weightTick={weightTick}
+        />
       )}
 
       {showCoach && (
@@ -203,6 +218,15 @@ export function App() {
             setOpenId(id);
             setTab('history');
           }}
+        />
+      )}
+
+      {showWeight && (
+        <WeightScreen
+          profile={profile}
+          onProfileChange={changeProfile}
+          onToast={showToast}
+          onLogChange={() => setWeightTick((t) => t + 1)}
         />
       )}
 
@@ -221,7 +245,7 @@ export function App() {
 
       {toast && <div className="toast">{toast}</div>}
 
-      <nav className="tabs tabs-5" aria-label="Main">
+      <nav className="tabs tabs-6" aria-label="Main">
         {TABS.map((entry) => (
           <button
             key={entry.id}
