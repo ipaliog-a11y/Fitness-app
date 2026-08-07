@@ -110,24 +110,23 @@ The OS will prompt at runtime when a feature is used. **Deny location → outdoo
 
 ---
 
-## Bluetooth / heart rate (important)
+## Bluetooth / heart rate
 
-**Chrome on Android** supports Web Bluetooth. **Android System WebView** (used by Capacitor) often **does not**.
-
-So today:
+The APK uses **native BLE** via `@capacitor-community/bluetooth-le` (not Web Bluetooth in the WebView).
 
 | Host | HR / foot pod |
 |------|----------------|
-| Chrome / PWA (browser) | Usually works |
-| Capacitor APK (WebView) | Often **no** device picker |
+| Capacitor APK (debug/release) | **Native BLE** — device chooser from the plugin |
+| Chrome / PWA (browser) | Web Bluetooth |
 
-### Paths forward (pick later)
+**Testing tips**
 
-1. **Ship APK for GPS-first users** now; keep Bluetooth on Chrome PWA  
-2. **Trusted Web Activity (TWA)** — Play Store wrapper around Chrome (full Web Bluetooth)  
-3. **Native BLE plugin** (e.g. `@capacitor-community/bluetooth-le`) and thin adapters in `src/platform/heartRate.ts` + `footpod.ts`  
+1. Wear / wake the strap or pod (many only advertise while moving).  
+2. Grant **Nearby devices** / Bluetooth when Android prompts.  
+3. Tap **HR strap** or **Foot pod** on the Run screen (must be a real button press).  
+4. Pick the device from the system / plugin list.  
 
-Recommendation: use Capacitor for install + GPS; plan native BLE if HR-in-APK is a must.
+If connect fails: forget the device in Android Bluetooth settings, toggle BT off/on, retry.
 
 ---
 

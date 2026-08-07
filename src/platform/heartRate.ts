@@ -1,18 +1,14 @@
 /**
- * Heart-rate straps over Web Bluetooth.
+ * Heart-rate straps over BLE.
  *
- * Uses the standard Bluetooth SIG Heart Rate Service (0x180D), which every
- * mainstream chest strap and most watches implement. That is the whole appeal:
- * no vendor SDK, no account, no cloud round-trip — the strap talks directly to
- * the page.
- *
- * The API is Chromium-only and requires HTTPS plus a real user gesture to open
- * the chooser, so everything here is written to fail politely rather than to
- * assume it will work.
+ * Uses the standard Bluetooth SIG Heart Rate Service (0x180D). On the web that
+ * is Web Bluetooth (Chromium); on Capacitor Android/iOS it is native BLE via
+ * @capacitor-community/bluetooth-le, because System WebView has no Web Bluetooth.
  */
 
-// Full 128-bit UUIDs — some Chromium builds reject short GATT aliases
-// (same class of failure as rsc_feature on the foot pod).
+import { bleSupported, connectNativeNotify, isNativeBle, webBluetoothSupported } from './ble';
+
+// Full 128-bit UUIDs — some Chromium builds reject short GATT aliases.
 // SIG: Heart Rate service 0x180D, measurement 0x2A37.
 const HEART_RATE_SERVICE = '0000180d-0000-1000-8000-00805f9b34fb';
 const HEART_RATE_MEASUREMENT = '00002a37-0000-1000-8000-00805f9b34fb';
@@ -25,7 +21,7 @@ export interface HeartHandlers {
 }
 
 export function bluetoothSupported(): boolean {
-  return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
+  return bleSupported();
 }
 
 /**
@@ -53,38 +49,71 @@ export interface HeartConnection {
   deviceName: string;
 }
 
+function emitBpm(handlers: HeartHandlers, view: DataView): void {
+  const bpm = parseHeartRate(view);
+  // A strap reporting 0 has lost skin contact; passing it on would drag the
+  // average down and paint a zone-1 stripe through the middle of a hard run.
+  if (bpm !== null && bpm > 0) handlers.onReading(bpm);
+}
+
 /**
  * Open the device chooser and start streaming.
  *
- * Must be called straight from a click: Chrome rejects `requestDevice` without a
- * user gesture, and an await before it can lose that gesture.
+ * Must be called straight from a click (user gesture) for both Web Bluetooth
+ * and the native plugin chooser.
  */
 export async function connectHeartRate(handlers: HeartHandlers): Promise<HeartConnection | null> {
   if (!bluetoothSupported()) {
-    handlers.onStatus('unsupported', 'This browser has no Web Bluetooth. Chrome on Android works.');
+    handlers.onStatus(
+      'unsupported',
+      'Bluetooth is not available here. Use the Android app build or Chrome on Android.',
+    );
     return null;
   }
 
   handlers.onStatus('connecting');
 
+  if (isNativeBle()) {
+    try {
+      const conn = await connectNativeNotify({
+        serviceUuid: HEART_RATE_SERVICE,
+        characteristicUuid: HEART_RATE_MEASUREMENT,
+        nameHint: 'Heart rate monitor',
+        onValue: (value) => emitBpm(handlers, value),
+        onDisconnected: () => handlers.onStatus('disconnected', 'The strap disconnected.'),
+      });
+      handlers.onStatus('connected', conn.deviceName);
+      return {
+        deviceName: conn.deviceName,
+        disconnect: () => {
+          void conn.disconnect().then(() => handlers.onStatus('disconnected'));
+        },
+      };
+    } catch (error) {
+      return handleConnectError(error, handlers);
+    }
+  }
+
+  // --- Web Bluetooth (Chrome / Edge) ---------------------------------------
+  if (!webBluetoothSupported()) {
+    handlers.onStatus('unsupported', 'This browser has no Web Bluetooth.');
+    return null;
+  }
+
   try {
     const bluetooth = (navigator as Navigator & { bluetooth: any }).bluetooth;
     const device = await bluetooth.requestDevice({
       filters: [{ services: [HEART_RATE_SERVICE] }],
-      // Measurement lives on the primary HR service; no extra optional UUIDs.
       optionalServices: [HEART_RATE_SERVICE],
     });
 
-    const server = await device.gatt.connect();
+    const server = await device.gatt!.connect();
     const service = await server.getPrimaryService(HEART_RATE_SERVICE);
     const characteristic = await service.getCharacteristic(HEART_RATE_MEASUREMENT);
 
     const onChange = (event: Event) => {
       const value = (event.target as unknown as { value: DataView }).value;
-      const bpm = parseHeartRate(value);
-      // A strap reporting 0 has lost skin contact; passing it on would drag the
-      // average down and paint a zone-1 stripe through the middle of a hard run.
-      if (bpm !== null && bpm > 0) handlers.onReading(bpm);
+      emitBpm(handlers, value);
     };
 
     characteristic.addEventListener('characteristicvaluechanged', onChange);
@@ -101,24 +130,25 @@ export async function connectHeartRate(handlers: HeartHandlers): Promise<HeartCo
         characteristic.removeEventListener('characteristicvaluechanged', onChange);
         device.removeEventListener('gattserverdisconnected', onDisconnect);
         try {
-          // Stopping notifications first lets the strap drop back to advertising
-          // instead of sitting in a half-open connection until it times out.
           characteristic.stopNotifications().catch(() => {});
-          if (device.gatt.connected) device.gatt.disconnect();
+          if (device.gatt?.connected) device.gatt.disconnect();
         } catch {
-          // Already gone. Nothing to do.
+          // Already gone.
         }
         handlers.onStatus('disconnected');
       },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    // Cancelling the chooser is a normal thing to do, not an error worth shouting about.
-    if (/cancelled|user gesture|No device selected/i.test(message)) {
-      handlers.onStatus('disconnected');
-    } else {
-      handlers.onStatus('disconnected', message);
-    }
-    return null;
+    return handleConnectError(error, handlers);
   }
+}
+
+function handleConnectError(error: unknown, handlers: HeartHandlers): null {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/cancelled|canceled|user gesture|No device selected|user denied/i.test(message)) {
+    handlers.onStatus('disconnected');
+  } else {
+    handlers.onStatus('disconnected', message);
+  }
+  return null;
 }
