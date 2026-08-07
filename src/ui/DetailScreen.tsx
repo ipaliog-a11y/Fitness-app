@@ -22,6 +22,7 @@ import {
   goalProgress,
 } from '../core/goal';
 import { activityToGpx, downloadText } from '../core/gpx';
+import { activityToTcx } from '../core/tcx';
 import {
   heartSummaryFromReport,
   summariseHeart,
@@ -138,12 +139,24 @@ export function DetailScreen({
               const gpx = activityToGpx(activity);
               const day = new Date(activity.startedAt).toISOString().slice(0, 10);
               downloadText(`runlog-${day}.gpx`, gpx, 'application/gpx+xml');
-              onToast?.('GPX downloaded.');
+              onToast?.('GPX downloaded (HR included when available).');
             }}
           >
             Export GPX
           </button>
         )}
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            const tcx = activityToTcx(activity);
+            const day = new Date(activity.startedAt).toISOString().slice(0, 10);
+            downloadText(`runlog-${day}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
+            onToast?.('TCX downloaded — good for Strava / Garmin.');
+          }}
+        >
+          Export TCX
+        </button>
         {hasRoute(activity) && (
           <button
             type="button"

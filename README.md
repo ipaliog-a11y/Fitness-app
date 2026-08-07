@@ -70,6 +70,10 @@ outdoor routes as a ghost path for the next run.
 **Coach (Phase D).** Its own tab: recovery/load, multi-week training plans with
 check-offs, weekly coach notes, volume and personal records.
 
+**Backup & export (Phase E).** Full JSON backup (runs + profile + shoes + routes
++ plan), target pace band on live runs, GPX with heart rate and TCX for Strava.
+Data contract: [`docs/DATA.md`](docs/DATA.md).
+
 Roadmap and feature tiers live in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## How it is put together

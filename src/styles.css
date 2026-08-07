@@ -2372,6 +2372,78 @@ button.cal-event {
   font-weight: 700;
 }
 
+.pace-band-track {
+  margin: 10px 0 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.pace-band-track.pace-band-fast {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+}
+
+.pace-band-track.pace-band-slow {
+  border-color: color-mix(in srgb, var(--info, #5ac8ff) 45%, var(--line));
+}
+
+.pace-band-track.pace-band-ok {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.pace-band-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: visible;
+  margin-top: 4px;
+}
+
+.pace-band-zone {
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.pace-band-needle {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg, #0a0d12);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.pace-band-track.pace-band-ok .pace-band-needle {
+  background: var(--accent);
+}
+
+.pace-band-track.pace-band-fast .pace-band-needle,
+.live-meta-pill.pace-band-fast {
+  background: var(--warn);
+  color: #111;
+  border-color: transparent;
+}
+
+.pace-band-track.pace-band-slow .pace-band-needle {
+  background: var(--info, #5ac8ff);
+}
+
+[data-theme='hud'] .pace-band-track {
+  border-radius: 4px;
+  font-family: var(--metric-font);
+}
+
 
 
 .map-slot {

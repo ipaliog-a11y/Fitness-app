@@ -1,10 +1,11 @@
 /** App preferences, routes, and getting the data out — not the athlete profile. */
 
 import { useRef, useState } from 'react';
-import { clearAll, exportJson, importJson, saveActivity } from '../core/db';
+import { exportFullBackup, importBackup, wipeAllLocalData } from '../core/backup';
+import { saveActivity } from '../core/db';
 import { activityFromGpx } from '../core/gpx';
 import { loadRoutes, saveRoutes } from '../core/routes';
-import { THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
+import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
 import { distanceLabel, formatDistance, fromDisplayDistance, toDisplayDistance } from '../core/units';
 
 interface Props {
@@ -27,20 +28,39 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
   void routesTick;
 
   const download = async () => {
-    const json = await exportJson();
+    const json = await exportFullBackup();
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `runlog-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `runlog-backup-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    onToast('Full backup downloaded (runs, profile, shoes, routes, plan).');
   };
 
   const upload = async (file: File) => {
     try {
-      const result = await importJson(await file.text());
-      onToast(`Imported ${result.imported}, skipped ${result.skipped}.`);
+      const result = await importBackup(await file.text());
+      if (result.profileRestored) onChange(loadProfile());
       onReload();
+      setRoutesTick((t) => t + 1);
+      if (result.fullBackup) {
+        onToast(
+          `Full backup: ${result.activitiesImported} runs` +
+            (result.activitiesSkipped ? ` (${result.activitiesSkipped} skipped)` : '') +
+            (result.profileRestored ? ', profile' : '') +
+            (result.shoes ? `, ${result.shoes} shoes` : '') +
+            (result.routes ? `, ${result.routes} routes` : '') +
+            (result.planRestored ? ', plan' : '') +
+            '.',
+        );
+      } else {
+        onToast(
+          `Imported ${result.activitiesImported} runs` +
+            (result.activitiesSkipped ? `, skipped ${result.activitiesSkipped}` : '') +
+            '.',
+        );
+      }
     } catch (error) {
       onToast(error instanceof Error ? error.message : 'That file could not be read.');
     }
@@ -253,16 +273,21 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       <div className="card">
         <h2>Your data</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          Runs live in this browser&apos;s storage and nowhere else. Export now and then.
+          Everything stays on this device. Use a <strong>full backup</strong> before clearing the
+          browser or moving to another phone (or Android).
         </p>
         <div className="btn-row" style={{ marginBottom: 10 }}>
-          <button type="button" className="btn" onClick={download}>
-            Export JSON
+          <button type="button" className="btn primary" onClick={() => void download()}>
+            Export full backup
           </button>
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-            Import JSON
+            Import backup
           </button>
         </div>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          Backup includes runs, profile, shoes, routes, and active plan. Older activity-only JSON
+          files still import.
+        </p>
         <button
           type="button"
           className="btn wide"
@@ -272,7 +297,8 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           Import GPX
         </button>
         <p className="hint">
-          GPX brings in outdoor tracks from other apps. Export GPX from a run&apos;s detail screen.
+          GPX brings in outdoor tracks from other apps. Export GPX or TCX from a run&apos;s detail
+          screen (Strava-friendly).
         </p>
         <input
           ref={fileRef}
@@ -306,10 +332,11 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
               type="button"
               className="btn danger"
               onClick={async () => {
-                await clearAll();
+                await wipeAllLocalData();
                 setConfirmingWipe(false);
                 onReload();
-                onToast('All runs deleted.');
+                setRoutesTick((t) => t + 1);
+                onToast('All runs, shoes, routes and plan cleared. Profile kept.');
               }}
             >
               Delete everything
@@ -317,7 +344,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           </div>
         ) : (
           <button type="button" className="btn danger wide" onClick={() => setConfirmingWipe(true)}>
-            Delete all runs
+            Delete all runs &amp; gear data
           </button>
         )}
       </div>

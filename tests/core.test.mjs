@@ -71,6 +71,20 @@ import {
 } from '../src/core/shoes.ts';
 import { pathDistance, reverseSegments, thinSegment, routeFromActivity } from '../src/core/routes.ts';
 import { activityToGpx } from '../src/core/gpx.ts';
+import { activityToTcx } from '../src/core/tcx.ts';
+import {
+  BACKUP_FORMAT,
+  BACKUP_FORMAT_VERSION,
+  isFullBackupShape,
+  serializeBackup,
+} from '../src/core/backup.ts';
+import {
+  DEFAULT_PACE_BAND,
+  parsePaceInput,
+  paceBandStatus,
+  paceBandCueSpeech,
+} from '../src/core/paceBand.ts';
+import { SCHEMA_VERSION } from '../src/core/activity.ts';
 import {
   filterActivities,
   groupActivities,
@@ -1743,6 +1757,81 @@ check('month calendar places runs and plan sessions', () => {
   const at = planSessionAt(state, first);
   assert(eventsOnDay(planned, at).some((e) => e.type === 'plan'));
   assert(addMonths(month, 1) > month);
+});
+
+// --- pace band ------------------------------------------------------------
+
+check('pace input parses m:ss and minutes', () => {
+  equal(parsePaceInput('5:30'), 330);
+  equal(parsePaceInput('5:00'), 300);
+  equal(parsePaceInput('5'), 300);
+  equal(parsePaceInput('5.5'), 330);
+  equal(parsePaceInput(''), null);
+  equal(parsePaceInput('5:60'), null);
+  equal(parsePaceInput('abc'), null);
+});
+
+check('pace band classifies fast / ok / slow', () => {
+  const target = 300; // 5:00
+  equal(paceBandStatus(null, target), 'unknown');
+  equal(paceBandStatus(300, null), 'none');
+  equal(paceBandStatus(300, target), 'ok');
+  equal(paceBandStatus(290, target), 'ok'); // within ±5% (285–315)
+  equal(paceBandStatus(280, target), 'fast'); // under 285
+  equal(paceBandStatus(250, target), 'fast');
+  equal(paceBandStatus(360, target), 'slow');
+  assert(DEFAULT_PACE_BAND === 0.05);
+  equal(paceBandCueSpeech('fast', 300, 'metric')?.includes('Slow'), true);
+  equal(paceBandCueSpeech('ok', 300, 'metric'), null);
+});
+
+// --- backup shape / export formats ----------------------------------------
+
+check('full backup shape is versioned', () => {
+  const payload = {
+    format: BACKUP_FORMAT,
+    v: BACKUP_FORMAT_VERSION,
+    activitySchema: SCHEMA_VERSION,
+    exportedAt: Date.now(),
+    activities: [],
+    profile: { ...DEFAULTS },
+    shoes: [],
+    routes: [],
+    activePlan: null,
+  };
+  assert(isFullBackupShape(payload));
+  const text = serializeBackup(payload);
+  assert(text.includes('runlog-backup'));
+  assert(text.includes('"activitySchema"'));
+});
+
+check('GPX export includes HR extension when samples exist', () => {
+  const act = activityFrom([straightTrack({ points: 5 })], {
+    heart: [
+      { t: Date.now(), bpm: 140 },
+      { t: Date.now() + 1000, bpm: 145 },
+    ],
+  });
+  // Stamp heart times onto track points.
+  const pts = act.segments[0];
+  act.heart = pts.map((p, i) => ({ t: p.t, bpm: 140 + i }));
+  const gpx = activityToGpx(act);
+  assert(gpx.includes('gpxtpx:hr'), 'HR extension present');
+  assert(gpx.includes('TrackPointExtension'));
+});
+
+check('TCX export has lap totals and optional HR', () => {
+  const act = activityFrom([straightTrack({ points: 4 })], {
+    distanceM: 1000,
+    durationMs: 300_000,
+    caloriesKcal: 80,
+  });
+  act.heart = act.segments[0].map((p) => ({ t: p.t, bpm: 150 }));
+  const tcx = activityToTcx(act);
+  assert(tcx.includes('TrainingCenterDatabase'));
+  assert(tcx.includes('DistanceMeters'));
+  assert(tcx.includes('HeartRateBpm'));
+  assert(tcx.includes('80') || tcx.includes('<Calories>80</Calories>'));
 });
 
 // --- report ---------------------------------------------------------------

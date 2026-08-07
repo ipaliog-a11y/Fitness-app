@@ -49,6 +49,14 @@ import type { Profile } from '../core/settings';
 import { zoneOf } from '../core/heart';
 import { calibrateStride } from '../core/steps';
 import {
+  DEFAULT_PACE_BAND,
+  formatTargetPace,
+  paceBandCueSpeech,
+  paceBandLabel,
+  paceBandStatus,
+  parsePaceInput,
+} from '../core/paceBand';
+import {
   distanceLabel,
   formatDistance,
   formatDuration,
@@ -209,6 +217,8 @@ export function RunScreen({
   });
   /** Confirm before ending a run so Finish / Discard are not one-tap accidents. */
   const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'discard'>(null);
+  /** Optional target pace (m:ss per unit) for live band feedback. */
+  const [paceTargetInput, setPaceTargetInput] = useState('');
 
   const stillMsRef = useRef(0);
   const lastTickAtRef = useRef<number | null>(null);
@@ -339,6 +349,8 @@ export function RunScreen({
     });
     cuePrevRef.current = snap;
 
+    const paceTargetSec = parsePaceInput(paceTargetInput);
+
     for (const event of events) {
       if (event.type === 'goal_met') {
         setGoalFlash(true);
@@ -360,6 +372,16 @@ export function RunScreen({
             formatDuration,
           }),
         );
+      }
+
+      // Soft pace-band nudge on each whole km/mi when audio cues are on.
+      if (event.type === 'distance_unit' && profile.audioCues && paceTargetSec) {
+        const unitM = profile.units === 'metric' ? 1000 : 1609.344;
+        const recent = current.recentSpeed(20_000, now);
+        const paceNow = recent && recent > 0 ? unitM / recent : null;
+        const band = paceBandStatus(paceNow, paceTargetSec);
+        const line = paceBandCueSpeech(band, paceTargetSec, profile.units);
+        if (line) speak(line);
       }
     }
 
@@ -389,6 +411,7 @@ export function RunScreen({
     profile.autoPause,
     profile.audioCues,
     profile.units,
+    paceTargetInput,
     podStatus,
     onToast,
   ]);
@@ -840,6 +863,57 @@ export function RunScreen({
               {goalPick === 'none' && (
                 <p className="hint">No target — just start and run. Calories are still estimated.</p>
               )}
+
+              <div className="field" style={{ marginTop: 14 }}>
+                <label htmlFor="pace-target">Target pace (optional)</label>
+                <input
+                  id="pace-target"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={profile.units === 'metric' ? 'e.g. 5:30' : 'e.g. 8:30'}
+                  value={paceTargetInput}
+                  onChange={(e) => setPaceTargetInput(e.target.value)}
+                />
+                <div className="chip-row" style={{ marginTop: 8 }}>
+                  {(profile.units === 'metric'
+                    ? ['4:30', '5:00', '5:30', '6:00', '6:30']
+                    : ['7:00', '8:00', '8:30', '9:00', '10:00']
+                  ).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`chip${paceTargetInput === p ? ' active' : ''}`}
+                      onClick={() => setPaceTargetInput(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  {paceTargetInput && (
+                    <button
+                      type="button"
+                      className="chip"
+                      onClick={() => setPaceTargetInput('')}
+                    >
+                      Off
+                    </button>
+                  )}
+                </div>
+                {parsePaceInput(paceTargetInput) ? (
+                  <p className="hint">
+                    Band ±{Math.round(DEFAULT_PACE_BAND * 100)}% around{' '}
+                    {formatTargetPace(parsePaceInput(paceTargetInput)!, profile.units)}. Live cue
+                    if you drift.
+                  </p>
+                ) : paceTargetInput.trim() ? (
+                  <p className="hint" style={{ color: 'var(--warn)' }}>
+                    Use m:ss (e.g. 5:30).
+                  </p>
+                ) : (
+                  <p className="hint">
+                    Optional pacing guide — independent of distance/time goals above.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1362,6 +1436,8 @@ export function RunScreen({
   // Metres per second inverted into seconds per display unit.
   const current =
     speed && speed > 0 ? (profile.units === 'metric' ? 1000 : 1609.344) / speed : null;
+  const targetPaceSec = parsePaceInput(paceTargetInput);
+  const bandStatus = paceBandStatus(current ?? average, targetPaceSec);
 
   const goal = session.goal;
   const snap = { distanceM: distance, durationMs: elapsed, caloriesKcal: calories };
@@ -1409,6 +1485,15 @@ export function RunScreen({
             <span className="live-meta-pill warn">{autoPaused ? 'Auto-paused' : 'Paused'}</span>
           )}
           {(met || goalFlash) && <span className="live-meta-pill ok">Goal</span>}
+          {targetPaceSec && bandStatus !== 'none' && (
+            <span
+              className={`live-meta-pill pace-band pace-band-${bandStatus}${
+                bandStatus === 'ok' ? ' ok' : bandStatus === 'unknown' ? '' : ' warn'
+              }`}
+            >
+              {paceBandLabel(bandStatus) || 'Pace'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -1416,6 +1501,43 @@ export function RunScreen({
         <div className="value">{formatDuration(elapsed, { tenths: !isHud })}</div>
         <div className="label">{heroLabel}</div>
       </div>
+
+      {targetPaceSec && (
+        <div className={`pace-band-track pace-band-${bandStatus}`}>
+          <div className="goal-track-head">
+            <span>
+              Target pace · {formatTargetPace(targetPaceSec, profile.units)}
+              {bandStatus === 'ok'
+                ? ' · on band'
+                : bandStatus === 'fast'
+                  ? ' · too fast'
+                  : bandStatus === 'slow'
+                    ? ' · too slow'
+                    : ''}
+            </span>
+            <span>
+              now {formatPace(current ?? average)} {paceLabel(profile.units)}
+            </span>
+          </div>
+          <div className="pace-band-bar" aria-hidden>
+            <span className="pace-band-zone" />
+            <i
+              className="pace-band-needle"
+              style={{
+                left: `${(() => {
+                  if (!current && !average) return 50;
+                  const p = current ?? average!;
+                  // Map pace onto 0–100 with target at centre; ±20% fills the bar.
+                  const lo = targetPaceSec * 0.8;
+                  const hi = targetPaceSec * 1.2;
+                  const ratio = (p - lo) / (hi - lo);
+                  return Math.max(4, Math.min(96, ratio * 100));
+                })()}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {phaseProgress && !workoutRef.current?.done && (
         <div className={`workout-phase kind-${phaseProgress.phase.kind}`}>

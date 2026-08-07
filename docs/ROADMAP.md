@@ -92,10 +92,18 @@ Last updated from product discussion (2026).
 | Lightweight plans | Done — Start to run, First 5K, Base builder, Return to run; check-off sessions |
 | Load / recovery | Done — acute:chronic style load + coach cautions |
 
-### Phase E — Optional edges
+### Phase E — Pre-Android hardening ✅ *partially shipped*
+
+| Item | Status |
+|------|--------|
+| Full backup / restore | Done — Settings export includes runs, profile, shoes, routes, plan (`docs/DATA.md`) |
+| Schema documentation | Done — `docs/DATA.md` + backup format v1 / activity schema v1 |
+| Target pace band | Done — optional target on Run setup; live bar + audio nudge per km/mi |
+| Strava-friendly export | Done — GPX with HR extension; TCX from run detail |
+
+Still optional later:
 
 - Virtual partner
-- Strava-friendly GPX/TCX export
 - Cadence targets
 
 ---

@@ -10,6 +10,7 @@ import {
   newId,
   type Activity,
   type DistanceSource,
+  type HeartSample,
 } from './activity';
 import { distanceBetween, type GeoPoint } from './geo';
 
@@ -25,9 +26,30 @@ function iso(ms: number): string {
   return new Date(ms).toISOString();
 }
 
-/** Serialize an activity’s GPS track to GPX 1.1. */
+function bpmAt(samples: HeartSample[], t: number): number | null {
+  if (samples.length === 0) return null;
+  let best: number | null = null;
+  for (const s of samples) {
+    if (s.t > t) break;
+    best = s.bpm;
+  }
+  if (best === null && samples[0] && Math.abs(samples[0].t - t) < 30_000) {
+    return samples[0].bpm;
+  }
+  return best;
+}
+
+/**
+ * Serialize an activity’s GPS track to GPX 1.1.
+ *
+ * Includes Garmin TrackPointExtension heart-rate when samples exist so Strava
+ * and similar importers can attach HR without a separate TCX file.
+ */
 export function activityToGpx(activity: Activity, name?: string): string {
   const title = xmlEscape(name ?? `Run ${iso(activity.startedAt)}`);
+  const heart = [...activity.heart].sort((a, b) => a.t - b.t);
+  const hasHr = heart.length > 0;
+
   const trksegs = activity.segments
     .filter((s) => s.length > 0)
     .map((seg) => {
@@ -37,8 +59,17 @@ export function activityToGpx(activity: Activity, name?: string): string {
             p.elevation !== null && Number.isFinite(p.elevation)
               ? `\n          <ele>${p.elevation.toFixed(1)}</ele>`
               : '';
+          const bpm = bpmAt(heart, p.t);
+          const hrExt =
+            bpm !== null
+              ? `\n          <extensions>
+            <gpxtpx:TrackPointExtension>
+              <gpxtpx:hr>${Math.round(bpm)}</gpxtpx:hr>
+            </gpxtpx:TrackPointExtension>
+          </extensions>`
+              : '';
           return `        <trkpt lat="${p.lat}" lon="${p.lon}">${elev}
-          <time>${iso(p.t)}</time>
+          <time>${iso(p.t)}</time>${hrExt}
         </trkpt>`;
         })
         .join('\n');
@@ -46,9 +77,14 @@ export function activityToGpx(activity: Activity, name?: string): string {
     })
     .join('\n');
 
+  const hrNs = hasHr
+    ? `
+  xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"`
+    : '';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="RunLog"
-  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns="http://www.topografix.com/GPX/1/1"${hrNs}
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>

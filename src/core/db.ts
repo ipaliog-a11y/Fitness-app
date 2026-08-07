@@ -7,8 +7,6 @@
  */
 
 import { byNewest, SCHEMA_VERSION, type Activity } from './activity';
-import { sanitiseGoal } from './goal';
-import { sanitiseHeartReport } from './heart';
 
 const DB_NAME = 'runlog';
 const STORE = 'activities';
@@ -74,64 +72,34 @@ export async function clearAll(): Promise<void> {
 }
 
 /**
- * Everything, as a JSON string.
+ * Full backup JSON (activities + profile + shoes + routes + plan).
  *
- * The only export route out of a local-only app. Without it the data is one
- * cleared browser away from gone, which is not a reasonable thing to do to
- * somebody's training history.
+ * Prefer {@link exportFullBackup} by name; this alias keeps older call sites.
  */
 export async function exportJson(): Promise<string> {
-  const activities = await allActivities();
-  return JSON.stringify({ v: SCHEMA_VERSION, exportedAt: Date.now(), activities }, null, 2);
+  const { exportFullBackup } = await import('./backup');
+  return exportFullBackup();
 }
 
 export interface ImportResult {
   imported: number;
   skipped: number;
+  fullBackup?: boolean;
+  profileRestored?: boolean;
 }
 
 /**
- * Merge an exported file back in.
+ * Merge a backup or legacy activities-only file.
  *
- * Existing ids are skipped rather than overwritten, so importing the same file
- * twice is harmless and importing an older backup cannot roll back an edit.
+ * Existing activity ids are skipped rather than overwritten.
  */
 export async function importJson(text: string): Promise<ImportResult> {
-  const parsed = JSON.parse(text) as { activities?: unknown };
-  if (!Array.isArray(parsed.activities)) throw new Error('No activities in that file.');
-
-  const existing = new Set((await allActivities()).map((a) => a.id));
-  let imported = 0;
-  let skipped = 0;
-
-  for (const raw of parsed.activities) {
-    const activity = raw as Activity;
-    if (!activity || typeof activity.id !== 'string' || typeof activity.distanceM !== 'number') {
-      skipped++;
-      continue;
-    }
-    if (existing.has(activity.id)) {
-      skipped++;
-      continue;
-    }
-    await saveActivity({
-      ...activity,
-      segments: Array.isArray(activity.segments) ? activity.segments : [],
-      heart: Array.isArray(activity.heart) ? activity.heart : [],
-      heartReport: sanitiseHeartReport(activity.heartReport),
-      note: typeof activity.note === 'string' ? activity.note : '',
-      caloriesKcal:
-        typeof activity.caloriesKcal === 'number' && Number.isFinite(activity.caloriesKcal)
-          ? activity.caloriesKcal
-          : null,
-      goal: sanitiseGoal(activity.goal),
-      manualLaps: Array.isArray(activity.manualLaps) ? activity.manualLaps : [],
-      shoeId: typeof activity.shoeId === 'string' ? activity.shoeId : null,
-      workoutId: typeof activity.workoutId === 'string' ? activity.workoutId : null,
-      workoutName: typeof activity.workoutName === 'string' ? activity.workoutName : null,
-    });
-    imported++;
-  }
-
-  return { imported, skipped };
+  const { importBackup } = await import('./backup');
+  const result = await importBackup(text);
+  return {
+    imported: result.activitiesImported,
+    skipped: result.activitiesSkipped,
+    fullBackup: result.fullBackup,
+    profileRestored: result.profileRestored,
+  };
 }
