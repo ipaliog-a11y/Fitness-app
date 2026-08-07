@@ -2464,15 +2464,80 @@ button.cal-event {
   min-height: 52px;
 }
 
-/* Soft live metrics: 2×2 tiles; HUD stacks rows (existing rule) */
-[data-theme='soft'] .metric-grid-live.metric-grid-2x2 {
-  grid-template-columns: 1fr 1fr;
+/* Soft live metrics: 3×2 tappable pods */
+[data-theme='soft'] .metric-grid-live.metric-grid-3x2 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-[data-theme='hud'] .metric-grid-live.metric-grid-2x2 {
-  /* keep stacked instrument rows from metric-grid hud rule */
+[data-theme='hud'] .metric-grid-live.metric-grid-3x2 {
+  /* stacked instrument rows; still 6 tappable rows */
   grid-template-columns: 1fr;
+}
+
+.metric-pod {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  min-width: 0;
+}
+
+.metric-pod:active {
+  border-color: var(--accent);
+}
+
+.metric-pod.alt {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent-dim) 55%, var(--surface));
+}
+
+.metric-pod-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.metric-pod-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted-2, var(--muted));
+  opacity: 0.35;
+  display: block;
+}
+
+.metric-pod-dots i.on {
+  background: var(--accent);
+  opacity: 1;
+}
+
+[data-theme='hud'] .metric-pod {
+  text-align: left;
+}
+
+[data-theme='hud'] .metric-pod-dots {
+  justify-content: flex-end;
+  margin-top: 0;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+[data-theme='hud'] .metric.metric-pod {
+  position: relative;
+  padding-right: 28px;
+}
+
+/* Slightly tighter type so 6 pods stay glanceable */
+[data-theme='soft'] .metric-grid-3x2 .metric .value {
+  font-size: clamp(18px, 5.2vw, 22px);
+}
+
+[data-theme='soft'] .metric-grid-3x2 .metric .label {
+  font-size: 10px;
 }
 
 /* --- History row variants ------------------------------------------------ */

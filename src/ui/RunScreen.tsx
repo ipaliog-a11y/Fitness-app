@@ -11,7 +11,14 @@
  * into the moving-time total.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import type { Activity, RunMode } from '../core/activity';
 import { autoPauseAction, nextStillMs } from '../core/autoPause';
 import { calorieSourceLabel, formatCalories } from '../core/calories';
@@ -101,6 +108,27 @@ function sensorPillClass(kind: 'good' | 'warn' | 'bad' | 'neutral'): string {
 
 type GoalPick = 'none' | GoalKind;
 
+/** Six live pods; face 0 = primary, face 1 = alternate (tap to flip). */
+type LivePodId = 'pace' | 'distance' | 'hr' | 'kcal' | 'avg' | 'cadence';
+
+function flipPod(
+  setPodFace: Dispatch<SetStateAction<Record<LivePodId, 0 | 1>>>,
+  id: LivePodId,
+) {
+  setPodFace((prev) => ({ ...prev, [id]: prev[id] === 0 ? 1 : 0 }));
+}
+
+function formatSpeedMps(mps: number | null, units: Profile['units']): string {
+  if (mps === null || !(mps > 0) || !Number.isFinite(mps)) return '—';
+  // m/s → km/h or mph
+  const display = mps * (units === 'metric' ? 3.6 : 2.2369362921);
+  return display.toFixed(1);
+}
+
+function speedUnitLabel(units: Profile['units']): string {
+  return units === 'metric' ? 'km/h' : 'mph';
+}
+
 export function RunScreen({
   profile,
   onFinish,
@@ -164,6 +192,18 @@ export function RunScreen({
   /** Idle setup panels — keep Start above the fold (mockup hierarchy). */
   const [panelGoalOpen, setPanelGoalOpen] = useState(true);
   const [panelGearOpen, setPanelGearOpen] = useState(false);
+  /**
+   * Live metric pods: each cell flips between a primary and alternate reading
+   * on tap (pace↔speed, distance↔remaining, etc.).
+   */
+  const [podFace, setPodFace] = useState<Record<LivePodId, 0 | 1>>({
+    pace: 0,
+    distance: 0,
+    hr: 0,
+    kcal: 0,
+    avg: 0,
+    cadence: 0,
+  });
 
   const stillMsRef = useRef(0);
   const lastTickAtRef = useRef<number | null>(null);
@@ -1418,32 +1458,153 @@ export function RunScreen({
         </div>
       )}
 
-      <div className="metric-grid metric-grid-live metric-grid-2x2">
-        <div className="metric">
-          <div className="value">{formatDistance(distance, profile.units)}</div>
-          <div className="label">{distanceLabel(profile.units)}</div>
-        </div>
-        <div className="metric">
-          <div className="value">{formatPace(current ?? average)}</div>
-          <div className="label">
-            {current ? 'pace now' : `avg ${paceLabel(profile.units)}`}
-          </div>
-        </div>
-        <div className="metric">
-          <div className="value">{formatCalories(calories)}</div>
-          <div className="label">kcal{calorieEst.source === 'heart' ? ' · hr' : ''}</div>
-        </div>
-        <div className="metric">
-          <div className="value">{hrZone ? `Z${hrZone.index}` : bpm !== null ? '—' : '—'}</div>
-          <div className="label">{hrZone ? hrZone.name : 'HR zone'}</div>
-        </div>
-      </div>
-      <p className="hint live-calorie-hint">
-        Est. {calorieSourceLabel(calorieEst.source)}
-        {calorieEst.source === 'pace' && heartStatus !== 'connected'
-          ? ' — strap for effort-based burn'
-          : ''}
-      </p>
+      {(() => {
+        const paceNow = current;
+        const paceAvg = average;
+        const speedMps = speed && speed > 0 ? speed : null;
+        const avgSpeedMps =
+          distance > 0 && elapsed > 0 ? distance / (elapsed / 1000) : null;
+
+        // Goal remaining: distance left, time left, or kcal left.
+        let remainValue = '—';
+        let remainLabel = 'remaining';
+        if (goal) {
+          if (goal.kind === 'distance') {
+            const left = Math.max(0, goal.target - distance);
+            remainValue = formatDistance(left, profile.units);
+            remainLabel = `${distanceLabel(profile.units)} left`;
+          } else if (goal.kind === 'time') {
+            const left = Math.max(0, goal.target - elapsed);
+            remainValue = formatDuration(left);
+            remainLabel = 'time left';
+          } else {
+            const left = Math.max(0, Math.round(goal.target - calories));
+            remainValue = formatCalories(left);
+            remainLabel = 'kcal left';
+          }
+        }
+
+        const hours = elapsed / 3_600_000;
+        const kcalPerHour =
+          hours > 0.01 && calories > 0 ? Math.round(calories / hours) : null;
+
+        const pods: Array<{
+          id: LivePodId;
+          face0: { value: string; label: string };
+          face1: { value: string; label: string };
+        }> = [
+          {
+            id: 'pace',
+            face0: {
+              value: formatPace(paceNow ?? paceAvg),
+              label: paceNow ? `pace ${paceLabel(profile.units)}` : `avg ${paceLabel(profile.units)}`,
+            },
+            face1: {
+              value: formatSpeedMps(speedMps ?? avgSpeedMps, profile.units),
+              label: speedUnitLabel(profile.units),
+            },
+          },
+          {
+            id: 'distance',
+            face0: {
+              value: formatDistance(distance, profile.units),
+              label: distanceLabel(profile.units),
+            },
+            face1: {
+              value: remainValue,
+              label: goal ? remainLabel : 'set a goal',
+            },
+          },
+          {
+            id: 'hr',
+            face0: {
+              value: hrZone ? `Z${hrZone.index}` : bpm !== null ? '—' : '—',
+              label: hrZone ? hrZone.name : 'HR zone',
+            },
+            face1: {
+              value: bpm !== null ? String(bpm) : '—',
+              label: bpm !== null ? 'bpm' : 'no strap',
+            },
+          },
+          {
+            id: 'kcal',
+            face0: {
+              value: formatCalories(calories),
+              label: calorieEst.source === 'heart' ? 'kcal · hr' : 'kcal',
+            },
+            face1: {
+              value: kcalPerHour !== null ? String(kcalPerHour) : '—',
+              label: 'kcal/h',
+            },
+          },
+          {
+            id: 'avg',
+            face0: {
+              value: formatPace(paceAvg),
+              label: `avg ${paceLabel(profile.units)}`,
+            },
+            face1: {
+              value: formatPace(paceNow),
+              label: `now ${paceLabel(profile.units)}`,
+            },
+          },
+          {
+            id: 'cadence',
+            face0: {
+              value: cadence !== null ? String(Math.round(cadence)) : '—',
+              label: cadence !== null ? 'spm' : 'cadence',
+            },
+            face1: {
+              value:
+                session.manualLaps.length > 0
+                  ? String(session.manualLaps.length)
+                  : session.mode === 'treadmill' && session.steps > 0
+                    ? String(session.steps)
+                    : '—',
+              label:
+                session.manualLaps.length > 0
+                  ? 'laps'
+                  : session.mode === 'treadmill'
+                    ? 'steps'
+                    : 'laps',
+            },
+          },
+        ];
+
+        return (
+          <>
+            <div className="metric-grid metric-grid-live metric-grid-3x2">
+              {pods.map((pod) => {
+                const face = podFace[pod.id] === 1 ? pod.face1 : pod.face0;
+                const other = podFace[pod.id] === 1 ? pod.face0.label : pod.face1.label;
+                return (
+                  <button
+                    key={pod.id}
+                    type="button"
+                    className={`metric metric-pod${podFace[pod.id] === 1 ? ' alt' : ''}`}
+                    onClick={() => flipPod(setPodFace, pod.id)}
+                    aria-label={`${face.label} ${face.value}. Tap to show ${other}`}
+                    title={`Tap for ${other}`}
+                  >
+                    <div className="value">{face.value}</div>
+                    <div className="label">{face.label}</div>
+                    <span className="metric-pod-dots" aria-hidden>
+                      <i className={podFace[pod.id] === 0 ? 'on' : ''} />
+                      <i className={podFace[pod.id] === 1 ? 'on' : ''} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="hint live-calorie-hint">
+              Tap a tile to switch · Est. {calorieSourceLabel(calorieEst.source)}
+              {calorieEst.source === 'pace' && heartStatus !== 'connected'
+                ? ' — strap for effort-based burn'
+                : ''}
+            </p>
+          </>
+        );
+      })()}
 
       {session.mode === 'outdoor' &&
         (session.segments.some((s) => s.length > 1) || (ghostRoute && ghostRoute.length > 0)) && (
