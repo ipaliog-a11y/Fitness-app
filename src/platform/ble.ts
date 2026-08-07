@@ -11,7 +11,6 @@ import {
   numberToUUID,
   numbersToDataView,
   type BleService,
-  ConnectionPriority,
   type ScanResult,
 } from '@capacitor-community/bluetooth-le';
 
@@ -191,7 +190,8 @@ export async function connectNativeNotify(options: {
   }
 
   try {
-    await BleClient.requestConnectionPriority(deviceId, ConnectionPriority.HIGH);
+    // 1 = high priority on Android (plugin enum ConnectionPriority)
+    await BleClient.requestConnectionPriority(deviceId, 1 as never);
   } catch {
     /* optional */
   }
