@@ -50,6 +50,11 @@
   --metric-font: inherit;
   --letter-label: 0.07em;
 
+  /* The canvas map reads these; it cannot use variables directly, so
+     RouteMap samples them per paint. */
+  --map-casing: rgba(0, 0, 0, 0.45);
+  --map-tile-dim: 0.72;
+
   /* Effort ladder, tuned for a dark ground. */
   --zone-1: #6b7f9e;
   --zone-2: #3fa66a;
@@ -98,6 +103,9 @@
   --chip-radius: 4px;
   --metric-font: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   --letter-label: 0.12em;
+
+  --map-casing: rgba(0, 0, 0, 0.6);
+  --map-tile-dim: 0.6;
 
   /* Pushed a little hotter so the ladder still separates against pure black. */
   --zone-1: #7d90ad;
@@ -148,6 +156,11 @@
   --chip-radius: 999px;
   --metric-font: inherit;
   --letter-label: 0.06em;
+
+  /* A white casing under the route, and undimmed tiles — OSM's own style is
+     already light, and dimming it on a white page just makes mud. */
+  --map-casing: rgba(255, 255, 255, 0.85);
+  --map-tile-dim: 1;
 
   /* Every rung clears 5:1 on white; the dark ladder manages barely 2:1. */
   --zone-1: #4a5f80;

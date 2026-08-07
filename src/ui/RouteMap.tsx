@@ -71,6 +71,32 @@ function pointCount(segments: GeoPoint[][]): number {
   return segments.reduce((n, s) => n + s.length, 0);
 }
 
+/**
+ * The theme, sampled for the canvas.
+ *
+ * A canvas takes colour strings, not custom properties, so the tokens have to
+ * be read out of the computed style each time we paint. Every one falls back to
+ * the value it used to be hardcoded as, which is what the dark themes still
+ * resolve to.
+ */
+function readPaint() {
+  const css = getComputedStyle(document.documentElement);
+  const token = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+  return {
+    ground: token('--surface-2', '#1e242e'),
+    route: token('--accent', '#4ade80'),
+    casing: token('--map-casing', 'rgba(0,0,0,0.45)'),
+    ring: token('--bg', '#0e1116'),
+    start: token('--text', '#e8edf4'),
+    finish: token('--danger', '#f87171'),
+    ghost: token('--muted-2', '#64748b'),
+    label: token('--muted', '#93a0b3'),
+    // OSM's own tiles are light. A dark app dims them so the route stays the
+    // brightest thing on screen; a light one has no reason to.
+    tileDim: Number(token('--map-tile-dim', '0.72')) || 0.72,
+  };
+}
+
 export function RouteMap({
   segments,
   ghostSegments,
@@ -103,9 +129,22 @@ export function RouteMap({
     return () => observer.disconnect();
   }, []);
 
+  // Switching theme has to repaint the canvas; CSS alone cannot reach it.
+  const [themeTick, setThemeTick] = useState(0);
+  useEffect(() => {
+    const observer = new MutationObserver(() => setThemeTick((t) => t + 1));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || size.width === 0) return;
+
+    const paint = readPaint();
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = size.width * dpr;
@@ -135,7 +174,7 @@ export function RouteMap({
       for (const segment of segs) {
         if (segment.length < 2) continue;
         const points = segment.map((p) => toScreen(p.lat, p.lon, view));
-        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.strokeStyle = paint.casing;
         ctx.lineWidth = width + 3;
         ctx.beginPath();
         points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
@@ -156,18 +195,18 @@ export function RouteMap({
       ctx.fillStyle = fill;
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = '#0e1116';
+      ctx.strokeStyle = paint.ring;
       ctx.stroke();
     };
 
     const drawTrack = (v: MapView) => {
       if (ghostSegments && ghostSegments.length > 0) {
-        drawPolyline(ghostSegments, '#64748b', 3, [8, 6]);
+        drawPolyline(ghostSegments, paint.ghost, 3, [8, 6]);
       }
 
-      // A dark casing under the bright line keeps it legible over both pale
-      // streets and dark parkland.
-      drawPolyline(segments, '#4ade80', 3.5);
+      // A casing under the line keeps it legible over both pale streets and
+      // dark parkland; it flips with the theme so it always contrasts.
+      drawPolyline(segments, paint.route, 3.5);
 
       const first = segments.find((s) => s.length > 0)?.[0];
       const lastSegment = [...segments].reverse().find((s) => s.length > 0);
@@ -175,15 +214,15 @@ export function RouteMap({
       // Prefer the freshest GPS reading for the live "you are here" dot.
       const here = position ?? last;
 
-      if (first && first !== here) marker(first, '#e8edf4', 5, v);
-      if (here) marker(here, live ? '#4ade80' : '#f87171', live ? 7 : 5, v);
-      else if (first) marker(first, live ? '#4ade80' : '#e8edf4', live ? 7 : 5, v);
+      if (first && first !== here) marker(first, paint.start, 5, v);
+      if (here) marker(here, live ? paint.route : paint.finish, live ? 7 : 5, v);
+      else if (first) marker(first, live ? paint.route : paint.start, live ? 7 : 5, v);
     };
 
     if (!view) {
-      ctx.fillStyle = '#1e242e';
+      ctx.fillStyle = paint.ground;
       ctx.fillRect(0, 0, size.width, size.height);
-      ctx.fillStyle = '#93a0b3';
+      ctx.fillStyle = paint.label;
       ctx.font = '13px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -191,7 +230,7 @@ export function RouteMap({
       return;
     }
 
-    ctx.fillStyle = '#1e242e';
+    ctx.fillStyle = paint.ground;
     ctx.fillRect(0, 0, size.width, size.height);
 
     if (!tiles) {
@@ -210,12 +249,10 @@ export function RouteMap({
       }),
     ).then((results) => {
       if (cancelled) return;
-      ctx.fillStyle = '#1e242e';
+      ctx.fillStyle = paint.ground;
       ctx.fillRect(0, 0, size.width, size.height);
 
-      // OSM's standard style is light; dimming it keeps the app dark and makes
-      // the green track the brightest thing on screen.
-      ctx.globalAlpha = 0.72;
+      ctx.globalAlpha = paint.tileDim;
       for (const { tile, image } of results) {
         if (image) ctx.drawImage(image, tile.left, tile.top, TILE_SIZE, TILE_SIZE);
       }
@@ -227,7 +264,9 @@ export function RouteMap({
     return () => {
       cancelled = true;
     };
-  }, [segments, ghostSegments, position, size, tiles, live, emptyLabel]);
+    // themeTick is never read in the body — it is here so that switching theme
+    // forces the repaint a canvas cannot get from CSS.
+  }, [segments, ghostSegments, position, size, tiles, live, emptyLabel, themeTick]);
 
   const waiting =
     live &&
