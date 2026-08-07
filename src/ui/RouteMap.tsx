@@ -23,10 +23,17 @@ interface Props {
   segments: GeoPoint[][];
   /** Optional ghost / planned route drawn under the live track. */
   ghostSegments?: GeoPoint[][];
+  /**
+   * Latest GPS fix (including pre-start / not-yet-accepted points). Used to
+   * centre the live map before two track points exist.
+   */
+  position?: GeoPoint | null;
   /** Fetch map tiles. Off gives the bare track on a flat background. */
   tiles?: boolean;
   /** Marks the newest point, for a run in progress. */
   live?: boolean;
+  /** Empty-state copy when there is nothing to centre on yet. */
+  emptyLabel?: string;
 }
 
 /**
@@ -60,19 +67,37 @@ function loadTile(url: string): Promise<HTMLImageElement | null> {
   });
 }
 
-export function RouteMap({ segments, ghostSegments, tiles = true, live = false }: Props) {
+function pointCount(segments: GeoPoint[][]): number {
+  return segments.reduce((n, s) => n + s.length, 0);
+}
+
+export function RouteMap({
+  segments,
+  ghostSegments,
+  position = null,
+  tiles = true,
+  live = false,
+  emptyLabel = 'No route recorded',
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   // The canvas is sized in CSS but drawn in device pixels, so it has to be
-  // measured rather than assumed.
+  // measured rather than assumed. Read once immediately so the first paint is
+  // not stuck waiting for a ResizeObserver frame after mount.
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
+    const apply = (width: number, height: number) => {
+      if (width > 0 && height > 0) setSize({ width, height });
+    };
+    const rect = element.getBoundingClientRect();
+    apply(rect.width, rect.height);
+
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
-      setSize({ width, height });
+      apply(width, height);
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -91,6 +116,7 @@ export function RouteMap({ segments, ghostSegments, tiles = true, live = false }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const allForBounds = [...segments, ...(ghostSegments ?? [])];
+    if (position) allForBounds.push([position]);
     const view = fitBounds(allForBounds, size.width, size.height, 22);
     // `cancelled` stops a slow tile from painting over a map the user has
     // already navigated away from.
@@ -102,12 +128,13 @@ export function RouteMap({ segments, ghostSegments, tiles = true, live = false }
       width: number,
       dash?: number[],
     ) => {
+      if (!view) return;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       ctx.setLineDash(dash ?? []);
       for (const segment of segs) {
         if (segment.length < 2) continue;
-        const points = segment.map((p) => toScreen(p.lat, p.lon, view!));
+        const points = segment.map((p) => toScreen(p.lat, p.lon, view));
         ctx.strokeStyle = 'rgba(0,0,0,0.45)';
         ctx.lineWidth = width + 3;
         ctx.beginPath();
@@ -122,6 +149,17 @@ export function RouteMap({ segments, ghostSegments, tiles = true, live = false }
       ctx.setLineDash([]);
     };
 
+    const marker = (point: GeoPoint, fill: string, radius: number, v: MapView) => {
+      const [x, y] = toScreen(point.lat, point.lon, v);
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0e1116';
+      ctx.stroke();
+    };
+
     const drawTrack = (v: MapView) => {
       if (ghostSegments && ghostSegments.length > 0) {
         drawPolyline(ghostSegments, '#64748b', 3, [8, 6]);
@@ -134,20 +172,12 @@ export function RouteMap({ segments, ghostSegments, tiles = true, live = false }
       const first = segments.find((s) => s.length > 0)?.[0];
       const lastSegment = [...segments].reverse().find((s) => s.length > 0);
       const last = lastSegment?.[lastSegment.length - 1];
+      // Prefer the freshest GPS reading for the live "you are here" dot.
+      const here = position ?? last;
 
-      const marker = (point: GeoPoint, fill: string, radius: number) => {
-        const [x, y] = toScreen(point.lat, point.lon, v);
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = fill;
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#0e1116';
-        ctx.stroke();
-      };
-
-      if (first) marker(first, '#e8edf4', 5);
-      if (last && last !== first) marker(last, live ? '#4ade80' : '#f87171', live ? 7 : 5);
+      if (first && first !== here) marker(first, '#e8edf4', 5, v);
+      if (here) marker(here, live ? '#4ade80' : '#f87171', live ? 7 : 5, v);
+      else if (first) marker(first, live ? '#4ade80' : '#e8edf4', live ? 7 : 5, v);
     };
 
     if (!view) {
@@ -156,7 +186,8 @@ export function RouteMap({ segments, ghostSegments, tiles = true, live = false }
       ctx.fillStyle = '#93a0b3';
       ctx.font = '13px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('No route recorded', size.width / 2, size.height / 2);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(emptyLabel, size.width / 2, size.height / 2);
       return;
     }
 
@@ -196,10 +227,16 @@ export function RouteMap({ segments, ghostSegments, tiles = true, live = false }
     return () => {
       cancelled = true;
     };
-  }, [segments, ghostSegments, size, tiles, live]);
+  }, [segments, ghostSegments, position, size, tiles, live, emptyLabel]);
+
+  const waiting =
+    live &&
+    pointCount(segments) === 0 &&
+    !(ghostSegments && pointCount(ghostSegments) > 0) &&
+    !position;
 
   return (
-    <div className="map" ref={containerRef}>
+    <div className={`map${live ? ' map-live' : ''}${waiting ? ' map-waiting' : ''}`} ref={containerRef}>
       <canvas ref={canvasRef} />
       {tiles && <div className="attribution">{TILE_ATTRIBUTION}</div>}
     </div>
