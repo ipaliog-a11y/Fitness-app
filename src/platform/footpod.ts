@@ -2,15 +2,23 @@
  * Foot pods over BLE (Running Speed and Cadence profile).
  *
  * Web Bluetooth on Chromium; native BLE on Capacitor Android/iOS.
+ * Zwift RunPod and most shoe pods use the standard RSC service (0x1814).
  */
 
 import { parseRscMeasurement, type RscMeasurement } from '../core/footpod';
-import { bleSupported, connectNativeNotify, isNativeBle, webBluetoothSupported } from './ble';
+import {
+  asDataView,
+  bleSupported,
+  connectNativeNotify,
+  isNativeBle,
+  webBluetoothSupported,
+} from './ble';
 
 // Full 128-bit UUIDs — Chrome rejects some short aliases (e.g. rsc_feature).
-// SIG assigned numbers: RSC service 0x1814, measurement 0x2A53.
+// SIG: RSC service 0x1814, measurement 0x2A53, feature 0x2A54.
 const RSC_SERVICE = '00001814-0000-1000-8000-00805f9b34fb';
 const RSC_MEASUREMENT = '00002a53-0000-1000-8000-00805f9b34fb';
+const RSC_FEATURE = '00002a54-0000-1000-8000-00805f9b34fb';
 
 export type FootpodStatus = 'unsupported' | 'disconnected' | 'connecting' | 'connected';
 
@@ -28,11 +36,17 @@ export function bluetoothSupported(): boolean {
   return bleSupported();
 }
 
+function emitMeasurement(handlers: FootpodHandlers, raw: unknown): void {
+  const view = asDataView(raw);
+  const measurement = parseRscMeasurement(view);
+  if (measurement) handlers.onMeasurement(measurement);
+}
+
 /**
  * Open the chooser and start streaming.
  *
- * Must be called straight from a click — both Web Bluetooth and the native
- * plugin require a user gesture for the device picker.
+ * Must be called straight from a click. Zwift RunPod often only advertises and
+ * streams while it is moving — shake the pod if it does not appear or stays silent.
  */
 export async function connectFootpod(handlers: FootpodHandlers): Promise<FootpodConnection | null> {
   if (!bluetoothSupported()) {
@@ -47,17 +61,36 @@ export async function connectFootpod(handlers: FootpodHandlers): Promise<Footpod
 
   if (isNativeBle()) {
     try {
+      let packetCount = 0;
       const conn = await connectNativeNotify({
         serviceUuid: RSC_SERVICE,
         characteristicUuid: RSC_MEASUREMENT,
+        optionalServices: [RSC_SERVICE, RSC_FEATURE],
         nameHint: 'Foot pod',
+        nameHints: ['Zwift', 'RunPod', 'Run Pod', 'STRYD', 'Foot'],
         onValue: (value) => {
-          const measurement = parseRscMeasurement(value);
-          if (measurement) handlers.onMeasurement(measurement);
+          packetCount++;
+          emitMeasurement(handlers, value);
         },
         onDisconnected: () => handlers.onStatus('disconnected', 'The foot pod disconnected.'),
       });
-      handlers.onStatus('connected', conn.deviceName);
+      handlers.onStatus(
+        'connected',
+        conn.deviceName.includes('Zwift') || /run\s*pod/i.test(conn.deviceName)
+          ? `${conn.deviceName} · shake/move to stream`
+          : conn.deviceName,
+      );
+
+      // If nothing arrives for a few seconds, nudge the user (common with Zwift).
+      window.setTimeout(() => {
+        if (packetCount === 0) {
+          handlers.onStatus(
+            'connected',
+            `${conn.deviceName} · waiting for motion (shake the pod)`,
+          );
+        }
+      }, 4000);
+
       return {
         deviceName: conn.deviceName,
         disconnect: () => {
@@ -78,7 +111,7 @@ export async function connectFootpod(handlers: FootpodHandlers): Promise<Footpod
     const bluetooth = (navigator as Navigator & { bluetooth: any }).bluetooth;
     const device = await bluetooth.requestDevice({
       filters: [{ services: [RSC_SERVICE] }],
-      optionalServices: [RSC_SERVICE],
+      optionalServices: [RSC_SERVICE, RSC_FEATURE],
     });
 
     const server = await device.gatt!.connect();
@@ -87,8 +120,7 @@ export async function connectFootpod(handlers: FootpodHandlers): Promise<Footpod
 
     const onChange = (event: Event) => {
       const value = (event.target as unknown as { value: DataView }).value;
-      const measurement = parseRscMeasurement(value);
-      if (measurement) handlers.onMeasurement(measurement);
+      emitMeasurement(handlers, value);
     };
 
     characteristic.addEventListener('characteristicvaluechanged', onChange);

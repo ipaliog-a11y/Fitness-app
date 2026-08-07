@@ -616,15 +616,30 @@ export function RunScreen({
   const connectPod = async () => {
     const connection = await connectFootpod({
       onMeasurement: (measurement) => {
+        // Always accept packets when connected; session only stores while running.
         if (sessionRef.current?.state === 'running') {
           sessionRef.current.addFootpod(measurement);
         }
-        setCadence(measurement.cadenceSpm > 0 ? measurement.cadenceSpm : null);
+        // Show cadence even at idle so the user sees the pod is streaming.
+        if (measurement.cadenceSpm > 0) {
+          setCadence(measurement.cadenceSpm);
+        } else if (measurement.speedMps > 0.1) {
+          // Some pods report speed before cadence ticks up.
+          setCadence((c) => c ?? 0);
+        }
+        setTick((t) => t + 1);
       },
       onStatus: (status, detail) => {
         setPodStatus(status);
-        if (status === 'connected') setPodName(detail);
-        else if (detail) onToast(detail);
+        if (status === 'connected') {
+          setPodName(detail);
+          if (detail && /waiting for motion|shake/i.test(detail)) {
+            onToast(detail);
+          }
+        } else if (detail) {
+          onToast(detail);
+        }
+        if (status === 'disconnected') setCadence(null);
       },
     });
     if (connection) podRef.current = connection;

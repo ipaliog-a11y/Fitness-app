@@ -53,17 +53,26 @@ export function parseRscMeasurement(view: DataView): RscMeasurement | null {
   const speedMps = view.getUint16(1, true) / 256;
   const cadenceSpm = view.getUint8(3);
 
+  // Reject obviously corrupt frames (not silent zeros — standing still is valid).
+  if (!Number.isFinite(speedMps) || speedMps < 0 || speedMps > 20) return null;
+  if (!Number.isFinite(cadenceSpm) || cadenceSpm < 0 || cadenceSpm > 300) return null;
+
   let offset = 4;
   let strideLengthM: number | null = null;
   if (hasStride) {
-    if (view.byteLength < offset + 2) return null;
+    if (view.byteLength < offset + 2) {
+      // Some pods set the flag but omit the field briefly — still use speed/cadence.
+      return { speedMps, cadenceSpm, strideLengthM: null, totalDistanceM: null, running };
+    }
     strideLengthM = view.getUint16(offset, true) / 100;
     offset += 2;
   }
 
   let totalDistanceM: number | null = null;
   if (hasTotal) {
-    if (view.byteLength < offset + 4) return null;
+    if (view.byteLength < offset + 4) {
+      return { speedMps, cadenceSpm, strideLengthM, totalDistanceM: null, running };
+    }
     totalDistanceM = view.getUint32(offset, true) / 10;
   }
 
