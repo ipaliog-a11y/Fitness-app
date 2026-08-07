@@ -40,7 +40,16 @@ import {
 } from '../src/core/stats.ts';
 import { sanitise, DEFAULTS, parseTheme } from '../src/core/settings.ts';
 import { tipsForRun, tipsForWeek } from '../src/core/coach.ts';
-import { project, fitBounds, toScreen, visibleTiles, TILE_SIZE } from '../src/core/mercator.ts';
+import {
+  project,
+  fitBounds,
+  toScreen,
+  visibleTiles,
+  TILE_SIZE,
+  parseMapStyle,
+  resolveMapBasemap,
+  MAP_BASEMAPS,
+} from '../src/core/mercator.ts';
 import {
   parseRscMeasurement,
   FootpodTracker,
@@ -1806,6 +1815,27 @@ check('an unknown theme falls back rather than breaking the shell', () => {
 check('a profile round-trips the new theme', () => {
   equal(sanitise({ theme: 'day' }).theme, 'day', 'kept');
   assert(['soft', 'hud', 'day'].includes(sanitise({ theme: 'nonsense' }).theme), 'garbage falls back');
+});
+
+// --- map styles -----------------------------------------------------------
+
+check('map style auto follows theme', () => {
+  equal(parseMapStyle('auto'), 'auto');
+  equal(parseMapStyle('dark'), 'dark');
+  equal(parseMapStyle('topo'), 'terrain');
+  equal(resolveMapBasemap('auto', 'day'), 'standard');
+  equal(resolveMapBasemap('auto', 'soft'), 'dark');
+  equal(resolveMapBasemap('auto', 'hud'), 'dark');
+  equal(resolveMapBasemap('terrain', 'day'), 'terrain');
+  assert(MAP_BASEMAPS.dark.url({ x: 1, y: 2, z: 3, left: 0, top: 0 }).includes('cartocdn'));
+  assert(MAP_BASEMAPS.terrain.url({ x: 1, y: 2, z: 3, left: 0, top: 0 }).includes('opentopo'));
+});
+
+check('profile stores map prefs with safe defaults', () => {
+  equal(sanitise({}).mapStyle, 'auto');
+  equal(sanitise({}).liveMapTiles, false);
+  equal(sanitise({ mapStyle: 'terrain', liveMapTiles: true }).mapStyle, 'terrain');
+  equal(sanitise({ mapStyle: 'terrain', liveMapTiles: true }).liveMapTiles, true);
 });
 
 // --- weight / birth date --------------------------------------------------

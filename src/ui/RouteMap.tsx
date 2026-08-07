@@ -11,11 +11,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { GeoPoint } from '../core/geo';
 import {
   fitBounds,
-  tileUrl,
+  MAP_BASEMAPS,
   toScreen,
   visibleTiles,
-  TILE_ATTRIBUTION,
   TILE_SIZE,
+  type MapBasemapId,
   type MapView,
 } from '../core/mercator';
 
@@ -30,6 +30,10 @@ interface Props {
   position?: GeoPoint | null;
   /** Fetch map tiles. Off gives the bare track on a flat background. */
   tiles?: boolean;
+  /**
+   * Basemap skin (already resolved from style + theme). Default standard OSM.
+   */
+  basemap?: MapBasemapId;
   /** Marks the newest point, for a run in progress. */
   live?: boolean;
   /** Empty-state copy when there is nothing to centre on yet. */
@@ -91,9 +95,8 @@ function readPaint() {
     finish: token('--danger', '#f87171'),
     ghost: token('--muted-2', '#64748b'),
     label: token('--muted', '#93a0b3'),
-    // OSM's own tiles are light. A dark app dims them so the route stays the
-    // brightest thing on screen; a light one has no reason to.
-    tileDim: Number(token('--map-tile-dim', '0.72')) || 0.72,
+    // Theme can still override; basemap supplies its own default dim.
+    tileDim: Number(token('--map-tile-dim', '')) || 0,
   };
 }
 
@@ -102,9 +105,11 @@ export function RouteMap({
   ghostSegments,
   position = null,
   tiles = true,
+  basemap = 'standard',
   live = false,
   emptyLabel = 'No route recorded',
 }: Props) {
+  const basemapInfo = MAP_BASEMAPS[basemap] ?? MAP_BASEMAPS.standard;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -145,6 +150,12 @@ export function RouteMap({
     if (!canvas || size.width === 0) return;
 
     const paint = readPaint();
+    // Standard OSM is light — theme CSS dims it for Soft/HUD. Dark/terrain
+    // basemaps already suit the screen; use their own dim so labels stay crisp.
+    const tileDim =
+      basemap === 'standard' && paint.tileDim > 0
+        ? paint.tileDim
+        : basemapInfo.tileDim;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = size.width * dpr;
@@ -244,7 +255,7 @@ export function RouteMap({
 
     void Promise.all(
       visibleTiles(view).map(async (tile) => {
-        const image = await loadTile(tileUrl(tile));
+        const image = await loadTile(basemapInfo.url(tile));
         return { tile, image };
       }),
     ).then((results) => {
@@ -252,7 +263,7 @@ export function RouteMap({
       ctx.fillStyle = paint.ground;
       ctx.fillRect(0, 0, size.width, size.height);
 
-      ctx.globalAlpha = paint.tileDim;
+      ctx.globalAlpha = tileDim;
       for (const { tile, image } of results) {
         if (image) ctx.drawImage(image, tile.left, tile.top, TILE_SIZE, TILE_SIZE);
       }
@@ -266,7 +277,7 @@ export function RouteMap({
     };
     // themeTick is never read in the body — it is here so that switching theme
     // forces the repaint a canvas cannot get from CSS.
-  }, [segments, ghostSegments, position, size, tiles, live, emptyLabel, themeTick]);
+  }, [segments, ghostSegments, position, size, tiles, live, emptyLabel, themeTick, basemap, basemapInfo]);
 
   const waiting =
     live &&
@@ -277,7 +288,7 @@ export function RouteMap({
   return (
     <div className={`map${live ? ' map-live' : ''}${waiting ? ' map-waiting' : ''}`} ref={containerRef}>
       <canvas ref={canvasRef} />
-      {tiles && <div className="attribution">{TILE_ATTRIBUTION}</div>}
+      {tiles && <div className="attribution">{basemapInfo.attribution}</div>}
     </div>
   );
 }

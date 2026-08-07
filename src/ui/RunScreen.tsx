@@ -77,6 +77,7 @@ import { connectFootpod, type FootpodConnection, type FootpodStatus } from '../p
 import { countSteps, requestMotionPermission, type MotionStatus, type MotionWatcher } from '../platform/motion';
 import { pulse, speak, warmSpeech } from '../platform/speech';
 import { keepScreenAwake, type ScreenLock } from '../platform/wakeLock';
+import { resolveMapBasemap } from '../core/mercator';
 import { RouteMap } from './RouteMap';
 
 interface Props {
@@ -1403,7 +1404,8 @@ export function RunScreen({
               segments={[]}
               ghostSegments={ghostRoute}
               position={lastGeo}
-              tiles={false}
+              tiles={profile.liveMapTiles}
+              basemap={resolveMapBasemap(profile.mapStyle, profile.theme)}
               live
               emptyLabel={
                 gpsBad
@@ -1753,12 +1755,13 @@ export function RunScreen({
       {session.mode === 'outdoor' && (
         <div className="map-slot">
           {/* Always mount mid-run — do not wait for two track points.
-              Tiles off: glanceable shape only, no map-tile data mid-run. */}
+              Tiles optional (Settings → Map); off by default for data/glance. */}
           <RouteMap
             segments={session.segments}
             ghostSegments={ghostRoute}
             position={lastGeo}
-            tiles={false}
+            tiles={profile.liveMapTiles}
+            basemap={resolveMapBasemap(profile.mapStyle, profile.theme)}
             live
             emptyLabel={
               geoStatus === 'denied' || geoStatus === 'unavailable' || geoStatus === 'error'

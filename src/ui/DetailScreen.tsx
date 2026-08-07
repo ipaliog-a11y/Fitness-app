@@ -41,6 +41,7 @@ import {
   formatPace,
   paceLabel,
 } from '../core/units';
+import { resolveMapBasemap } from '../core/mercator';
 import { HeartChart, SplitsTable, ZoneBars } from './charts';
 import { RouteMap } from './RouteMap';
 
@@ -126,7 +127,10 @@ export function DetailScreen({
 
       {hasRoute(activity) && (
         <div style={{ marginBottom: 12 }}>
-          <RouteMap segments={activity.segments} />
+          <RouteMap
+            segments={activity.segments}
+            basemap={resolveMapBasemap(profile.mapStyle, profile.theme)}
+          />
         </div>
       )}
 

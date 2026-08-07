@@ -316,6 +316,17 @@ textarea:focus-visible {
   font-size: 9px;
 }
 
+.map-style-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-style-option {
+  text-align: left;
+  width: 100%;
+}
+
 [data-theme='hud'] .tabs button {
   font-size: 8px;
   font-weight: 800;

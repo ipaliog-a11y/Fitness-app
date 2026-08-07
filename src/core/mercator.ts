@@ -120,14 +120,98 @@ export function visibleTiles(view: MapView): TileRef[] {
 }
 
 /**
- * OpenStreetMap's standard tile server.
+ * Basemap skins (raster tiles in Web Mercator).
  *
- * No key and no account, which is what keeps this app free of a backend. Their
- * tile usage policy asks for attribution and modest volumes; one person's runs
- * is about as modest as it gets, and the attribution is drawn on the map.
+ * `auto` is resolved against the app theme before fetch: Daylight → standard,
+ * Soft/HUD → dark. No API keys — free public layers with required attribution.
  */
-export function tileUrl(tile: TileRef): string {
-  return `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
+export type MapStyleId = 'auto' | 'standard' | 'dark' | 'terrain';
+export type MapBasemapId = 'standard' | 'dark' | 'terrain';
+
+export const MAP_STYLE_OPTIONS: Array<{
+  id: MapStyleId;
+  label: string;
+  blurb: string;
+}> = [
+  {
+    id: 'auto',
+    label: 'Match theme',
+    blurb: 'Light streets in Daylight; dark basemap in Soft and HUD.',
+  },
+  {
+    id: 'standard',
+    label: 'Standard',
+    blurb: 'Classic OpenStreetMap streets.',
+  },
+  {
+    id: 'dark',
+    label: 'Dark',
+    blurb: 'Carto dark basemap — easier on Soft / HUD.',
+  },
+  {
+    id: 'terrain',
+    label: 'Terrain',
+    blurb: 'OpenTopoMap relief and contours for trails.',
+  },
+];
+
+export function parseMapStyle(value: unknown): MapStyleId {
+  if (value === 'standard' || value === 'osm' || value === 'light') return 'standard';
+  if (value === 'dark' || value === 'dark-matter' || value === 'carto-dark') return 'dark';
+  if (value === 'terrain' || value === 'topo' || value === 'opentopo') return 'terrain';
+  if (value === 'auto' || value === 'theme' || value === 'match') return 'auto';
+  return 'auto';
 }
 
-export const TILE_ATTRIBUTION = '© OpenStreetMap contributors';
+/** Pick a concrete basemap from style + UI theme. */
+export function resolveMapBasemap(
+  style: MapStyleId,
+  theme: 'soft' | 'hud' | 'day',
+): MapBasemapId {
+  if (style === 'auto') return theme === 'day' ? 'standard' : 'dark';
+  return style;
+}
+
+export interface MapBasemapInfo {
+  id: MapBasemapId;
+  /** How hard to dim tiles under the route (1 = full brightness). */
+  tileDim: number;
+  attribution: string;
+  url(tile: TileRef): string;
+}
+
+/**
+ * Tile templates for each basemap.
+ *
+ * Standard OSM is fine for personal low volume; dark uses Carto CDN free
+ * basemaps; terrain uses OpenTopoMap. Attribution is always shown on the map.
+ */
+export const MAP_BASEMAPS: Record<MapBasemapId, MapBasemapInfo> = {
+  standard: {
+    id: 'standard',
+    tileDim: 0.72,
+    attribution: '© OpenStreetMap contributors',
+    url: (tile) => `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`,
+  },
+  dark: {
+    id: 'dark',
+    // Already dark — little dimming so labels stay readable.
+    tileDim: 0.92,
+    attribution: '© OpenStreetMap © CARTO',
+    url: (tile) =>
+      `https://basemaps.cartocdn.com/dark_all/${tile.z}/${tile.x}/${tile.y}.png`,
+  },
+  terrain: {
+    id: 'terrain',
+    tileDim: 0.85,
+    attribution: '© OpenStreetMap, SRTM · © OpenTopoMap (CC-BY-SA)',
+    url: (tile) => `https://tile.opentopomap.org/${tile.z}/${tile.x}/${tile.y}.png`,
+  },
+};
+
+/** @deprecated Prefer basemap.url — kept for older call sites. */
+export function tileUrl(tile: TileRef, basemap: MapBasemapId = 'standard'): string {
+  return MAP_BASEMAPS[basemap].url(tile);
+}
+
+export const TILE_ATTRIBUTION = MAP_BASEMAPS.standard.attribution;

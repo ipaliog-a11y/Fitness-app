@@ -5,6 +5,11 @@ import { exportFullBackup, importBackup, wipeAllLocalData } from '../core/backup
 import { saveActivity } from '../core/db';
 import { activityFromGpx } from '../core/gpx';
 import { loadRoutes, saveRoutes } from '../core/routes';
+import {
+  MAP_STYLE_OPTIONS,
+  resolveMapBasemap,
+  type MapStyleId,
+} from '../core/mercator';
 import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
 import { estimateStride } from '../core/steps';
 import { distanceLabel, formatDistance, fromDisplayDistance, toDisplayDistance } from '../core/units';
@@ -138,6 +143,55 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             Miles
           </button>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Map</h2>
+        <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
+          Basemap for history routes
+          {profile.liveMapTiles ? ' and live outdoor runs' : ''}.{' '}
+          {profile.mapStyle === 'auto'
+            ? `Auto → ${resolveMapBasemap('auto', profile.theme) === 'dark' ? 'dark' : 'standard'} with this theme.`
+            : null}
+        </p>
+        <div className="theme-picker map-style-picker" role="radiogroup" aria-label="Map style">
+          {MAP_STYLE_OPTIONS.map((opt) => {
+            const selected = profile.mapStyle === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={`theme-option map-style-option${selected ? ' selected' : ''}`}
+                onClick={() => set('mapStyle', opt.id as MapStyleId)}
+              >
+                <span className="theme-option-body">
+                  <span className="theme-option-label">{opt.label}</span>
+                  <span className="theme-option-blurb">{opt.blurb}</span>
+                </span>
+                <span className="theme-option-check" aria-hidden>
+                  {selected ? '✓' : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="row" style={{ marginTop: 14 }}>
+          <span>Map tiles on live run</span>
+          <button
+            type="button"
+            className="btn"
+            aria-pressed={profile.liveMapTiles}
+            onClick={() => set('liveMapTiles', !profile.liveMapTiles)}
+          >
+            {profile.liveMapTiles ? 'On' : 'Off'}
+          </button>
+        </div>
+        <p className="hint">
+          Off by default — saves data and keeps the live screen simple. When on, the outdoor map
+          loads the basemap while arming and running (needs network).
+        </p>
       </div>
 
       <div className="card">

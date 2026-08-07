@@ -8,8 +8,11 @@
 
 import type { BiologicalSex } from './calories';
 import { estimateMaxHeartRate } from './heart';
+import { parseMapStyle, type MapStyleId } from './mercator';
 import { estimateStride } from './steps';
 import type { UnitSystem } from './units';
+
+export type { MapStyleId };
 
 const KEY = 'runlog:settings:v1';
 
@@ -91,6 +94,16 @@ export interface Profile {
    * Auto-resumes when movement returns.
    */
   autoPause: boolean;
+  /**
+   * Map basemap for history/detail (and live when liveMapTiles is on).
+   * `auto` follows the app theme (day → standard, soft/hud → dark).
+   */
+  mapStyle: MapStyleId;
+  /**
+   * When true, outdoor live/arming maps fetch basemap tiles.
+   * Default off to save data and keep the live HUD glanceable.
+   */
+  liveMapTiles: boolean;
 }
 
 export const DEFAULTS: Profile = {
@@ -109,6 +122,8 @@ export const DEFAULTS: Profile = {
   keepAwake: true,
   audioCues: true,
   autoPause: true,
+  mapStyle: 'auto',
+  liveMapTiles: false,
 };
 
 /**
@@ -216,6 +231,9 @@ export function sanitise(raw: unknown): Profile {
     keepAwake: typeof input.keepAwake === 'boolean' ? input.keepAwake : DEFAULTS.keepAwake,
     audioCues: typeof input.audioCues === 'boolean' ? input.audioCues : DEFAULTS.audioCues,
     autoPause: typeof input.autoPause === 'boolean' ? input.autoPause : DEFAULTS.autoPause,
+    mapStyle: parseMapStyle(input.mapStyle),
+    liveMapTiles:
+      typeof input.liveMapTiles === 'boolean' ? input.liveMapTiles : DEFAULTS.liveMapTiles,
   };
 }
 
