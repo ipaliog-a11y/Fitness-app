@@ -1681,3 +1681,616 @@ button.cal-event {
 [data-theme='hud'] .select {
   border-radius: 6px;
 }
+
+/* --- Theme layout: tab icons --------------------------------------------- */
+
+.tabs .tab-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.tabs .glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+}
+
+.tabs .tab-label-short {
+  display: none;
+}
+
+[data-theme='hud'] .tabs .tab-label {
+  display: none;
+}
+
+[data-theme='hud'] .tabs .tab-label-short {
+  display: block;
+}
+
+[data-theme='soft'] .tabs button[aria-current='page'] .glyph::before {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--accent-dim);
+  z-index: -1;
+}
+
+/* --- Theme layout: Run idle / Start control ------------------------------ */
+
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.run-idle .subtitle {
+  margin-bottom: 12px;
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+.mode-switch button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 11px 8px;
+  border-radius: 11px;
+}
+
+.mode-switch button[aria-pressed='true'] {
+  background: var(--surface-3, var(--surface-2));
+  color: var(--text);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='hud'] .mode-switch {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  margin: 0 -16px 10px;
+  padding: 0 16px;
+}
+
+[data-theme='hud'] .mode-switch button {
+  flex: 1;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 10px 4px 12px;
+  position: relative;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-theme='hud'] .mode-switch button[aria-pressed='true'] {
+  color: var(--text);
+  background: transparent;
+}
+
+[data-theme='hud'] .mode-switch button[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(200, 255, 0, 0.45);
+}
+
+.mode-blurb {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+[data-theme='hud'] .mode-blurb {
+  font-family: var(--metric-font);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.run-hero-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px 18px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-lg, 22px);
+  background:
+    radial-gradient(ellipse 80% 100% at 50% 120%, var(--accent-dim), transparent 55%),
+    linear-gradient(180deg, var(--surface) 0%, var(--bg-elev, var(--bg)) 100%);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='hud'] .run-hero-start {
+  border-radius: var(--radius);
+  border-color: var(--line);
+  background: radial-gradient(circle at 50% 45%, var(--accent-dim), transparent 55%), var(--surface);
+  box-shadow: none;
+}
+
+.run-ready-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--accent-bright, var(--accent));
+  background: var(--accent-dim);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+[data-theme='hud'] .run-ready-pill {
+  border-radius: 2px;
+  font-family: var(--metric-font);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.start-control {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--accent-ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.start-control-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--accent-bright, var(--accent)), var(--accent) 55%, #059669);
+  box-shadow:
+    0 0 0 6px var(--accent-dim),
+    0 10px 24px color-mix(in srgb, var(--accent) 40%, transparent);
+  z-index: 0;
+}
+
+[data-theme='hud'] .start-control-face {
+  background: conic-gradient(var(--accent) 0 72%, #222 0);
+  box-shadow: 0 0 40px rgba(200, 255, 0, 0.12);
+}
+
+[data-theme='hud'] .start-control-face::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid #1a1a1a;
+}
+
+.start-control-label,
+.start-control-sub {
+  position: relative;
+  z-index: 1;
+}
+
+.start-control-label {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--accent-ink);
+}
+
+[data-theme='hud'] .start-control-label {
+  color: var(--accent);
+  font-size: 22px;
+  letter-spacing: 0.12em;
+}
+
+.start-control-sub {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--accent-ink) 75%, transparent);
+  margin-top: 2px;
+}
+
+[data-theme='hud'] .start-control-sub {
+  color: var(--muted-2);
+  font-family: var(--metric-font);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.run-hero-hint {
+  text-align: center;
+  margin: 0;
+  max-width: 28ch;
+}
+
+/* Collapsible setup panels */
+.setup-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.setup-panel-head {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.setup-panel-head h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-label, 0.07em);
+  color: var(--muted);
+}
+
+.setup-panel-summary {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+[data-theme='hud'] .setup-panel-summary {
+  font-family: var(--metric-font);
+  font-size: 12px;
+}
+
+.setup-panel-chev {
+  color: var(--muted-2, var(--muted));
+  font-size: 14px;
+  width: 1rem;
+  text-align: center;
+}
+
+.setup-panel-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--line-soft, var(--line));
+  padding-top: 12px;
+}
+
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.kv-k {
+  color: var(--muted-2, var(--muted));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.kv-v {
+  font-weight: 650;
+  font-family: var(--metric-font, inherit);
+}
+
+/* --- Live run actions ---------------------------------------------------- */
+
+.run-actions {
+  display: grid;
+  grid-template-columns: 0.8fr 1fr 1.1fr;
+  gap: 8px;
+}
+
+.run-actions .btn {
+  width: 100%;
+  min-height: 48px;
+}
+
+[data-theme='hud'] .run-actions {
+  gap: 6px;
+}
+
+[data-theme='hud'] .run-action-pause,
+[data-theme='hud'] .run-action-lap {
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+[data-theme='soft'] .run-action-finish {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+/* Soft live metrics stay as a compact 3-up; HUD stacks (existing rule) */
+[data-theme='soft'] .metric-grid-live {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* --- History row variants ------------------------------------------------ */
+
+.run-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.run-item-bar {
+  display: none;
+  width: 4px;
+  align-self: stretch;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin: -13px 0 -13px -14px;
+}
+
+.run-item-day {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1.05;
+}
+
+.run-item-day b {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.run-item-day small {
+  font-size: 9px;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.run-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.run-item-when {
+  display: none;
+  font-family: var(--metric-font);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted-2, var(--muted));
+  flex-shrink: 0;
+}
+
+.run-item-chev {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Soft Emerald: date badge, hide mono when + left bar */
+[data-theme='soft'] .run-item .glyph {
+  display: none;
+}
+
+/* Athletic HUD: left volt bar + mono when, hide soft day badge */
+[data-theme='hud'] .run-item {
+  gap: 0;
+  padding-left: 0;
+  border-radius: 4px;
+}
+
+[data-theme='hud'] .run-item-bar {
+  display: block;
+  margin: 0 12px 0 0;
+  width: 4px;
+  align-self: stretch;
+}
+
+[data-theme='hud'] .run-item-day {
+  display: none;
+}
+
+[data-theme='hud'] .run-item .glyph {
+  display: none;
+}
+
+[data-theme='hud'] .run-item .body {
+  padding: 12px 12px 12px 0;
+}
+
+[data-theme='hud'] .run-item-when {
+  display: inline;
+}
+
+[data-theme='hud'] .run-item .headline {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+[data-theme='hud'] .run-item .meta {
+  font-family: var(--metric-font);
+  font-size: 11px;
+}
+
+[data-theme='hud'] .run-item-chev {
+  display: none;
+}
+
+[data-theme='hud'] .cal-cell:has(.cal-dot.run),
+[data-theme='hud'] .cal-cell.today {
+  border-radius: 2px;
+}
+
+[data-theme='hud'] .cal-dot.run {
+  background: var(--accent);
+  width: 6px;
+  height: 6px;
+}
+
+/* Soft calendar slightly rounder fill feel via selected state already */
+
+/* --- Coach recovery hero ------------------------------------------------- */
+
+.recovery-hero-main {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.recovery-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: conic-gradient(
+    var(--accent) 0 var(--ring-pct, 55%),
+    var(--surface-3, var(--surface-2)) 0
+  );
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.recovery-ring::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.recovery-ring-inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.recovery-ring-inner b {
+  font-size: 12px;
+  font-weight: 800;
+  font-family: var(--metric-font, inherit);
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.recovery-ring-inner span {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted-2, var(--muted));
+}
+
+.recovery-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.recovery-title {
+  margin: 8px 0 0;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-transform: none;
+  font-weight: 750;
+}
+
+[data-theme='soft'] .recovery-hero {
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  background:
+    radial-gradient(ellipse 70% 80% at 90% 20%, var(--accent-dim), transparent),
+    var(--surface);
+}
+
+[data-theme='hud'] .recovery-hero {
+  border-radius: var(--radius);
+}
+
+[data-theme='hud'] .recovery-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.next-session-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+[data-theme='hud'] .next-session-hero {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-dim);
+}
+
+[data-theme='hud'] .next-session-hero .btn.primary {
+  margin-top: 4px;
+}
+
+/* Fallback when color-mix unsupported: border still uses --line from card */
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .run-hero-start {
+    border-color: var(--line);
+  }
+  [data-theme='soft'] .run-action-finish {
+    background: transparent;
+  }
+}

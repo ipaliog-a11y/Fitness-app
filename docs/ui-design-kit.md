@@ -4,6 +4,8 @@ Saved visual system from the refresh mockups.
 
 **In app:** Settings → **Theme** switches between Soft Emerald (`soft`) and Athletic HUD (`hud`). Preference is on the profile (`theme` field in `localStorage` key `runlog:settings:v1`) and applied as `document.documentElement.dataset.theme`.
 
+**Layout (not just palette):** circular vs ring START, segmented vs underline mode, collapsible setup panels, SVG tab icons + floating vs solid dock, stacked HUD metrics, history date badge vs left accent bar, coach recovery ring + next-session hero.
+
 | File | What |
 |------|------|
 | [ui-mockups.html](ui-mockups.html) | Side-by-side chooser |

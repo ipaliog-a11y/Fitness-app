@@ -3,7 +3,7 @@
  * volume / records view so training advice has one place to live.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import type { Activity } from '../core/activity';
 import { tipsForRecovery, tipsForWeek } from '../core/coach';
 import {
@@ -165,20 +165,40 @@ export function CoachScreen({ activities, profile, onOpen, onToast, onStartRun }
         {streak > 0 ? ` · ${streak}-day streak` : ''}.
       </p>
 
-      {/* Recovery / load */}
-      <div className="card">
-        <div className="row">
-          <h2 style={{ margin: 0 }}>Recovery</h2>
-          <span className={`pill ${statusClass(load.status)}`}>
-            {recoveryLabel(load.status)}
-          </span>
+      {/* Recovery / load — hero layout (ring on HUD theme via CSS) */}
+      <div className={`card recovery-hero status-${load.status}`}>
+        <div className="recovery-hero-main">
+          <div
+            className="recovery-ring"
+            style={
+              {
+                '--ring-pct': `${Math.min(100, Math.round((load.ratio ?? 1) * 50))}%`,
+              } as CSSProperties
+            }
+            aria-hidden
+          >
+            <span className="recovery-ring-inner">
+              <b>{recoveryLabel(load.status).slice(0, 3).toUpperCase()}</b>
+              <span>Load</span>
+            </span>
+          </div>
+          <div className="recovery-copy">
+            <span className={`pill ${statusClass(load.status)}`}>{recoveryLabel(load.status)}</span>
+            <h2 className="recovery-title">Recovery</h2>
+            {recoveryTips.slice(0, 1).map((tip, i) => (
+              <p className="hint" key={i} style={{ marginTop: 6, marginBottom: 0 }}>
+                {tip.body}
+              </p>
+            ))}
+          </div>
         </div>
-        {recoveryTips.map((tip, i) => (
-          <p className="hint" key={i} style={{ marginTop: 10, marginBottom: 0 }}>
-            {tip.body}
-          </p>
-        ))}
-        <div className="metric-grid" style={{ marginTop: 14 }}>
+        {recoveryTips.length > 1 &&
+          recoveryTips.slice(1).map((tip, i) => (
+            <p className="hint" key={`more-${i}`} style={{ marginTop: 10, marginBottom: 0 }}>
+              {tip.body}
+            </p>
+          ))}
+        <div className="metric-grid recovery-metrics" style={{ marginTop: 14 }}>
           <div className="metric">
             <div className="value">{Math.round(load.acute)}</div>
             <div className="label">7-day load</div>
@@ -268,7 +288,8 @@ export function CoachScreen({ activities, profile, onOpen, onToast, onStartRun }
             <p className="hint">{Math.round(overall * 100)}% of plan ticked off</p>
 
             {upcoming && (
-              <div className="next-session">
+              <div className="next-session next-session-hero">
+                <div className="next-session-label">Next session</div>
                 <div className="row">
                   <span className="pill">{kindLabel(upcoming.kind)}</span>
                   <span className="hint" style={{ margin: 0 }}>

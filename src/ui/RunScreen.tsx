@@ -160,6 +160,9 @@ export function RunScreen({
   /** Expand long help text under compact sensor chips on the idle screen. */
   const [podInfoOpen, setPodInfoOpen] = useState(false);
   const [hrInfoOpen, setHrInfoOpen] = useState(false);
+  /** Idle setup panels — keep Start above the fold (mockup hierarchy). */
+  const [panelGoalOpen, setPanelGoalOpen] = useState(true);
+  const [panelGearOpen, setPanelGearOpen] = useState(false);
 
   const stillMsRef = useRef(0);
   const lastTickAtRef = useRef<number | null>(null);
@@ -614,231 +617,356 @@ export function RunScreen({
   // --- Idle ---------------------------------------------------------------
 
   if (!session && !arming) {
-    return (
-      <div className="screen">
-        <h1>New run</h1>
-        <p className="subtitle">Outdoors or on the treadmill.</p>
+    const isHud = profile.theme === 'hud';
+    const workoutSummary =
+      workoutId === 'none'
+        ? 'Free run'
+        : workoutId === 'custom'
+          ? customTemplate?.name ?? 'Custom intervals'
+          : (WORKOUT_PRESETS.find((w) => w.id === workoutId)?.name ?? 'Workout');
+    const goalSummary =
+      goalPick === 'none'
+        ? 'Free run'
+        : resolveGoal()
+          ? formatGoalTarget(resolveGoal()!, profile.units)
+          : goalKindLabel(goalPick);
+    const shoeSummary =
+      activeShoes(shoes).find((s) => s.id === shoeId)?.name ??
+      (activeShoes(shoes).length === 0 ? 'None' : 'None');
 
-        <div className="mode-picker">
-          <button aria-pressed={mode === 'outdoor'} onClick={() => setMode('outdoor')}>
-            <span className="name">🏃 Outdoor</span>
-            <span className="blurb">GPS tracks your route, distance and pace.</span>
-          </button>
-          <button aria-pressed={mode === 'treadmill'} onClick={() => setMode('treadmill')}>
-            <span className="name">🎽 Treadmill</span>
-            <span className="blurb">Foot pod, step counting, or type the distance in.</span>
-          </button>
+    return (
+      <div className="screen run-idle">
+        <div className="title-row">
+          <div>
+            <h1>New run</h1>
+            <p className="subtitle">Local only · data stays on this device</p>
+          </div>
         </div>
 
-        <div className="card">
-          <h2>Workout</h2>
-          <select
-            className="select"
-            value={workoutId}
-            onChange={(e) => {
-              setWorkoutId(e.target.value);
-              if (e.target.value !== 'custom') setCustomOpen(false);
-              else setCustomOpen(true);
-            }}
+        <div className="mode-switch" role="group" aria-label="Run mode">
+          <button type="button" aria-pressed={mode === 'outdoor'} onClick={() => setMode('outdoor')}>
+            Outdoor
+          </button>
+          <button
+            type="button"
+            aria-pressed={mode === 'treadmill'}
+            onClick={() => setMode('treadmill')}
           >
-            <option value="none">Free run — no structure</option>
-            {WORKOUT_PRESETS.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-            <option value="custom">Custom intervals…</option>
-          </select>
-          {workoutId !== 'none' && workoutId !== 'custom' && (
-            <p className="hint">
-              {WORKOUT_PRESETS.find((w) => w.id === workoutId)?.blurb}
-            </p>
-          )}
-          {(customOpen || workoutId === 'custom') && (
-            <div className="custom-workout">
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="cw-warm">Warm-up (min)</label>
-                  <input id="cw-warm" type="number" min="0" value={customWarm} onChange={(e) => setCustomWarm(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label htmlFor="cw-cool">Cool-down (min)</label>
-                  <input id="cw-cool" type="number" min="0" value={customCool} onChange={(e) => setCustomCool(e.target.value)} />
-                </div>
+            Treadmill
+          </button>
+        </div>
+        <p className="mode-blurb">
+          {mode === 'outdoor'
+            ? 'GPS tracks route, distance and pace.'
+            : 'Foot pod, step counting, or type the console distance in.'}
+        </p>
+
+        <div className="run-hero-start">
+          <span className="run-ready-pill">Ready when you are</span>
+          <button type="button" className="start-control" onClick={arm}>
+            <span className="start-control-face" aria-hidden />
+            <span className="start-control-label">{isHud ? 'GO' : 'START'}</span>
+            <span className="start-control-sub">{isHud ? 'Tap to arm' : 'Arm sensors'}</span>
+          </button>
+          <p className="hint run-hero-hint">
+            Arms GPS / sensors first — the clock starts on the next screen.
+          </p>
+        </div>
+
+        <div className={`card setup-panel${panelGoalOpen ? ' open' : ''}`}>
+          <button
+            type="button"
+            className="setup-panel-head"
+            aria-expanded={panelGoalOpen}
+            onClick={() => setPanelGoalOpen((v) => !v)}
+          >
+            <h2>Goal</h2>
+            <span className="setup-panel-summary">{goalSummary}</span>
+            <span className="setup-panel-chev" aria-hidden>
+              {panelGoalOpen ? '▾' : '▸'}
+            </span>
+          </button>
+          {panelGoalOpen && (
+            <div className="setup-panel-body">
+              <div className="goal-kinds">
+                {(
+                  [
+                    ['none', 'Free run'],
+                    ['distance', 'Distance'],
+                    ['time', 'Time'],
+                    ['calories', 'Calories'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={goalPick === id}
+                    onClick={() => {
+                      setGoalPick(id);
+                      if (id === 'none') setGoalInput('');
+                      else if (id === 'distance' && !goalInput) {
+                        setGoalInput(profile.units === 'metric' ? '5' : '3');
+                      } else if (id === 'time' && !goalInput) {
+                        setGoalInput('30');
+                      } else if (id === 'calories' && !goalInput) {
+                        setGoalInput('300');
+                      }
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="cw-work">Work (min)</label>
-                  <input id="cw-work" type="number" min="0.5" step="0.5" value={customWork} onChange={(e) => setCustomWork(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label htmlFor="cw-rest">Rest (min)</label>
-                  <input id="cw-rest" type="number" min="0" step="0.5" value={customRest} onChange={(e) => setCustomRest(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label htmlFor="cw-reps">Repeats</label>
-                  <input id="cw-reps" type="number" min="1" max="40" value={customRepeats} onChange={(e) => setCustomRepeats(e.target.value)} />
-                </div>
-              </div>
-              <button
-                type="button"
-                className="btn wide"
-                onClick={() => {
-                  const t = customIntervals({
-                    warmupMin: Number(customWarm) || 0,
-                    workMin: Number(customWork) || 1,
-                    restMin: Number(customRest) || 0,
-                    repeats: Number(customRepeats) || 1,
-                    cooldownMin: Number(customCool) || 0,
-                  });
-                  setCustomTemplate(t);
-                  setWorkoutId('custom');
-                  onToast(`Custom workout: ${t.blurb}`);
-                }}
-              >
-                Apply custom intervals
-              </button>
-              {customTemplate && workoutId === 'custom' && (
-                <p className="hint">{customTemplate.blurb}</p>
+
+              {goalPick !== 'none' && (
+                <>
+                  <div className="field" style={{ marginTop: 14 }}>
+                    <label htmlFor="run-goal">
+                      {goalPick === 'distance'
+                        ? `Target (${distanceLabel(profile.units)})`
+                        : goalPick === 'time'
+                          ? 'Target (minutes)'
+                          : 'Target (kcal)'}
+                    </label>
+                    <input
+                      id="run-goal"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step={goalPick === 'distance' ? '0.1' : '1'}
+                      value={goalInput}
+                      onChange={(e) => setGoalInput(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="chip-row">
+                    {goalPick === 'distance' &&
+                      (profile.units === 'metric' ? [1, 3, 5, 10] : [1, 2, 3, 5]).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`chip${goalInput === String(n) ? ' active' : ''}`}
+                          onClick={() => setGoalInput(String(n))}
+                        >
+                          {n}
+                          {profile.units === 'metric' ? ' km' : ' mi'}
+                        </button>
+                      ))}
+                    {goalPick === 'time' &&
+                      [15, 20, 30, 45, 60].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`chip${goalInput === String(n) ? ' active' : ''}`}
+                          onClick={() => setGoalInput(String(n))}
+                        >
+                          {n} min
+                        </button>
+                      ))}
+                    {goalPick === 'calories' &&
+                      [150, 250, 350, 500].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`chip${goalInput === String(n) ? ' active' : ''}`}
+                          onClick={() => setGoalInput(String(n))}
+                        >
+                          {n} kcal
+                        </button>
+                      ))}
+                  </div>
+
+                  {resolveGoal() ? (
+                    <p className="hint">
+                      Goal: {formatGoalTarget(resolveGoal()!, profile.units)}. Progress shows live
+                      once you start.
+                    </p>
+                  ) : (
+                    <p className="hint">Enter a target above, or pick a preset.</p>
+                  )}
+                </>
+              )}
+
+              {goalPick === 'none' && (
+                <p className="hint">No target — just start and run. Calories are still estimated.</p>
               )}
             </div>
           )}
         </div>
 
-        {mode === 'outdoor' && routes.length > 0 && (
-          <div className="card">
-            <h2>Saved route (ghost)</h2>
-            <select
-              className="select"
-              value={routeId}
-              onChange={(e) => setRouteId(e.target.value)}
-            >
-              <option value="">None</option>
-              {routes.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} · {formatDistance(r.distanceM, profile.units)} {distanceLabel(profile.units)}
-                </option>
-              ))}
-            </select>
-            {routeId && (
-              <div className="row" style={{ marginTop: 10 }}>
-                <span>Reverse direction</span>
-                <button
-                  type="button"
-                  className="btn"
-                  aria-pressed={routeReversed}
-                  onClick={() => setRouteReversed((v) => !v)}
-                >
-                  {routeReversed ? 'On' : 'Off'}
-                </button>
+        <div className={`card setup-panel${panelGearOpen ? ' open' : ''}`}>
+          <button
+            type="button"
+            className="setup-panel-head"
+            aria-expanded={panelGearOpen}
+            onClick={() => setPanelGearOpen((v) => !v)}
+          >
+            <h2>Workout &amp; route</h2>
+            <span className="setup-panel-summary">
+              {workoutSummary}
+              {mode === 'outdoor' && routeId
+                ? ` · ${routes.find((r) => r.id === routeId)?.name ?? 'route'}`
+                : ''}
+            </span>
+            <span className="setup-panel-chev" aria-hidden>
+              {panelGearOpen ? '▾' : '▸'}
+            </span>
+          </button>
+          {panelGearOpen && (
+            <div className="setup-panel-body">
+              <div className="kv-row">
+                <span className="kv-k">Workout</span>
+                <span className="kv-v">{workoutSummary}</span>
               </div>
-            )}
-            <p className="hint">Shows a grey path under your live track — not turn-by-turn nav.</p>
-          </div>
-        )}
-
-        <div className="card">
-          <h2>This run&apos;s goal</h2>
-          <div className="goal-kinds">
-            {(
-              [
-                ['none', 'Free run'],
-                ['distance', 'Distance'],
-                ['time', 'Time'],
-                ['calories', 'Calories'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                aria-pressed={goalPick === id}
-                onClick={() => {
-                  setGoalPick(id);
-                  if (id === 'none') setGoalInput('');
-                  else if (id === 'distance' && !goalInput) {
-                    setGoalInput(profile.units === 'metric' ? '5' : '3');
-                  } else if (id === 'time' && !goalInput) {
-                    setGoalInput('30');
-                  } else if (id === 'calories' && !goalInput) {
-                    setGoalInput('300');
-                  }
+              <select
+                className="select"
+                value={workoutId}
+                onChange={(e) => {
+                  setWorkoutId(e.target.value);
+                  if (e.target.value !== 'custom') setCustomOpen(false);
+                  else setCustomOpen(true);
                 }}
               >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {goalPick !== 'none' && (
-            <>
-              <div className="field" style={{ marginTop: 14 }}>
-                <label htmlFor="run-goal">
-                  {goalPick === 'distance'
-                    ? `Target (${distanceLabel(profile.units)})`
-                    : goalPick === 'time'
-                      ? 'Target (minutes)'
-                      : 'Target (kcal)'}
-                </label>
-                <input
-                  id="run-goal"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step={goalPick === 'distance' ? '0.1' : '1'}
-                  value={goalInput}
-                  onChange={(e) => setGoalInput(e.target.value)}
-                />
-              </div>
-
-              <div className="chip-row">
-                {goalPick === 'distance' &&
-                  (profile.units === 'metric' ? [1, 3, 5, 10] : [1, 2, 3, 5]).map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={`chip${goalInput === String(n) ? ' active' : ''}`}
-                      onClick={() => setGoalInput(String(n))}
-                    >
-                      {n}
-                      {profile.units === 'metric' ? ' km' : ' mi'}
-                    </button>
-                  ))}
-                {goalPick === 'time' &&
-                  [15, 20, 30, 45, 60].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={`chip${goalInput === String(n) ? ' active' : ''}`}
-                      onClick={() => setGoalInput(String(n))}
-                    >
-                      {n} min
-                    </button>
-                  ))}
-                {goalPick === 'calories' &&
-                  [150, 250, 350, 500].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={`chip${goalInput === String(n) ? ' active' : ''}`}
-                      onClick={() => setGoalInput(String(n))}
-                    >
-                      {n} kcal
-                    </button>
-                  ))}
-              </div>
-
-              {resolveGoal() ? (
-                <p className="hint">
-                  Goal: {formatGoalTarget(resolveGoal()!, profile.units)}. Progress shows live once
-                  you start.
-                </p>
-              ) : (
-                <p className="hint">Enter a target above, or pick a preset.</p>
+                <option value="none">Free run — no structure</option>
+                {WORKOUT_PRESETS.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+                <option value="custom">Custom intervals…</option>
+              </select>
+              {workoutId !== 'none' && workoutId !== 'custom' && (
+                <p className="hint">{WORKOUT_PRESETS.find((w) => w.id === workoutId)?.blurb}</p>
               )}
-            </>
-          )}
+              {(customOpen || workoutId === 'custom') && (
+                <div className="custom-workout">
+                  <div className="field-row">
+                    <div className="field">
+                      <label htmlFor="cw-warm">Warm-up (min)</label>
+                      <input
+                        id="cw-warm"
+                        type="number"
+                        min="0"
+                        value={customWarm}
+                        onChange={(e) => setCustomWarm(e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="cw-cool">Cool-down (min)</label>
+                      <input
+                        id="cw-cool"
+                        type="number"
+                        min="0"
+                        value={customCool}
+                        onChange={(e) => setCustomCool(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="field-row">
+                    <div className="field">
+                      <label htmlFor="cw-work">Work (min)</label>
+                      <input
+                        id="cw-work"
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        value={customWork}
+                        onChange={(e) => setCustomWork(e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="cw-rest">Rest (min)</label>
+                      <input
+                        id="cw-rest"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={customRest}
+                        onChange={(e) => setCustomRest(e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="cw-reps">Repeats</label>
+                      <input
+                        id="cw-reps"
+                        type="number"
+                        min="1"
+                        max="40"
+                        value={customRepeats}
+                        onChange={(e) => setCustomRepeats(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn wide"
+                    onClick={() => {
+                      const t = customIntervals({
+                        warmupMin: Number(customWarm) || 0,
+                        workMin: Number(customWork) || 1,
+                        restMin: Number(customRest) || 0,
+                        repeats: Number(customRepeats) || 1,
+                        cooldownMin: Number(customCool) || 0,
+                      });
+                      setCustomTemplate(t);
+                      setWorkoutId('custom');
+                      onToast(`Custom workout: ${t.blurb}`);
+                    }}
+                  >
+                    Apply custom intervals
+                  </button>
+                  {customTemplate && workoutId === 'custom' && (
+                    <p className="hint">{customTemplate.blurb}</p>
+                  )}
+                </div>
+              )}
 
-          {goalPick === 'none' && (
-            <p className="hint">No target — just start and run. Calories are still estimated.</p>
+              {mode === 'outdoor' && routes.length > 0 && (
+                <>
+                  <div className="kv-row" style={{ marginTop: 12 }}>
+                    <span className="kv-k">Ghost route</span>
+                    <span className="kv-v">
+                      {routeId ? routes.find((r) => r.id === routeId)?.name ?? '—' : 'None'}
+                    </span>
+                  </div>
+                  <select
+                    className="select"
+                    value={routeId}
+                    onChange={(e) => setRouteId(e.target.value)}
+                  >
+                    <option value="">None</option>
+                    {routes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} · {formatDistance(r.distanceM, profile.units)}{' '}
+                        {distanceLabel(profile.units)}
+                      </option>
+                    ))}
+                  </select>
+                  {routeId && (
+                    <div className="row" style={{ marginTop: 10 }}>
+                      <span>Reverse direction</span>
+                      <button
+                        type="button"
+                        className="btn"
+                        aria-pressed={routeReversed}
+                        onClick={() => setRouteReversed((v) => !v)}
+                      >
+                        {routeReversed ? 'On' : 'Off'}
+                      </button>
+                    </div>
+                  )}
+                  <p className="hint">Grey path under your live track — not turn-by-turn nav.</p>
+                </>
+              )}
+
+              <div className="kv-row" style={{ marginTop: 12 }}>
+                <span className="kv-k">Shoes</span>
+                <span className="kv-v">{shoeSummary}</span>
+              </div>
+              <p className="hint" style={{ marginBottom: 0 }}>
+                Pair assignment is on the Get ready screen after you arm.
+              </p>
+            </div>
           )}
         </div>
 
@@ -959,10 +1087,6 @@ export function RunScreen({
             </p>
           )}
         </div>
-
-        <button className="btn primary wide" onClick={arm}>
-          Start {mode === 'outdoor' ? 'outdoor run' : 'treadmill run'}
-        </button>
       </div>
     );
   }
@@ -1134,15 +1258,20 @@ export function RunScreen({
           </button>
         )}
 
-        <button className="btn primary wide" onClick={begin}>
-          {mode === 'outdoor' && !gpsReady ? 'Start now (without waiting)' : 'Start now'}
-        </button>
-
-        {mode === 'outdoor' && !gpsReady && !gpsBad && (
-          <p className="hint" style={{ textAlign: 'center', marginTop: 10 }}>
-            Or wait until GPS shows Ready, then press Start now.
-          </p>
-        )}
+        <div className="run-hero-start arming">
+          <button type="button" className="start-control" onClick={begin}>
+            <span className="start-control-face" aria-hidden />
+            <span className="start-control-label">
+              {profile.theme === 'hud' ? 'GO' : 'START'}
+            </span>
+            <span className="start-control-sub">
+              {mode === 'outdoor' && !gpsReady ? 'Start without fix' : 'Start clock'}
+            </span>
+          </button>
+          {mode === 'outdoor' && !gpsReady && !gpsBad && (
+            <p className="hint run-hero-hint">Or wait until GPS shows Ready.</p>
+          )}
+        </div>
 
         <button className="btn wide" style={{ marginTop: 10 }} onClick={cancelArming}>
           Cancel
@@ -1280,7 +1409,7 @@ export function RunScreen({
         </div>
       )}
 
-      <div className="metric-grid" style={{ margin: '18px 0' }}>
+      <div className="metric-grid metric-grid-live" style={{ margin: '18px 0' }}>
         <div className="metric">
           <div className="value">{formatDistance(distance, profile.units)}</div>
           <div className="label">{distanceLabel(profile.units)}</div>
@@ -1376,14 +1505,15 @@ export function RunScreen({
         </button>
       )}
 
-      <div className="btn-row" style={{ marginBottom: 10 }}>
-        <button className="btn" onClick={markLap} type="button">
+      <div className="run-actions" style={{ marginBottom: 10 }}>
+        <button className="btn run-action-lap" onClick={markLap} type="button">
           Lap
           {session.manualLaps.length > 0 ? ` (${session.manualLaps.length})` : ''}
         </button>
         {running ? (
           <button
-            className="btn"
+            type="button"
+            className="btn run-action-pause"
             onClick={() => {
               session.pause();
               setAutoPaused(false);
@@ -1395,7 +1525,8 @@ export function RunScreen({
           </button>
         ) : (
           <button
-            className="btn primary"
+            type="button"
+            className="btn primary run-action-pause"
             onClick={() => {
               session.resume();
               setAutoPaused(false);
@@ -1406,7 +1537,7 @@ export function RunScreen({
             Resume
           </button>
         )}
-        <button className="btn primary" onClick={finish}>
+        <button type="button" className="btn danger run-action-finish" onClick={finish}>
           Finish
         </button>
       </div>

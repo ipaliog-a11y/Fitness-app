@@ -79,18 +79,33 @@ function RunRow({
 
   const report = activity.heartReport;
   const hasHr = Boolean(report || (activity.heart && activity.heart.length > 0));
+  const started = new Date(activity.startedAt);
+  const dayNum = started.getDate();
+  const weekday = started.toLocaleDateString(undefined, { weekday: 'short' });
+  const monoWhen = started
+    .toLocaleDateString(undefined, { weekday: 'short', day: '2-digit' })
+    .replace(',', '')
+    .toUpperCase();
 
   return (
     <button className="run-item" type="button" onClick={() => onOpen(activity.id)}>
+      <span className="run-item-bar" aria-hidden />
+      <span className="run-item-day" aria-hidden>
+        <b>{dayNum}</b>
+        <small>{weekday}</small>
+      </span>
       <span className="glyph">{modeIcon(activity.mode)}</span>
       <span className="body">
-        <span className="headline">
-          {formatDistance(activity.distanceM, profile.units)} {distanceLabel(profile.units)}
-          {' · '}
-          {formatDuration(activity.durationMs)}
-          {' · '}
-          {formatCalories(calories)} kcal
-          {hit ? ' · ✓ goal' : ''}
+        <span className="run-item-top">
+          <span className="headline">
+            {formatDistance(activity.distanceM, profile.units)} {distanceLabel(profile.units)}
+            {' · '}
+            {formatDuration(activity.durationMs)}
+            {' · '}
+            {formatCalories(calories)} kcal
+            {hit ? ' · ✓ goal' : ''}
+          </span>
+          <span className="run-item-when">{monoWhen}</span>
         </span>
         <span className="meta">
           {formatDay(activity.startedAt)} at {formatClock(activity.startedAt)} ·{' '}
@@ -119,7 +134,7 @@ function RunRow({
           </span>
         )}
       </span>
-      <span aria-hidden style={{ color: 'var(--muted)' }}>
+      <span className="run-item-chev" aria-hidden>
         ›
       </span>
     </button>
