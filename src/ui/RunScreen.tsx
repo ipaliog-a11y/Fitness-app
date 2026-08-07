@@ -21,7 +21,7 @@ import {
 } from 'react';
 import type { Activity, RunMode } from '../core/activity';
 import { autoPauseAction, nextStillMs } from '../core/autoPause';
-import { calorieSourceLabel, formatCalories } from '../core/calories';
+import { formatCalories } from '../core/calories';
 import { cueSpeech, makeSnapshot, pendingCues, type CueSnapshot } from '../core/cues';
 import { calibrateAgainst } from '../core/footpod';
 import {
@@ -1596,12 +1596,6 @@ export function RunScreen({
                 );
               })}
             </div>
-            <p className="hint live-calorie-hint">
-              Tap a tile to switch · Est. {calorieSourceLabel(calorieEst.source)}
-              {calorieEst.source === 'pace' && heartStatus !== 'connected'
-                ? ' — strap for effort-based burn'
-                : ''}
-            </p>
           </>
         );
       })()}

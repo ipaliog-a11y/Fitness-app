@@ -291,9 +291,17 @@ export function DetailScreen({
             </div>
           </div>
           <ZoneBars summary={heart} maxHeartRate={reportMaxHr} showPercent />
-          {activity.heart.length > 1 && (
+          {(activity.heart.length > 1 ||
+            activity.segments.some((s) => s.length > 1)) && (
             <div style={{ marginTop: 14 }}>
-              <HeartChart samples={activity.heart} maxHeartRate={reportMaxHr} />
+              <HeartChart
+                samples={activity.heart}
+                maxHeartRate={reportMaxHr}
+                segments={activity.segments}
+                distanceM={activity.distanceM}
+                durationMs={activity.durationMs}
+                units={profile.units}
+              />
             </div>
           )}
         </div>
