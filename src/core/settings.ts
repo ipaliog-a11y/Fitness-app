@@ -89,6 +89,8 @@ export interface Profile {
   keepAwake: boolean;
   /** Speak distance / goal / lap cues during a run. */
   audioCues: boolean;
+  /** Short vibration / haptic on button presses. */
+  haptics: boolean;
   /**
    * Auto-pause when stopped (outdoor GPS or treadmill with foot-pod speed).
    * Auto-resumes when movement returns.
@@ -121,6 +123,7 @@ export const DEFAULTS: Profile = {
   weeklyGoalM: 20000,
   keepAwake: true,
   audioCues: true,
+  haptics: true,
   autoPause: true,
   mapStyle: 'auto',
   liveMapTiles: false,
@@ -230,6 +233,7 @@ export function sanitise(raw: unknown): Profile {
     weeklyGoalM: clamp(num(input.weeklyGoalM, DEFAULTS.weeklyGoalM), 0, 500_000),
     keepAwake: typeof input.keepAwake === 'boolean' ? input.keepAwake : DEFAULTS.keepAwake,
     audioCues: typeof input.audioCues === 'boolean' ? input.audioCues : DEFAULTS.audioCues,
+    haptics: typeof input.haptics === 'boolean' ? input.haptics : DEFAULTS.haptics,
     autoPause: typeof input.autoPause === 'boolean' ? input.autoPause : DEFAULTS.autoPause,
     mapStyle: parseMapStyle(input.mapStyle),
     liveMapTiles:

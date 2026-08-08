@@ -6,12 +6,14 @@
  * Weight lives under Profile, not as a sixth tab.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Activity } from './core/activity';
 import { byNewest } from './core/activity';
 import { allActivities, deleteActivity, saveActivity } from './core/db';
 import { applyTheme, loadProfile, saveProfile, sanitise, type Profile } from './core/settings';
 import { addDistanceToShoe, loadShoes, saveShoes, shoeNeedsWarning } from './core/shoes';
+import { exitApp, listenHardwareBack, minimizeApp } from './platform/appBack';
+import { hapticChange } from './platform/haptics';
 import {
   bootstrapPermissions,
   hideNativeSplash,
@@ -99,6 +101,19 @@ export function App() {
   /** False until splash branding + permission bootstrap finish. */
   const [bootReady, setBootReady] = useState(false);
   const [bootStatus, setBootStatus] = useState('Getting ready…');
+  /** Coach recovery guide overlay. */
+  const [coachGuideOpen, setCoachGuideOpen] = useState(false);
+  /**
+   * After finishing a run the detail screen is locked until Save or Delete so
+   * a stray tab tap cannot abandon the results flow.
+   */
+  const [resultDecisionLock, setResultDecisionLock] = useState(false);
+
+  /** Run screen consumes hardware back (picker / Get ready). */
+  const runBackHandlerRef = useRef<(() => boolean) | null>(null);
+  /** Second-press window for exit or minimize. */
+  const pendingBackActionRef = useRef<null | 'exit' | 'minimize'>(null);
+  const pendingBackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const reload = useCallback(() => {
     void allActivities().then(setActivities);
@@ -138,11 +153,129 @@ export function App() {
     setTimeout(() => setToast((current) => (current === message ? null : current)), 3500);
   }, []);
 
+  const clearPendingBack = useCallback(() => {
+    pendingBackActionRef.current = null;
+    if (pendingBackTimerRef.current) {
+      clearTimeout(pendingBackTimerRef.current);
+      pendingBackTimerRef.current = null;
+    }
+  }, []);
+
+  const armPendingBack = useCallback(
+    (kind: 'exit' | 'minimize', toast: string) => {
+      pendingBackActionRef.current = kind;
+      if (pendingBackTimerRef.current) clearTimeout(pendingBackTimerRef.current);
+      pendingBackTimerRef.current = setTimeout(() => {
+        pendingBackActionRef.current = null;
+        pendingBackTimerRef.current = null;
+      }, 2000);
+      showToast(toast);
+    },
+    [showToast],
+  );
+
+  // Android system back.
+  useEffect(() => {
+    if (!bootReady) return;
+    let dispose: (() => void) | undefined;
+    let cancelled = false;
+
+    void listenHardwareBack(() => {
+      // Post-run results: only Save / Delete may leave.
+      if (resultDecisionLock && openId) {
+        clearPendingBack();
+        showToast('Choose Save or Delete to continue');
+        return;
+      }
+      // 1) Nested overlays first
+      if (openId) {
+        clearPendingBack();
+        setOpenId(null);
+        return;
+      }
+      if (coachGuideOpen) {
+        clearPendingBack();
+        setCoachGuideOpen(false);
+        return;
+      }
+      // 2) Any other tab → Run
+      if (tab !== 'run') {
+        clearPendingBack();
+        setTab('run');
+        void hapticChange();
+        return;
+      }
+      // 3) Run screen internal (workout picker / Get ready)
+      if (runBackHandlerRef.current?.()) {
+        clearPendingBack();
+        return;
+      }
+      // 4) Live run: double-back minimizes
+      if (runLive) {
+        if (pendingBackActionRef.current === 'minimize') {
+          clearPendingBack();
+          void minimizeApp();
+          return;
+        }
+        armPendingBack('minimize', 'Press again to minimize');
+        return;
+      }
+      // 5) Idle Run tab: double-back exits
+      if (pendingBackActionRef.current === 'exit') {
+        clearPendingBack();
+        void exitApp();
+        return;
+      }
+      armPendingBack('exit', 'Press again to exit');
+    }).then((d) => {
+      if (cancelled) d();
+      else dispose = d;
+    });
+
+    return () => {
+      cancelled = true;
+      dispose?.();
+      clearPendingBack();
+    };
+  }, [
+    bootReady,
+    openId,
+    resultDecisionLock,
+    coachGuideOpen,
+    tab,
+    runLive,
+    armPendingBack,
+    clearPendingBack,
+    showToast,
+  ]);
+
   const changeProfile = useCallback((next: Profile) => {
     // Always re-sanitise so a partial write never leaves the UI with missing
     // fields (e.g. displayName) that crash the Profile screen on .trim().
     const clean = sanitise(next);
-    setProfile(clean);
+    setProfile((prev) => {
+      const changed =
+        prev.theme !== clean.theme ||
+        prev.units !== clean.units ||
+        prev.audioCues !== clean.audioCues ||
+        prev.haptics !== clean.haptics ||
+        prev.autoPause !== clean.autoPause ||
+        prev.keepAwake !== clean.keepAwake ||
+        prev.liveMapTiles !== clean.liveMapTiles ||
+        prev.mapStyle !== clean.mapStyle ||
+        prev.displayName !== clean.displayName ||
+        prev.birthDate !== clean.birthDate ||
+        prev.age !== clean.age ||
+        prev.heightCm !== clean.heightCm ||
+        prev.weightKg !== clean.weightKg ||
+        prev.sex !== clean.sex ||
+        prev.maxHeartRate !== clean.maxHeartRate ||
+        prev.strideM !== clean.strideM ||
+        prev.footpodCalibration !== clean.footpodCalibration ||
+        prev.weeklyGoalM !== clean.weeklyGoalM;
+      if (changed) void hapticChange();
+      return clean;
+    });
     saveProfile(clean);
     applyTheme(clean.theme);
   }, []);
@@ -170,6 +303,7 @@ export function App() {
       setActivities((current) => [activity, ...current].sort(byNewest));
       setOpenId(activity.id);
       setTab('history');
+      setResultDecisionLock(true);
     },
     [showToast],
   );
@@ -178,6 +312,7 @@ export function App() {
     await deleteActivity(id);
     setActivities((current) => current.filter((a) => a.id !== id));
     setOpenId(null);
+    setResultDecisionLock(false);
   }, []);
 
   const handleNote = useCallback(async (id: string, note: string) => {
@@ -216,6 +351,7 @@ export function App() {
           onToast={showToast}
           onLiveChange={setRunLive}
           visible={showRun}
+          backHandlerRef={runBackHandlerRef}
         />
       </div>
 
@@ -226,10 +362,19 @@ export function App() {
           // "longest run yet" is measured against what came before it.
           history={activities.filter((a) => a.id !== open.id && a.startedAt < open.startedAt)}
           profile={profile}
-          onBack={() => setOpenId(null)}
+          decisionRequired={resultDecisionLock}
+          onBack={() => {
+            if (resultDecisionLock) {
+              showToast('Choose Save or Delete to continue');
+              return;
+            }
+            setOpenId(null);
+          }}
           onSave={() => {
+            setResultDecisionLock(false);
             setOpenId(null);
             setTab('run');
+            void hapticChange();
           }}
           onDelete={handleDelete}
           onNoteChange={handleNote}
@@ -256,6 +401,8 @@ export function App() {
             setOpenId(id);
             setTab('history');
           }}
+          guideOpen={coachGuideOpen}
+          onGuideOpenChange={setCoachGuideOpen}
         />
       )}
 
@@ -279,16 +426,28 @@ export function App() {
 
       {toast && <div className="toast">{toast}</div>}
 
-      <nav className="tabs tabs-5" aria-label="Main">
+      <nav
+        className={`tabs tabs-5${resultDecisionLock && open ? ' tabs-locked' : ''}`}
+        aria-label="Main"
+        aria-disabled={resultDecisionLock && open ? true : undefined}
+      >
         {TABS.map((entry) => (
           <button
             key={entry.id}
+            type="button"
+            aria-disabled={resultDecisionLock && open ? true : undefined}
             aria-current={!open && tab === entry.id ? 'page' : undefined}
             onClick={() => {
+              if (resultDecisionLock && open) {
+                showToast('Choose Save or Delete to continue');
+                return;
+              }
               // Tapping a tab always leaves the detail view, so the tab bar
               // never looks inert.
+              const tabChanged = entry.id !== tab;
               setOpenId(null);
               setTab(entry.id);
+              if (tabChanged) void hapticChange();
             }}
           >
             <span className="glyph" aria-hidden>

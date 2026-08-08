@@ -420,6 +420,27 @@ textarea:focus-visible {
   box-shadow: none;
 }
 
+.tabs.tabs-locked {
+  opacity: 0.5;
+}
+
+.tabs.tabs-locked button {
+  cursor: not-allowed;
+}
+
+.detail-decision-banner {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 12px);
+  background: var(--accent-dim);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--text);
+}
+
+.detail-decision-banner strong {
+  color: var(--accent-bright, var(--accent));
+}
+
 .tabs button {
   flex: 1;
   padding: 10px 4px 12px;
@@ -1215,6 +1236,22 @@ textarea:focus-visible {
 }
 
 /* --- Coach / plans ------------------------------------------------------- */
+
+.coach-guide-list {
+  margin: 10px 0 0;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.coach-guide-list li {
+  margin-bottom: 8px;
+}
+
+.coach-guide-list strong {
+  color: var(--text);
+}
 
 .plan-list {
   margin-top: 10px;

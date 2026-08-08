@@ -56,6 +56,9 @@ interface Props {
   onToast(message: string): void;
   /** Jump to Run tab so the athlete can start today’s session. */
   onStartRun?(): void;
+  /** Controlled recovery guide (also closed by Android back). */
+  guideOpen?: boolean;
+  onGuideOpenChange?(open: boolean): void;
 }
 
 function statusClass(status: RecoveryStatus): string {
@@ -81,10 +84,24 @@ function sessionTarget(s: PlanSession, units: Profile['units']): string {
   return kindLabel(s.kind);
 }
 
-export function CoachScreen({ activities, profile, onOpen, onToast, onStartRun }: Props) {
+export function CoachScreen({
+  activities,
+  profile,
+  onOpen,
+  onToast,
+  onStartRun,
+  guideOpen: guideOpenProp,
+  onGuideOpenChange,
+}: Props) {
   const now = Date.now();
   const [active, setActive] = useState<ActivePlanState | null>(() => loadActivePlan());
   const [browse, setBrowse] = useState(false);
+  const [guideLocal, setGuideLocal] = useState(false);
+  const guideOpen = guideOpenProp ?? guideLocal;
+  const setGuideOpen = (open: boolean) => {
+    if (onGuideOpenChange) onGuideOpenChange(open);
+    else setGuideLocal(open);
+  };
 
   const name = (profile.displayName ?? '').trim();
   const greeting = name ? `Coach for ${name}` : 'Coach';
@@ -157,6 +174,101 @@ export function CoachScreen({ activities, profile, onOpen, onToast, onStartRun }
     setActive(toggleSessionComplete(active, session));
   };
 
+  if (guideOpen) {
+    return (
+      <div className="screen coach-guide">
+        <button type="button" className="back" onClick={() => setGuideOpen(false)}>
+          ‹ Back
+        </button>
+        <h1>Understanding Coach</h1>
+        <p className="subtitle">
+          Short plain-language guide to the recovery numbers — not medical advice.
+        </p>
+
+        <div className="card">
+          <h2>Why recovery matters</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Hard training only works if the body adapts between sessions. Too much hard work
+            stacked too close together raises injury risk and makes the next run feel flat.
+            Easy days and sleep are part of the plan, not a break from it.
+          </p>
+          <ul className="coach-guide-list">
+            <li>
+              <strong>Fresh</strong> — room for a quality session if you feel good.
+            </li>
+            <li>
+              <strong>Balanced</strong> — keep most running easy; hard days are planned.
+            </li>
+            <li>
+              <strong>Loaded / High</strong> — ease volume and intensity until you bounce back.
+            </li>
+          </ul>
+        </div>
+
+        <div className="card">
+          <h2>7-day load</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            How much training stress you have piled up in the <strong>last week</strong>. It
+            scores each run from time and effort (heart rate when available, otherwise pace).
+            Higher means more recent work — not “good” or “bad” by itself.
+          </p>
+        </div>
+
+        <div className="card">
+          <h2>Base load</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Your recent <strong>average weekly load</strong> (about the last four weeks). Think of
+            it as your fitness “normal.” New runners with little history will see a small base —
+            that is expected.
+          </p>
+        </div>
+
+        <div className="card">
+          <h2>Acute : chronic</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            The ratio of <strong>this week’s load ÷ your base</strong>. Roughly:
+          </p>
+          <ul className="coach-guide-list">
+            <li>
+              <strong>Under ~0.8</strong> — lighter than usual (fresh / taper).
+            </li>
+            <li>
+              <strong>~0.8–1.3</strong> — steady build.
+            </li>
+            <li>
+              <strong>Above ~1.5</strong> — a sharp jump; classic risk window if volume is high.
+            </li>
+          </ul>
+          <p className="hint">
+            With only a few easy runs, a high ratio can look scary while absolute load is still
+            low. RunLog only flags “high load” when the base is solid enough — still use how you
+            feel.
+          </p>
+        </div>
+
+        <div className="card">
+          <h2>Weekly distance &amp; records</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Simple totals and personal bests from runs saved on this device. The weekly goal bar
+            (if you set one in Profile) is a distance target, separate from load.
+          </p>
+        </div>
+
+        <div className="card">
+          <h2>Training plans</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Multi-week templates you tick by hand. They guide structure; they do not auto-read
+            your GPS and invent sessions.
+          </p>
+        </div>
+
+        <button type="button" className="btn primary wide" onClick={() => setGuideOpen(false)}>
+          Got it
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="screen">
       <h1>{greeting}</h1>
@@ -218,6 +330,14 @@ export function CoachScreen({ activities, profile, onOpen, onToast, onStartRun }
           Load is a simple score from time and effort (HR when available). It is a guide, not a
           medical reading.
         </p>
+        <button
+          type="button"
+          className="btn wide"
+          style={{ marginTop: 12 }}
+          onClick={() => setGuideOpen(true)}
+        >
+          What do these numbers mean?
+        </button>
       </div>
 
       {/* Active plan */}

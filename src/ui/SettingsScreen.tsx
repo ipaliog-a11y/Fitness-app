@@ -394,6 +394,20 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           voice (works offline).
         </p>
         <div className="row" style={{ marginTop: 12 }}>
+          <span>Haptic feedback</span>
+          <button
+            type="button"
+            className="btn"
+            aria-pressed={profile.haptics}
+            onClick={() => set('haptics', !profile.haptics)}
+          >
+            {profile.haptics ? 'On' : 'Off'}
+          </button>
+        </div>
+        <p className="hint">
+          Short vibration when something changes (tabs, settings). Not on every finger tap.
+        </p>
+        <div className="row" style={{ marginTop: 12 }}>
           <span>Auto-pause</span>
           <button
             type="button"

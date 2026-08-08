@@ -113,6 +113,11 @@ interface Props {
    * that may have been edited under Settings while this screen stayed mounted.
    */
   visible?: boolean;
+  /**
+   * Hardware back: parent calls this. Return true if the run screen consumed
+   * the press (close picker / leave Get ready).
+   */
+  backHandlerRef?: { current: (() => boolean) | null };
 }
 
 function geoLabel(status: GeoStatus, detail?: string): string {
@@ -211,6 +216,7 @@ export function RunScreen({
   onToast,
   onLiveChange,
   visible = true,
+  backHandlerRef,
 }: Props) {
   const [mode, setMode] = useState<RunMode>('outdoor');
   const [tick, setTick] = useState(0);
@@ -723,6 +729,31 @@ export function RunScreen({
     setRoutes(loadRoutes());
     setTick((t) => t + 1);
   };
+
+  // Hardware back: workout picker → Get ready cancel. Live/idle left to App.
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    backHandlerRef.current = () => {
+      if (workoutPickerOpen) {
+        if (workoutPickerView === 'mine') {
+          setWorkoutPickerView('main');
+          return true;
+        }
+        setWorkoutPickerOpen(false);
+        setWorkoutPickerView('main');
+        return true;
+      }
+      const sess = sessionRef.current;
+      if (arming && sess?.state === 'idle') {
+        cancelArming();
+        return true;
+      }
+      return false;
+    };
+    return () => {
+      backHandlerRef.current = null;
+    };
+  }, [backHandlerRef, workoutPickerOpen, workoutPickerView, arming]);
 
   const connectPod = async () => {
     const connection = await connectFootpod({

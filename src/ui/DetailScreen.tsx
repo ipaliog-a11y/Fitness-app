@@ -49,6 +49,10 @@ interface Props {
   activity: Activity;
   history: Activity[];
   profile: Profile;
+  /**
+   * Post-finish results: hide back and block leaving until Save or Delete.
+   */
+  decisionRequired?: boolean;
   onBack(): void;
   /** Save note (if needed) and return to the main Run screen. */
   onSave(): void;
@@ -61,6 +65,7 @@ export function DetailScreen({
   activity,
   history,
   profile,
+  decisionRequired = false,
   onBack,
   onSave,
   onDelete,
@@ -111,10 +116,17 @@ export function DetailScreen({
   const goalShare = activity.goal ? Math.min(1, goalProgress(activity.goal, goalSnap)) : 0;
 
   return (
-    <div className="screen">
-      <button className="back" onClick={onBack}>
-        ‹ Back
-      </button>
+    <div className={`screen${decisionRequired ? ' detail-decision' : ''}`}>
+      {!decisionRequired ? (
+        <button type="button" className="back" onClick={onBack}>
+          ‹ Back
+        </button>
+      ) : (
+        <p className="hint detail-decision-banner">
+          Finish by choosing <strong>Save</strong> or <strong>Delete</strong> — navigation is
+          locked so this run is not left by accident.
+        </p>
+      )}
 
       <h1>
         {formatDistance(activity.distanceM, profile.units)} {distanceLabel(profile.units)}
@@ -134,8 +146,8 @@ export function DetailScreen({
         </div>
       )}
 
-      <div className="btn-row" style={{ marginBottom: 12 }}>
-        {hasRoute(activity) && (
+      {hasRoute(activity) && (
+        <div className="btn-row" style={{ marginBottom: 12 }}>
           <button
             type="button"
             className="btn"
@@ -148,20 +160,6 @@ export function DetailScreen({
           >
             Export GPX
           </button>
-        )}
-        <button
-          type="button"
-          className="btn"
-          onClick={() => {
-            const tcx = activityToTcx(activity);
-            const day = new Date(activity.startedAt).toISOString().slice(0, 10);
-            downloadText(`runlog-${day}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
-            onToast?.('TCX downloaded — good for Strava / Garmin.');
-          }}
-        >
-          Export TCX
-        </button>
-        {hasRoute(activity) && (
           <button
             type="button"
             className="btn"
@@ -182,8 +180,8 @@ export function DetailScreen({
           >
             Save route
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {(activity.shoeId || activity.workoutName) && (
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
@@ -364,6 +362,21 @@ export function DetailScreen({
           // IndexedDB, and one per letter is a lot of writes for no benefit.
           onBlur={() => note !== activity.note && onNoteChange(activity.id, note)}
         />
+      </div>
+
+      <div className="btn-row" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className="btn wide"
+          onClick={() => {
+            const tcx = activityToTcx(activity);
+            const day = new Date(activity.startedAt).toISOString().slice(0, 10);
+            downloadText(`runlog-${day}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
+            onToast?.('TCX downloaded — good for Strava / Garmin.');
+          }}
+        >
+          Export TCX
+        </button>
       </div>
 
       {confirming ? (
