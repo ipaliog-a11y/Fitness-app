@@ -19,16 +19,17 @@ export function activityLoad(activity: Activity, maxHeartRate = 185): number {
   const report = activity.heartReport;
   if (report && report.averageBpm > 0 && maxHeartRate > 0) {
     // Fraction of max HR, clamped so easy jogs still count a little.
-    intensity = Math.min(1.4, Math.max(0.5, report.averageBpm / maxHeartRate));
+    intensity = Math.min(1.35, Math.max(0.45, report.averageBpm / maxHeartRate));
   } else if (activity.heart.length > 0 && maxHeartRate > 0) {
     const avg =
       activity.heart.reduce((s, h) => s + h.bpm, 0) / activity.heart.length;
-    intensity = Math.min(1.4, Math.max(0.5, avg / maxHeartRate));
+    intensity = Math.min(1.35, Math.max(0.45, avg / maxHeartRate));
   } else if (activity.distanceM > 0) {
     // Pace vs a casual ~6:00/km (360 s/km): faster ⇒ higher load.
+    // Cap without HR is lower so easy jogs (~5:00–11:00/km) stay mild.
     const pace = averagePace(activity, 'metric');
     if (pace && pace > 0) {
-      intensity = Math.min(1.4, Math.max(0.55, 360 / pace));
+      intensity = Math.min(1.15, Math.max(0.45, 360 / pace));
     }
   }
 
@@ -69,8 +70,12 @@ export interface LoadSnapshot {
 /**
  * Acute:chronic style snapshot.
  *
- * Chronic is mean of the last four complete-ish weeks of load (including the
- * current partial week as one of four rolling windows of 7 days).
+ * Chronic is mean of the last four 7-day windows ending now.
+ *
+ * Important: a thin history (most load in the last week, empty weeks before)
+ * makes acute/chronic ≈ 4 by construction. We only use ratio-based “high load”
+ * when there is a real multi-week base and meaningful absolute load — otherwise
+ * beginners with 1–2 easy runs get false “High load” alarms.
  */
 export function loadSnapshot(
   activities: Activity[],
@@ -82,10 +87,14 @@ export function loadSnapshot(
 
   // Four consecutive 7-day windows ending now.
   let chronicSum = 0;
+  let weeksWithLoad = 0;
   for (let i = 0; i < 4; i++) {
     const end = now - i * 7 * day;
     const start = end - 7 * day;
-    chronicSum += loadBetween(activities, start, end, maxHeartRate);
+    const weekLoad = loadBetween(activities, start, end, maxHeartRate);
+    chronicSum += weekLoad;
+    // Count weeks that actually had training (not empty zeros that deflate chronic).
+    if (weekLoad >= 8) weeksWithLoad += 1;
   }
   const chronic = chronicSum / 4;
 
@@ -101,19 +110,28 @@ export function loadSnapshot(
   let ratio: number | null = null;
   let status: RecoveryStatus = 'unknown';
 
-  if (chronic < 15 && acute < 15) {
-    status = activities.length === 0 ? 'unknown' : 'fresh';
-  } else if (chronic >= 10) {
+  const thinHistory = weeksWithLoad < 2 || chronic < 25;
+  // Always compute ratio for display when chronic is non-trivial, but don't
+  // trust it for status when the base is thin.
+  if (chronic >= 5) {
     ratio = acute / chronic;
-    if (ratio < 0.8) status = 'fresh';
-    else if (ratio <= 1.3) status = 'balanced';
-    else if (ratio <= 1.5) status = 'loaded';
+  }
+
+  if (activities.length === 0) {
+    status = 'unknown';
+  } else if (thinHistory) {
+    // Absolute acute only — small easy weeks stay fresh/balanced.
+    if (acute < 45) status = 'fresh';
+    else if (acute < 90) status = 'balanced';
+    else if (acute < 140) status = 'loaded';
     else status = 'high';
-  } else if (acute > 40) {
-    status = 'loaded';
-    ratio = null;
   } else {
-    status = 'balanced';
+    // Established base: classic ACWR bands, but "high" also needs real volume.
+    const r = ratio ?? 1;
+    if (r < 0.8) status = 'fresh';
+    else if (r <= 1.3) status = 'balanced';
+    else if (r <= 1.5 || acute < 50) status = 'loaded';
+    else status = 'high';
   }
 
   return { acute, chronic, ratio, status, thisWeek, lastWeek };
@@ -137,7 +155,7 @@ export function recoveryLabel(status: RecoveryStatus): string {
 export function recoveryBlurb(snap: LoadSnapshot): string {
   switch (snap.status) {
     case 'fresh':
-      return 'Recent training is light relative to your base. A quality session is fine if you feel good.';
+      return 'Recent training is light. Build gradually — a quality session is fine if you feel good.';
     case 'balanced':
       return 'Load looks steady. Keep most running easy and save hard efforts for planned days.';
     case 'loaded':

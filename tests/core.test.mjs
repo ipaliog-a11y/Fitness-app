@@ -1729,6 +1729,27 @@ check('training load rises with harder effort', () => {
   assert(['fresh', 'balanced', 'loaded', 'high', 'unknown'].includes(snap.status));
 });
 
+check('thin history does not scream high load on easy short week', () => {
+  const now = Date.now();
+  // Two easy jogs this week only (~1.6 km each, ~10 min/km, no HR).
+  const a = activityFrom([straightTrack({ points: 8 })], {
+    startedAt: now - 2 * 86_400_000,
+    durationMs: 18 * 60_000,
+    distanceM: 1700,
+  });
+  const b = activityFrom([straightTrack({ points: 8 })], {
+    startedAt: now - 1 * 86_400_000,
+    durationMs: 18 * 60_000,
+    distanceM: 1630,
+  });
+  const snap = loadSnapshot([a, b], now, 185);
+  // Ratio can look high when prior weeks are empty — status must not be "high".
+  assert(
+    snap.status === 'fresh' || snap.status === 'balanced',
+    `expected fresh/balanced for tiny easy week, got ${snap.status} (acute ${snap.acute.toFixed(1)}, chronic ${snap.chronic.toFixed(1)}, ratio ${snap.ratio})`,
+  );
+});
+
 check('plans have weekly sessions and progress', () => {
   assert(PLAN_TEMPLATES.length >= 3, 'several plans');
   const plan = planById('first-5k');

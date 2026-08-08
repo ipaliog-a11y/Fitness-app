@@ -16,6 +16,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type Dispatch,
   type SetStateAction,
 } from 'react';
@@ -46,7 +47,7 @@ import {
 import { loadRoutes, type SavedRoute } from '../core/routes';
 import { RunSession } from '../core/session';
 import type { Profile } from '../core/settings';
-import { zoneOf } from '../core/heart';
+import { zoneOf, zoneSwatch } from '../core/heart';
 import { calibrateStride } from '../core/steps';
 import {
   DEFAULT_PACE_BAND,
@@ -63,12 +64,27 @@ import {
   formatPace,
   paceLabel,
   paceSecondsPerUnit,
+  toDisplayDistance,
 } from '../core/units';
+import {
+  addSavedWorkout,
+  deleteSavedWorkout,
+  loadSavedWorkouts,
+  savedWorkoutById,
+  templateFromSaved,
+  type SavedWorkout,
+} from '../core/savedWorkouts';
 import {
   WORKOUT_PRESETS,
   WorkoutRunner,
   customIntervals,
   phaseKindLabel,
+  phaseVisualWeight,
+  workoutEffortLevel,
+  workoutTimeMs,
+  workoutWorkCount,
+  type PhaseKind,
+  type WorkoutPhase,
   type WorkoutTemplate,
 } from '../core/workout';
 import { watchPosition, type GeoStatus, type GeoWatcher } from '../platform/geolocation';
@@ -114,6 +130,50 @@ function geoLabel(status: GeoStatus, detail?: string): string {
     default:
       return 'Idle';
   }
+}
+
+/** Compact interval strip for workout tiles (warmup / work / rest / …). */
+function WorkoutIntervalStrip({ phases }: { phases: WorkoutPhase[] }) {
+  if (phases.length === 0) {
+    return (
+      <div className="workout-interval-strip" aria-hidden>
+        <span className="interval-seg kind-steady" style={{ flexGrow: 1 }} />
+      </div>
+    );
+  }
+  return (
+    <div className="workout-interval-strip" aria-hidden>
+      {phases.map((phase, i) => (
+        <span
+          key={`${phase.kind}-${i}`}
+          className={`interval-seg kind-${phase.kind as PhaseKind}`}
+          style={{ flexGrow: Math.max(1, Math.round(phaseVisualWeight(phase) / 15_000)) }}
+          title={`${phaseKindLabel(phase.kind)}: ${phase.label}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function EffortDots({ level }: { level: number }) {
+  const n = Math.min(5, Math.max(1, Math.round(level)));
+  return (
+    <span className="effort-dots" aria-label={`Effort ${n} of 5`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i} className={`effort-dot${i < n ? ' on' : ''}`} />
+      ))}
+    </span>
+  );
+}
+
+function workoutTileMeta(template: WorkoutTemplate): string {
+  const parts: string[] = [];
+  const ms = workoutTimeMs(template);
+  if (ms != null) parts.push(formatDuration(ms));
+  const work = workoutWorkCount(template);
+  if (work > 0) parts.push(`${work} hard`);
+  else parts.push(`${template.phases.length} phases`);
+  return parts.join(' · ');
 }
 
 function sensorPillClass(kind: 'good' | 'warn' | 'bad' | 'neutral'): string {
@@ -162,12 +222,17 @@ export function RunScreen({
   const [goalInput, setGoalInput] = useState('');
 
   const [workoutId, setWorkoutId] = useState<string>('none');
-  const [customOpen, setCustomOpen] = useState(false);
+  /** Dedicated workout tile picker (replaces the old <select>). */
+  const [workoutPickerOpen, setWorkoutPickerOpen] = useState(false);
+  /** Main grid vs My Workouts list. */
+  const [workoutPickerView, setWorkoutPickerView] = useState<'main' | 'mine'>('main');
+  const [myWorkouts, setMyWorkouts] = useState<SavedWorkout[]>(() => loadSavedWorkouts());
   const [customWork, setCustomWork] = useState('3');
   const [customRest, setCustomRest] = useState('2');
   const [customRepeats, setCustomRepeats] = useState('6');
   const [customWarm, setCustomWarm] = useState('5');
   const [customCool, setCustomCool] = useState('5');
+  const [customName, setCustomName] = useState('');
   const [customTemplate, setCustomTemplate] = useState<WorkoutTemplate | null>(null);
 
   const [shoes, setShoes] = useState<Shoe[]>(() => loadShoes());
@@ -225,6 +290,13 @@ export function RunScreen({
   const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'discard'>(null);
   /** Optional target pace (m:ss per unit) for live band feedback. */
   const [paceTargetInput, setPaceTargetInput] = useState('');
+  /**
+   * Flash the distance pod when a whole km/mi rolls over — not every clock tick.
+   * Hooks live at the top of the component (early returns later for idle/arm).
+   */
+  const [unitFlash, setUnitFlash] = useState(false);
+  const lastWholeRef = useRef<number | null>(null);
+  const flashUnitsRef = useRef(profile.units);
 
   const stillMsRef = useRef(0);
   const lastTickAtRef = useRef<number | null>(null);
@@ -243,8 +315,22 @@ export function RunScreen({
   const selectedWorkout = useCallback((): WorkoutTemplate | null => {
     if (workoutId === 'none') return null;
     if (workoutId === 'custom') return customTemplate;
-    return WORKOUT_PRESETS.find((w) => w.id === workoutId) ?? null;
+    const preset = WORKOUT_PRESETS.find((w) => w.id === workoutId);
+    if (preset) return preset;
+    const saved = savedWorkoutById(workoutId);
+    return saved ? templateFromSaved(saved) : null;
   }, [workoutId, customTemplate]);
+
+  const buildCustomFromForm = useCallback((): WorkoutTemplate => {
+    return customIntervals({
+      name: customName.trim() || undefined,
+      warmupMin: Number(customWarm) || 0,
+      workMin: Number(customWork) || 1,
+      restMin: Number(customRest) || 0,
+      repeats: Number(customRepeats) || 1,
+      cooldownMin: Number(customCool) || 0,
+    });
+  }, [customName, customWarm, customWork, customRest, customRepeats, customCool]);
 
   const ghostRoute = (() => {
     const r = routes.find((x) => x.id === routeId);
@@ -260,10 +346,35 @@ export function RunScreen({
   const running = session?.state === 'running';
   const active = running || session?.state === 'paused';
   const live = arming || active;
+  const liveDistanceM = session?.distanceM ?? 0;
 
   useEffect(() => {
     onLiveChange?.(live);
   }, [live, onLiveChange]);
+
+  /*
+   * A whole kilometre (or mile) is worth reporting; a passing second is not.
+   * Fires on the displayed unit so a miles user gets miles, and re-baselines
+   * instead of flashing when the unit setting itself changes.
+   * Kept above early returns so hook order never changes.
+   */
+  useEffect(() => {
+    if (!session || (session.state !== 'running' && session.state !== 'paused')) {
+      lastWholeRef.current = null;
+      return;
+    }
+    const whole = Math.floor(toDisplayDistance(liveDistanceM, profile.units));
+    const previous = lastWholeRef.current;
+    const rebase = previous === null || flashUnitsRef.current !== profile.units;
+    flashUnitsRef.current = profile.units;
+    lastWholeRef.current = whole;
+
+    if (rebase || whole <= previous) return;
+
+    setUnitFlash(true);
+    const timer = setTimeout(() => setUnitFlash(false), 700);
+    return () => clearTimeout(timer);
+  }, [liveDistanceM, profile.units, session, session?.state]);
 
   // Android: ongoing notification + home widget while the clock is live.
   useEffect(() => {
@@ -748,14 +859,323 @@ export function RunScreen({
 
   // --- Idle ---------------------------------------------------------------
 
+  if (!session && !arming && workoutPickerOpen) {
+    const freeSelected = workoutId === 'none';
+    const customSelected = workoutId === 'custom';
+
+    if (workoutPickerView === 'mine') {
+      return (
+        <div className="screen workout-picker-screen">
+          <button
+            type="button"
+            className="back"
+            onClick={() => setWorkoutPickerView('main')}
+          >
+            ‹ Workouts
+          </button>
+          <h1>My Workouts</h1>
+          <p className="subtitle">
+            {myWorkouts.length === 0
+              ? 'Nothing saved yet — build one under Custom intervals'
+              : 'Your saved interval sessions'}
+          </p>
+          <div className="workout-tile-grid">
+            {myWorkouts.map((w) => {
+              const t = templateFromSaved(w);
+              const selected = workoutId === w.id;
+              return (
+                <div
+                  key={w.id}
+                  className={`workout-tile workout-tile-saved${selected ? ' selected' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="workout-tile-hit"
+                    onClick={() => {
+                      setCustomTemplate(t);
+                      setWorkoutId(w.id);
+                      setWorkoutPickerOpen(false);
+                      setWorkoutPickerView('main');
+                      onToast(`Workout: ${w.name}`);
+                    }}
+                  >
+                    <div className="workout-tile-top">
+                      <span className="workout-tile-name">{w.name}</span>
+                      <EffortDots level={workoutEffortLevel(t)} />
+                    </div>
+                    <WorkoutIntervalStrip phases={w.phases} />
+                    <p className="workout-tile-blurb">{w.blurb || 'Saved custom workout'}</p>
+                    <span className="workout-tile-meta">{workoutTileMeta(t)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn danger workout-tile-delete"
+                    onClick={() => {
+                      deleteSavedWorkout(w.id);
+                      setMyWorkouts(loadSavedWorkouts());
+                      if (workoutId === w.id) {
+                        setWorkoutId('none');
+                        setCustomTemplate(null);
+                      }
+                      onToast('Workout deleted');
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="screen workout-picker-screen">
+        <button
+          type="button"
+          className="back"
+          onClick={() => {
+            setWorkoutPickerOpen(false);
+            setWorkoutPickerView('main');
+          }}
+        >
+          ‹ Back
+        </button>
+        <h1>Workout</h1>
+        <p className="subtitle">Choose a structure — each tile shows effort and intervals</p>
+
+        <div className="workout-tile-grid">
+          <button
+            type="button"
+            className={`workout-tile${freeSelected ? ' selected' : ''}`}
+            onClick={() => {
+              setWorkoutId('none');
+              setWorkoutPickerOpen(false);
+            }}
+          >
+            <div className="workout-tile-top">
+              <span className="workout-tile-name">Free run</span>
+              <EffortDots level={1} />
+            </div>
+            <WorkoutIntervalStrip
+              phases={[{ kind: 'steady', label: 'Free', target: { type: 'time', ms: 1 } }]}
+            />
+            <p className="workout-tile-blurb">No structure — just start and go.</p>
+            <span className="workout-tile-meta">Open-ended</span>
+          </button>
+
+          <button
+            type="button"
+            className={`workout-tile${workoutId.startsWith('my-') ? ' selected' : ''}`}
+            onClick={() => {
+              setMyWorkouts(loadSavedWorkouts());
+              setWorkoutPickerView('mine');
+            }}
+          >
+            <div className="workout-tile-top">
+              <span className="workout-tile-name">My Workouts</span>
+              <span className="workout-tile-badge">{myWorkouts.length}</span>
+            </div>
+            <WorkoutIntervalStrip
+              phases={
+                myWorkouts[0]?.phases ?? [
+                  { kind: 'work', label: 'W', target: { type: 'time', ms: 1 } },
+                  { kind: 'rest', label: 'R', target: { type: 'time', ms: 1 } },
+                  { kind: 'work', label: 'W', target: { type: 'time', ms: 1 } },
+                ]
+              }
+            />
+            <p className="workout-tile-blurb">
+              {myWorkouts.length === 0
+                ? 'Save custom intervals here for reuse.'
+                : 'Open your saved sessions.'}
+            </p>
+            <span className="workout-tile-meta">
+              {myWorkouts.length === 0 ? 'Empty' : `${myWorkouts.length} saved`} ›
+            </span>
+          </button>
+
+          {WORKOUT_PRESETS.map((w) => {
+            const selected = workoutId === w.id;
+            return (
+              <button
+                key={w.id}
+                type="button"
+                className={`workout-tile${selected ? ' selected' : ''}`}
+                onClick={() => {
+                  setWorkoutId(w.id);
+                  setWorkoutPickerOpen(false);
+                }}
+              >
+                <div className="workout-tile-top">
+                  <span className="workout-tile-name">{w.name}</span>
+                  <EffortDots level={workoutEffortLevel(w)} />
+                </div>
+                <WorkoutIntervalStrip phases={w.phases} />
+                <p className="workout-tile-blurb">{w.blurb}</p>
+                <span className="workout-tile-meta">{workoutTileMeta(w)}</span>
+              </button>
+            );
+          })}
+
+          <div className={`workout-tile workout-tile-custom${customSelected ? ' selected' : ''}`}>
+            <button
+              type="button"
+              className="workout-tile-hit"
+              onClick={() => setWorkoutId('custom')}
+            >
+              <div className="workout-tile-top">
+                <span className="workout-tile-name">Custom intervals</span>
+                <EffortDots
+                  level={
+                    customTemplate ? workoutEffortLevel(customTemplate) : 3
+                  }
+                />
+              </div>
+              <WorkoutIntervalStrip
+                phases={
+                  customTemplate?.phases ?? [
+                    { kind: 'warmup', label: 'W', target: { type: 'time', ms: 5 * 60_000 } },
+                    { kind: 'work', label: 'H', target: { type: 'time', ms: 3 * 60_000 } },
+                    { kind: 'rest', label: 'R', target: { type: 'time', ms: 2 * 60_000 } },
+                    { kind: 'work', label: 'H', target: { type: 'time', ms: 3 * 60_000 } },
+                    { kind: 'rest', label: 'R', target: { type: 'time', ms: 2 * 60_000 } },
+                    { kind: 'cooldown', label: 'C', target: { type: 'time', ms: 5 * 60_000 } },
+                  ]
+                }
+              />
+              <p className="workout-tile-blurb">
+                {customTemplate?.blurb ?? 'Build your own work / rest repeats.'}
+              </p>
+              <span className="workout-tile-meta">
+                {customTemplate ? workoutTileMeta(customTemplate) : 'Tap to edit below'}
+              </span>
+            </button>
+
+            {(customSelected || workoutId === 'custom') && (
+              <div className="custom-workout workout-tile-custom-form">
+                <div className="field">
+                  <label htmlFor="cw-name">Name (for Save)</label>
+                  <input
+                    id="cw-name"
+                    type="text"
+                    maxLength={48}
+                    placeholder="e.g. Tuesday hills"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                  />
+                </div>
+                <div className="field-row">
+                  <div className="field">
+                    <label htmlFor="cw-warm">Warm-up (min)</label>
+                    <input
+                      id="cw-warm"
+                      type="number"
+                      min="0"
+                      value={customWarm}
+                      onChange={(e) => setCustomWarm(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="cw-cool">Cool-down (min)</label>
+                    <input
+                      id="cw-cool"
+                      type="number"
+                      min="0"
+                      value={customCool}
+                      onChange={(e) => setCustomCool(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="field-row">
+                  <div className="field">
+                    <label htmlFor="cw-work">Work (min)</label>
+                    <input
+                      id="cw-work"
+                      type="number"
+                      min="0.5"
+                      step="0.5"
+                      value={customWork}
+                      onChange={(e) => setCustomWork(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="cw-rest">Rest (min)</label>
+                    <input
+                      id="cw-rest"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={customRest}
+                      onChange={(e) => setCustomRest(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="cw-reps">Repeats</label>
+                    <input
+                      id="cw-reps"
+                      type="number"
+                      min="1"
+                      max="40"
+                      value={customRepeats}
+                      onChange={(e) => setCustomRepeats(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="btn-row">
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => {
+                      const t = buildCustomFromForm();
+                      setCustomTemplate(t);
+                      setWorkoutId('custom');
+                      onToast(`Custom workout: ${t.blurb}`);
+                      setWorkoutPickerOpen(false);
+                      setWorkoutPickerView('main');
+                    }}
+                  >
+                    Use this workout
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      const t = buildCustomFromForm();
+                      const saved = addSavedWorkout(
+                        t,
+                        customName.trim() || t.name,
+                      );
+                      setMyWorkouts(loadSavedWorkouts());
+                      setCustomTemplate(templateFromSaved(saved));
+                      setWorkoutId(saved.id);
+                      onToast(`Saved “${saved.name}” to My Workouts`);
+                    }}
+                  >
+                    Save workout
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!session && !arming) {
     const isHud = profile.theme === 'hud';
+    const resolvedWorkout = selectedWorkout();
     const workoutSummary =
       workoutId === 'none'
         ? 'Free run'
-        : workoutId === 'custom'
-          ? customTemplate?.name ?? 'Custom intervals'
-          : (WORKOUT_PRESETS.find((w) => w.id === workoutId)?.name ?? 'Workout');
+        : resolvedWorkout?.name ??
+          (workoutId === 'custom' ? 'Custom intervals' : 'Workout');
+    const workoutBlurb =
+      workoutId === 'none'
+        ? 'No structure'
+        : resolvedWorkout?.blurb ?? '';
     const goalSummary =
       goalPick === 'none'
         ? 'Free run'
@@ -765,6 +1185,8 @@ export function RunScreen({
     const shoeSummary =
       activeShoes(shoes).find((s) => s.id === shoeId)?.name ??
       (activeShoes(shoes).length === 0 ? 'None' : 'None');
+    const selectedForStrip: WorkoutPhase[] | null =
+      workoutId === 'none' ? null : resolvedWorkout?.phases ?? null;
 
     return (
       <div className="screen run-idle">
@@ -977,6 +1399,34 @@ export function RunScreen({
           )}
         </div>
 
+        <div className="card workout-card">
+          <button
+            type="button"
+            className="workout-open-btn"
+            onClick={() => {
+              setMyWorkouts(loadSavedWorkouts());
+              setWorkoutPickerView('main');
+              setWorkoutPickerOpen(true);
+            }}
+          >
+            <div className="workout-open-btn-main">
+              <span className="workout-open-btn-label">Workout</span>
+              <span className="workout-open-btn-name">{workoutSummary}</span>
+              {workoutBlurb && (
+                <span className="workout-open-btn-blurb">{workoutBlurb}</span>
+              )}
+            </div>
+            {selectedForStrip && selectedForStrip.length > 0 ? (
+              <WorkoutIntervalStrip phases={selectedForStrip} />
+            ) : (
+              <WorkoutIntervalStrip
+                phases={[{ kind: 'steady', label: 'Free', target: { type: 'time', ms: 1 } }]}
+              />
+            )}
+            <span className="workout-open-btn-cta">Choose workout ›</span>
+          </button>
+        </div>
+
         <div className={`card setup-panel${panelGearOpen ? ' open' : ''}`}>
           <button
             type="button"
@@ -984,12 +1434,15 @@ export function RunScreen({
             aria-expanded={panelGearOpen}
             onClick={() => setPanelGearOpen((v) => !v)}
           >
-            <h2>Workout &amp; route</h2>
+            <h2>Route &amp; shoes</h2>
             <span className="setup-panel-summary">
-              {workoutSummary}
               {mode === 'outdoor' && routeId
-                ? ` · ${routes.find((r) => r.id === routeId)?.name ?? 'route'}`
-                : ''}
+                ? routes.find((r) => r.id === routeId)?.name ?? 'Route'
+                : mode === 'outdoor'
+                  ? 'No ghost route'
+                  : 'Treadmill'}
+              {' · '}
+              {shoeSummary}
             </span>
             <span className="setup-panel-chev" aria-hidden>
               {panelGearOpen ? '▾' : '▸'}
@@ -997,113 +1450,6 @@ export function RunScreen({
           </button>
           {panelGearOpen && (
             <div className="setup-panel-body">
-              <div className="kv-row">
-                <span className="kv-k">Workout</span>
-                <span className="kv-v">{workoutSummary}</span>
-              </div>
-              <select
-                className="select"
-                value={workoutId}
-                onChange={(e) => {
-                  setWorkoutId(e.target.value);
-                  if (e.target.value !== 'custom') setCustomOpen(false);
-                  else setCustomOpen(true);
-                }}
-              >
-                <option value="none">Free run — no structure</option>
-                {WORKOUT_PRESETS.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-                <option value="custom">Custom intervals…</option>
-              </select>
-              {workoutId !== 'none' && workoutId !== 'custom' && (
-                <p className="hint">{WORKOUT_PRESETS.find((w) => w.id === workoutId)?.blurb}</p>
-              )}
-              {(customOpen || workoutId === 'custom') && (
-                <div className="custom-workout">
-                  <div className="field-row">
-                    <div className="field">
-                      <label htmlFor="cw-warm">Warm-up (min)</label>
-                      <input
-                        id="cw-warm"
-                        type="number"
-                        min="0"
-                        value={customWarm}
-                        onChange={(e) => setCustomWarm(e.target.value)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="cw-cool">Cool-down (min)</label>
-                      <input
-                        id="cw-cool"
-                        type="number"
-                        min="0"
-                        value={customCool}
-                        onChange={(e) => setCustomCool(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="field-row">
-                    <div className="field">
-                      <label htmlFor="cw-work">Work (min)</label>
-                      <input
-                        id="cw-work"
-                        type="number"
-                        min="0.5"
-                        step="0.5"
-                        value={customWork}
-                        onChange={(e) => setCustomWork(e.target.value)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="cw-rest">Rest (min)</label>
-                      <input
-                        id="cw-rest"
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={customRest}
-                        onChange={(e) => setCustomRest(e.target.value)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="cw-reps">Repeats</label>
-                      <input
-                        id="cw-reps"
-                        type="number"
-                        min="1"
-                        max="40"
-                        value={customRepeats}
-                        onChange={(e) => setCustomRepeats(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn wide"
-                    onClick={() => {
-                      const t = customIntervals({
-                        warmupMin: Number(customWarm) || 0,
-                        workMin: Number(customWork) || 1,
-                        restMin: Number(customRest) || 0,
-                        repeats: Number(customRepeats) || 1,
-                        cooldownMin: Number(customCool) || 0,
-                      });
-                      setCustomTemplate(t);
-                      setWorkoutId('custom');
-                      onToast(`Custom workout: ${t.blurb}`);
-                    }}
-                  >
-                    Apply custom intervals
-                  </button>
-                  {customTemplate && workoutId === 'custom' && (
-                    <p className="hint">{customTemplate.blurb}</p>
-                  )}
-                </div>
-              )}
-
               {mode === 'outdoor' && routes.length > 0 && (
                 <>
                   <div className="kv-row" style={{ marginTop: 12 }}>
@@ -1155,54 +1501,107 @@ export function RunScreen({
 
         <div className="card sensor-compact">
           <h2>Sensors</h2>
-          <div className="sensor-chip-row">
-            <button
-              type="button"
-              className={`sensor-chip${podStatus === 'connected' ? ' on' : ''}${podStatus === 'connecting' ? ' busy' : ''}`}
-              disabled={!bluetoothSupported() && podStatus !== 'connected'}
-              onClick={() => {
-                if (podStatus === 'connected') {
-                  podRef.current?.disconnect();
-                  podRef.current = null;
-                  setPodStatus('disconnected');
-                  setPodName(undefined);
-                } else {
-                  void connectPod();
-                }
-              }}
-            >
-              <span
-                className={`dot${podStatus === 'connected' ? ' live' : ''}`}
-                data-state={
-                  podStatus === 'connected'
-                    ? 'good'
-                    : podStatus === 'connecting'
-                      ? 'warn'
-                      : 'idle'
-                }
-              />
-              <span className="sensor-chip-text">
-                <span className="sensor-chip-title">Foot pod</span>
-                <span className="sensor-chip-status">
-                  {podStatus === 'connected'
-                    ? podName ?? 'Connected'
-                    : podStatus === 'connecting'
-                      ? 'Connecting…'
-                      : bluetoothSupported()
-                        ? 'Tap to connect'
-                        : 'Unavailable'}
+          <div className="sensor-chip-row sensor-chip-row-pair">
+            <div className="sensor-chip-group">
+              <button
+                type="button"
+                className={`sensor-chip${podStatus === 'connected' ? ' on' : ''}${podStatus === 'connecting' ? ' busy' : ''}`}
+                disabled={!bluetoothSupported() && podStatus !== 'connected'}
+                onClick={() => {
+                  if (podStatus === 'connected') {
+                    podRef.current?.disconnect();
+                    podRef.current = null;
+                    setPodStatus('disconnected');
+                    setPodName(undefined);
+                  } else {
+                    void connectPod();
+                  }
+                }}
+              >
+                <span
+                  className={`dot${podStatus === 'connected' ? ' live' : ''}`}
+                  data-state={
+                    podStatus === 'connected'
+                      ? 'good'
+                      : podStatus === 'connecting'
+                        ? 'warn'
+                        : 'idle'
+                  }
+                />
+                <span className="sensor-chip-text">
+                  <span className="sensor-chip-title">Foot pod</span>
+                  <span className="sensor-chip-status">
+                    {podStatus === 'connected'
+                      ? podName ?? 'Connected'
+                      : podStatus === 'connecting'
+                        ? 'Connecting…'
+                        : bluetoothSupported()
+                          ? 'Tap'
+                          : 'N/A'}
+                  </span>
                 </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className={`sensor-info${podInfoOpen ? ' open' : ''}`}
-              aria-label="Foot pod information"
-              aria-expanded={podInfoOpen}
-              onClick={() => setPodInfoOpen((v) => !v)}
-            >
-              i
-            </button>
+              </button>
+              <button
+                type="button"
+                className={`sensor-info${podInfoOpen ? ' open' : ''}`}
+                aria-label="Foot pod information"
+                aria-expanded={podInfoOpen}
+                onClick={() => setPodInfoOpen((v) => !v)}
+              >
+                i
+              </button>
+            </div>
+
+            <div className="sensor-chip-group">
+              <button
+                type="button"
+                className={`sensor-chip${heartStatus === 'connected' ? ' on' : ''}${heartStatus === 'connecting' ? ' busy' : ''}`}
+                disabled={!bluetoothSupported() && heartStatus !== 'connected'}
+                onClick={() => {
+                  if (heartStatus === 'connected') {
+                    heartRef.current?.disconnect();
+                    heartRef.current = null;
+                    setHeartStatus('disconnected');
+                    setHeartName(undefined);
+                    setBpm(null);
+                  } else {
+                    void connectStrap();
+                  }
+                }}
+              >
+                <span
+                  className={`dot${heartStatus === 'connected' ? ' live' : ''}`}
+                  data-state={
+                    heartStatus === 'connected'
+                      ? 'good'
+                      : heartStatus === 'connecting'
+                        ? 'warn'
+                        : 'idle'
+                  }
+                />
+                <span className="sensor-chip-text">
+                  <span className="sensor-chip-title">Heart rate</span>
+                  <span className="sensor-chip-status">
+                    {heartStatus === 'connected'
+                      ? heartName ?? 'Connected'
+                      : heartStatus === 'connecting'
+                        ? 'Connecting…'
+                        : bluetoothSupported()
+                          ? 'Tap'
+                          : 'N/A'}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`sensor-info${hrInfoOpen ? ' open' : ''}`}
+                aria-label="Heart rate information"
+                aria-expanded={hrInfoOpen}
+                onClick={() => setHrInfoOpen((v) => !v)}
+              >
+                i
+              </button>
+            </div>
           </div>
           {podInfoOpen && (
             <p className="hint sensor-info-body">
@@ -1211,57 +1610,6 @@ export function RunScreen({
                 : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
             </p>
           )}
-
-          <div className="sensor-chip-row" style={{ marginTop: 10 }}>
-            <button
-              type="button"
-              className={`sensor-chip${heartStatus === 'connected' ? ' on' : ''}${heartStatus === 'connecting' ? ' busy' : ''}`}
-              disabled={!bluetoothSupported() && heartStatus !== 'connected'}
-              onClick={() => {
-                if (heartStatus === 'connected') {
-                  heartRef.current?.disconnect();
-                  heartRef.current = null;
-                  setHeartStatus('disconnected');
-                  setHeartName(undefined);
-                  setBpm(null);
-                } else {
-                  void connectStrap();
-                }
-              }}
-            >
-              <span
-                className={`dot${heartStatus === 'connected' ? ' live' : ''}`}
-                data-state={
-                  heartStatus === 'connected'
-                    ? 'good'
-                    : heartStatus === 'connecting'
-                      ? 'warn'
-                      : 'idle'
-                }
-              />
-              <span className="sensor-chip-text">
-                <span className="sensor-chip-title">Heart rate</span>
-                <span className="sensor-chip-status">
-                  {heartStatus === 'connected'
-                    ? heartName ?? 'Connected'
-                    : heartStatus === 'connecting'
-                      ? 'Connecting…'
-                      : bluetoothSupported()
-                        ? 'Tap to connect'
-                        : 'Unavailable'}
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className={`sensor-info${hrInfoOpen ? ' open' : ''}`}
-              aria-label="Heart rate information"
-              aria-expanded={hrInfoOpen}
-              onClick={() => setHrInfoOpen((v) => !v)}
-            >
-              i
-            </button>
-          </div>
           {hrInfoOpen && (
             <p className="hint sensor-info-body">
               {bluetoothSupported()
@@ -1535,7 +1883,11 @@ export function RunScreen({
         </span>
         <div className="live-top-right">
           {bpm !== null && (
-            <span className="live-hr-pill">
+            <span
+              className="live-hr-pill"
+              /* Zone drives the pill colour so effort reads without focusing the number. */
+              style={hrZone ? ({ '--z': zoneSwatch(hrZone) } as CSSProperties) : undefined}
+            >
               ❤ {bpm}
               {hrZone ? ` · Z${hrZone.index}` : ''}
             </span>
@@ -1791,7 +2143,11 @@ export function RunScreen({
                   <button
                     key={pod.id}
                     type="button"
-                    className={`metric metric-pod${podFace[pod.id] === 1 ? ' alt' : ''}`}
+                    className={`metric metric-pod${podFace[pod.id] === 1 ? ' alt' : ''}${
+                      pod.id === 'distance' && podFace.distance === 0 && unitFlash
+                        ? ' unit-tick'
+                        : ''
+                    }`}
                     onClick={() => flipPod(setPodFace, pod.id)}
                     aria-label={`${face.label} ${face.value}. Tap to show ${other}`}
                     title={`Tap for ${other}`}

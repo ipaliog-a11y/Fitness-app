@@ -66,15 +66,30 @@ function toImportable(w: Workout): ImportableWorkout {
   };
 }
 
+export interface HealthFetchWindow {
+  /** Inclusive start (ms epoch). */
+  startMs: number;
+  /** Exclusive end (ms epoch). Default: now. */
+  endMs?: number;
+}
+
 /**
  * Fetch workouts from Health Connect (paginated).
- * @param days lookback window (default 90)
+ * Prefer `window`; `days` is a convenience lookback from now.
  */
-export async function fetchHealthWorkouts(days = 90): Promise<ImportableWorkout[]> {
-  const end = Date.now();
-  const start = end - days * 86_400_000;
-  const startDate = new Date(start).toISOString();
-  const endDate = new Date(end).toISOString();
+export async function fetchHealthWorkouts(
+  daysOrWindow: number | HealthFetchWindow = 90,
+): Promise<ImportableWorkout[]> {
+  const endMs =
+    typeof daysOrWindow === 'number'
+      ? Date.now()
+      : (daysOrWindow.endMs ?? Date.now());
+  const startMs =
+    typeof daysOrWindow === 'number'
+      ? endMs - daysOrWindow * 86_400_000
+      : daysOrWindow.startMs;
+  const startDate = new Date(startMs).toISOString();
+  const endDate = new Date(endMs).toISOString();
 
   const all: ImportableWorkout[] = [];
   let anchor: string | undefined;
@@ -102,33 +117,100 @@ export interface HealthImportResult extends HealthImportPlan {
   imported: number;
 }
 
-/**
- * Authorize (if needed), pull workouts, import run-like sessions not already stored.
- */
-export async function importRunsFromHealthConnect(options?: {
-  days?: number;
-}): Promise<HealthImportResult> {
+export interface HealthPreviewResult extends HealthImportPlan {
+  /** Candidates you can tick before import. */
+  candidates: Activity[];
+}
+
+async function ensureHealthReady(): Promise<void> {
   const availability = await healthConnectAvailable();
   if (!availability.available) {
     throw new Error(availability.reason || 'Health Connect is not available on this device.');
   }
-
   await requestHealthConnectAccess();
+}
 
-  const workouts = await fetchHealthWorkouts(options?.days ?? 90);
+/**
+ * Pull + plan only (no writes). Use for date-range preview + multi-select UI.
+ */
+export async function previewHealthConnectImport(options?: {
+  days?: number;
+  startMs?: number;
+  endMs?: number;
+}): Promise<HealthPreviewResult> {
+  await ensureHealthReady();
+
+  const endMs = options?.endMs ?? Date.now();
+  const startMs =
+    options?.startMs ??
+    endMs - (options?.days ?? 90) * 86_400_000;
+
+  const workouts = await fetchHealthWorkouts({ startMs, endMs });
   const existing = new Set((await allActivities()).map((a) => a.id));
   const profile = loadProfile();
   const plan = planHealthImport(workouts, existing, {
     maxHeartRate: profile.maxHeartRate,
   });
 
-  for (const activity of plan.toImport) {
-    await saveActivity(activity as Activity);
+  return {
+    ...plan,
+    candidates: plan.toImport,
+  };
+}
+
+/** Persist a chosen subset from a preview (by activity id). */
+export async function importSelectedHealthActivities(
+  activities: Activity[],
+): Promise<HealthImportResult> {
+  const existing = new Set((await allActivities()).map((a) => a.id));
+  let skippedDuplicate = 0;
+  let imported = 0;
+  const toImport: Activity[] = [];
+
+  for (const activity of activities) {
+    if (existing.has(activity.id)) {
+      skippedDuplicate++;
+      continue;
+    }
+    await saveActivity(activity);
+    existing.add(activity.id);
+    toImport.push(activity);
+    imported++;
   }
 
   return {
-    ...plan,
-    imported: plan.toImport.length,
+    toImport,
+    skippedDuplicate,
+    skippedNotRun: 0,
+    skippedInvalid: 0,
+    imported,
+  };
+}
+
+/**
+ * Authorize (if needed), pull workouts, import run-like sessions not already stored.
+ * Prefer preview + importSelected for UI with choice; this remains a one-shot path.
+ */
+export async function importRunsFromHealthConnect(options?: {
+  days?: number;
+  startMs?: number;
+  endMs?: number;
+  /** When set, only these activity ids from the planned set are saved. */
+  onlyIds?: string[];
+}): Promise<HealthImportResult> {
+  const preview = await previewHealthConnectImport(options);
+  let list = preview.candidates;
+  if (options?.onlyIds && options.onlyIds.length > 0) {
+    const want = new Set(options.onlyIds);
+    list = list.filter((a) => want.has(a.id));
+  }
+
+  const result = await importSelectedHealthActivities(list);
+  return {
+    ...preview,
+    toImport: result.toImport,
+    imported: result.imported,
+    skippedDuplicate: preview.skippedDuplicate + result.skippedDuplicate,
   };
 }
 

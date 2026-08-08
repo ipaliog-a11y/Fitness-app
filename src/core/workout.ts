@@ -393,3 +393,65 @@ export function customIntervals(options: {
     ],
   });
 }
+
+/**
+ * Relative width for an interval strip segment. Time phases use ms;
+ * distance phases use a rough time-equivalent so bars still read as shape.
+ */
+export function phaseVisualWeight(phase: WorkoutPhase): number {
+  if (phase.target.type === 'time') return Math.max(1, phase.target.ms);
+  // ~4 min/km → 240 ms per metre as a display scale only.
+  return Math.max(1, Math.round(phase.target.m * 240));
+}
+
+/** Total of phase weights (for flex strips). */
+export function workoutStripWeights(phases: WorkoutPhase[]): number[] {
+  return phases.map(phaseVisualWeight);
+}
+
+/**
+ * Rough effort 1–5 for tile dots. Weighted by hard work vs easy/rest volume.
+ */
+export function workoutEffortLevel(template: WorkoutTemplate): number {
+  const weights = workoutStripWeights(template.phases);
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  let score = 0;
+  template.phases.forEach((phase, i) => {
+    const w = weights[i] / total;
+    switch (phase.kind) {
+      case 'work':
+        score += w * 1;
+        break;
+      case 'steady':
+        score += w * 0.45;
+        break;
+      case 'rest':
+        score += w * 0.12;
+        break;
+      case 'warmup':
+      case 'cooldown':
+        score += w * 0.2;
+        break;
+    }
+  });
+  if (score < 0.28) return 1;
+  if (score < 0.4) return 2;
+  if (score < 0.52) return 3;
+  if (score < 0.68) return 4;
+  return 5;
+}
+
+/** Sum of time phases in ms, or null if any phase is distance-based. */
+export function workoutTimeMs(template: WorkoutTemplate): number | null {
+  let total = 0;
+  for (const phase of template.phases) {
+    if (phase.target.type !== 'time') return null;
+    total += phase.target.ms;
+  }
+  return total;
+}
+
+/** Count of work (hard) intervals in the template. */
+export function workoutWorkCount(template: WorkoutTemplate): number {
+  return template.phases.filter((p) => p.kind === 'work').length;
+}

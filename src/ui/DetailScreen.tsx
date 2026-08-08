@@ -367,7 +367,7 @@ export function DetailScreen({
       </div>
 
       {confirming ? (
-        <div className="btn-row">
+        <div className="btn-row detail-actions">
           <button type="button" className="btn" onClick={() => setConfirming(false)}>
             Cancel
           </button>
@@ -376,7 +376,7 @@ export function DetailScreen({
           </button>
         </div>
       ) : (
-        <div className="btn-row">
+        <div className="btn-row detail-actions">
           <button
             type="button"
             className="btn primary"

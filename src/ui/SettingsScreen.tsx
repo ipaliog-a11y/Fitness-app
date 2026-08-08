@@ -1,6 +1,7 @@
 /** App preferences, routes, and getting the data out — not the athlete profile. */
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import type { Activity } from '../core/activity';
 import { exportFullBackup, importBackup, wipeAllLocalData } from '../core/backup';
 import { saveActivity } from '../core/db';
 import { activityFromGpx } from '../core/gpx';
@@ -12,12 +13,22 @@ import {
 } from '../core/mercator';
 import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
 import { estimateStride } from '../core/steps';
-import { distanceLabel, formatDistance, fromDisplayDistance, toDisplayDistance } from '../core/units';
+import {
+  distanceLabel,
+  formatDay,
+  formatDistance,
+  formatDuration,
+  fromDisplayDistance,
+  toDisplayDistance,
+} from '../core/units';
 import {
   healthConnectSupported,
-  importRunsFromHealthConnect,
+  importSelectedHealthActivities,
   openHealthConnectSettings,
+  previewHealthConnectImport,
 } from '../platform/healthConnect';
+
+type HealthRangePreset = 7 | 30 | 90 | 'custom';
 
 interface Props {
   profile: Profile;
@@ -35,33 +46,101 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
     Number.isFinite(profile.strideM) ? profile.strideM.toFixed(2) : '0.75',
   );
   const [healthImporting, setHealthImporting] = useState(false);
+  const [healthRange, setHealthRange] = useState<HealthRangePreset>(30);
+  const [healthFrom, setHealthFrom] = useState(() => {
+    const d = new Date(Date.now() - 30 * 86_400_000);
+    return d.toISOString().slice(0, 10);
+  });
+  const [healthTo, setHealthTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [healthCandidates, setHealthCandidates] = useState<Activity[] | null>(null);
+  const [healthSelected, setHealthSelected] = useState<Set<string>>(new Set());
+  const [healthSkippedDup, setHealthSkippedDup] = useState(0);
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value });
 
-  const importHealth = async () => {
+  const healthWindow = useMemo(() => {
+    const endOfDay = (iso: string) => {
+      const d = new Date(`${iso}T23:59:59.999`);
+      return d.getTime();
+    };
+    const startOfDay = (iso: string) => {
+      const d = new Date(`${iso}T00:00:00`);
+      return d.getTime();
+    };
+    if (healthRange === 'custom') {
+      return {
+        startMs: startOfDay(healthFrom),
+        endMs: endOfDay(healthTo) + 1,
+      };
+    }
+    const endMs = Date.now();
+    return {
+      startMs: endMs - healthRange * 86_400_000,
+      endMs,
+    };
+  }, [healthRange, healthFrom, healthTo]);
+
+  const scanHealth = async () => {
     if (!healthConnectSupported()) {
       onToast('Health Connect import works in the Android app only.');
       return;
     }
     setHealthImporting(true);
+    setHealthCandidates(null);
     try {
-      const result = await importRunsFromHealthConnect({ days: 90 });
+      const preview = await previewHealthConnectImport({
+        startMs: healthWindow.startMs,
+        endMs: healthWindow.endMs,
+      });
+      setHealthSkippedDup(preview.skippedDuplicate);
+      setHealthCandidates(preview.candidates);
+      setHealthSelected(new Set(preview.candidates.map((a) => a.id)));
+      if (preview.candidates.length === 0) {
+        onToast(
+          preview.skippedDuplicate > 0
+            ? `No new runs · ${preview.skippedDuplicate} already in history.`
+            : 'No running workouts found in that date range.',
+        );
+      }
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'Health Connect scan failed.');
+    } finally {
+      setHealthImporting(false);
+    }
+  };
+
+  const importHealthSelected = async () => {
+    if (!healthCandidates || healthSelected.size === 0) {
+      onToast('Select at least one run to import.');
+      return;
+    }
+    setHealthImporting(true);
+    try {
+      const list = healthCandidates.filter((a) => healthSelected.has(a.id));
+      const result = await importSelectedHealthActivities(list);
       onReload();
+      setHealthCandidates(null);
+      setHealthSelected(new Set());
       onToast(
         result.imported > 0
-          ? `Imported ${result.imported} run${result.imported === 1 ? '' : 's'}` +
-              (result.skippedDuplicate ? ` · ${result.skippedDuplicate} already saved` : '') +
-              '.'
-          : result.skippedDuplicate > 0
-            ? `No new runs · ${result.skippedDuplicate} already in history.`
-            : 'No running workouts found in Health Connect (last 90 days).',
+          ? `Imported ${result.imported} run${result.imported === 1 ? '' : 's'}.`
+          : 'Nothing new imported.',
       );
     } catch (error) {
       onToast(error instanceof Error ? error.message : 'Health Connect import failed.');
     } finally {
       setHealthImporting(false);
     }
+  };
+
+  const toggleHealthId = (id: string) => {
+    setHealthSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const routes = loadRoutes();
@@ -404,22 +483,138 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
         <h2>Health Connect</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
           Pull runs that <strong>Samsung Health</strong> (or other apps) has shared into Health
-          Connect. Enable Samsung Health → Health Connect write access first. Routes may be empty
-          if only session totals were shared.
+          Connect. Choose a date range, scan, then tick which sessions to import. Routes may be
+          empty if only session totals were shared.
         </p>
+
+        <div className="chip-row" style={{ marginBottom: 10 }}>
+          {([7, 30, 90] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              className={`chip${healthRange === d ? ' active' : ''}`}
+              onClick={() => setHealthRange(d)}
+            >
+              Last {d}d
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`chip${healthRange === 'custom' ? ' active' : ''}`}
+            onClick={() => setHealthRange('custom')}
+          >
+            Custom
+          </button>
+        </div>
+
+        {healthRange === 'custom' && (
+          <div className="field-row" style={{ marginBottom: 10 }}>
+            <div className="field">
+              <label htmlFor="hc-from">From</label>
+              <input
+                id="hc-from"
+                type="date"
+                value={healthFrom}
+                onChange={(e) => setHealthFrom(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="hc-to">To</label>
+              <input
+                id="hc-to"
+                type="date"
+                value={healthTo}
+                onChange={(e) => setHealthTo(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           className="btn primary wide"
           style={{ marginBottom: 8 }}
           disabled={healthImporting}
-          onClick={() => void importHealth()}
+          onClick={() => void scanHealth()}
         >
-          {healthImporting ? 'Importing…' : 'Import runs from Health Connect'}
+          {healthImporting ? 'Scanning…' : 'Scan Health Connect'}
         </button>
+
+        {healthCandidates && healthCandidates.length > 0 && (
+          <div className="health-import-list">
+            <div className="row" style={{ marginBottom: 8 }}>
+              <span className="hint" style={{ margin: 0 }}>
+                {healthSelected.size}/{healthCandidates.length} selected
+                {healthSkippedDup > 0 ? ` · ${healthSkippedDup} already saved` : ''}
+              </span>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  if (healthSelected.size === healthCandidates.length) {
+                    setHealthSelected(new Set());
+                  } else {
+                    setHealthSelected(new Set(healthCandidates.map((a) => a.id)));
+                  }
+                }}
+              >
+                {healthSelected.size === healthCandidates.length ? 'Clear' : 'All'}
+              </button>
+            </div>
+            <ul className="health-import-items">
+              {healthCandidates.map((a) => (
+                <li key={a.id}>
+                  <label className="health-import-item">
+                    <input
+                      type="checkbox"
+                      checked={healthSelected.has(a.id)}
+                      onChange={() => toggleHealthId(a.id)}
+                    />
+                    <span className="health-import-item-body">
+                      <strong>
+                        {formatDistance(a.distanceM, profile.units)}{' '}
+                        {distanceLabel(profile.units)}
+                      </strong>
+                      <span>
+                        {formatDay(a.startedAt)} · {formatDuration(a.durationMs)}
+                        {a.caloriesKcal != null ? ` · ${a.caloriesKcal} kcal` : ''}
+                      </span>
+                      <span className="muted">{a.note || a.mode}</span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="btn primary wide"
+              style={{ marginTop: 10 }}
+              disabled={healthImporting || healthSelected.size === 0}
+              onClick={() => void importHealthSelected()}
+            >
+              {healthImporting
+                ? 'Importing…'
+                : `Import selected (${healthSelected.size})`}
+            </button>
+            <button
+              type="button"
+              className="btn wide"
+              style={{ marginTop: 8 }}
+              onClick={() => {
+                setHealthCandidates(null);
+                setHealthSelected(new Set());
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {healthConnectSupported() ? (
           <button
             type="button"
             className="btn wide"
+            style={{ marginTop: 8 }}
             onClick={() => void openHealthConnectSettings()}
           >
             Open Health Connect settings

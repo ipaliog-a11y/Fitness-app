@@ -12,12 +12,17 @@ import { byNewest } from './core/activity';
 import { allActivities, deleteActivity, saveActivity } from './core/db';
 import { applyTheme, loadProfile, saveProfile, sanitise, type Profile } from './core/settings';
 import { addDistanceToShoe, loadShoes, saveShoes, shoeNeedsWarning } from './core/shoes';
+import {
+  bootstrapPermissions,
+  hideNativeSplash,
+} from './platform/permissions';
 import { CoachScreen } from './ui/CoachScreen';
 import { DetailScreen } from './ui/DetailScreen';
 import { HistoryScreen } from './ui/HistoryScreen';
 import { ProfileScreen } from './ui/ProfileScreen';
 import { RunScreen } from './ui/RunScreen';
 import { SettingsScreen } from './ui/SettingsScreen';
+import { SplashScreen } from './ui/SplashScreen';
 
 type Tab = 'run' | 'history' | 'coach' | 'profile' | 'settings';
 
@@ -78,6 +83,8 @@ function TabIcon({ id }: { id: Tab }) {
   );
 }
 
+const SPLASH_MIN_MS = 1000;
+
 export function App() {
   const [tab, setTab] = useState<Tab>('run');
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -89,12 +96,42 @@ export function App() {
   const [runLive, setRunLive] = useState(false);
   /** Bumps History calendar when weight log changes. */
   const [weightTick, setWeightTick] = useState(0);
+  /** False until splash branding + permission bootstrap finish. */
+  const [bootReady, setBootReady] = useState(false);
+  const [bootStatus, setBootStatus] = useState('Getting ready…');
 
   const reload = useCallback(() => {
     void allActivities().then(setActivities);
   }, []);
 
   useEffect(reload, [reload]);
+
+  // Cold-start splash: logo + version, then prime OS permissions up front.
+  useEffect(() => {
+    let cancelled = false;
+    const started = Date.now();
+
+    void (async () => {
+      await hideNativeSplash();
+      try {
+        await bootstrapPermissions((p) => {
+          if (!cancelled) setBootStatus(p.label);
+        });
+      } catch {
+        if (!cancelled) setBootStatus('Ready');
+      }
+      const elapsed = Date.now() - started;
+      const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+      if (remaining > 0) {
+        await new Promise((r) => setTimeout(r, remaining));
+      }
+      if (!cancelled) setBootReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -158,6 +195,14 @@ export function App() {
   const showCoach = !open && tab === 'coach';
   const showProfile = !open && tab === 'profile';
   const showSettings = !open && tab === 'settings';
+
+  if (!bootReady) {
+    return (
+      <div className="app" data-theme={profile.theme}>
+        <SplashScreen status={bootStatus} />
+      </div>
+    );
+  }
 
   return (
     <div className="app" data-theme={profile.theme}>

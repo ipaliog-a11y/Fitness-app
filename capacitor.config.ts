@@ -21,7 +21,10 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
+      // Native splash hands off quickly; the in-app SplashScreen does branding
+      // + permission bootstrap before the main tabs appear.
       launchAutoHide: true,
+      launchShowDuration: 0,
       backgroundColor: '#0a0d12',
       showSpinner: false,
     },
