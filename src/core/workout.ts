@@ -26,6 +26,8 @@ export interface WorkoutTemplate {
   blurb: string;
   /** Expanded phase list (repeats already unrolled). */
   phases: WorkoutPhase[];
+  /** Picker effort 1–5 (explicit on presets; else derived). */
+  effort?: number;
 }
 
 /** Compact recipe used to build presets. */
@@ -33,6 +35,8 @@ export interface WorkoutRecipe {
   id: string;
   name: string;
   blurb: string;
+  /** Display / sort effort 1 (easiest) … 5 (hardest). Optional for custom. */
+  effort?: number;
   steps: Array<
     | { kind: PhaseKind; label: string; timeMs: number }
     | { kind: PhaseKind; label: string; distanceM: number }
@@ -85,17 +89,91 @@ export function expandRecipe(recipe: WorkoutRecipe): WorkoutTemplate {
       phases.push(phaseFrom(step.kind, step.label, step.timeMs));
     }
   }
-  return { id: recipe.id, name: recipe.name, blurb: recipe.blurb, phases };
+  return {
+    id: recipe.id,
+    name: recipe.name,
+    blurb: recipe.blurb,
+    phases,
+    effort: recipe.effort,
+  };
 }
 
 const min = (n: number) => n * 60_000;
+const sec = (n: number) => n * 1_000;
 
-/** Built-in presets (Phase B). */
-export const WORKOUT_PRESETS: WorkoutTemplate[] = [
-  expandRecipe({
+/**
+ * Built-in recipes. Expanded and sorted by effort for the picker
+ * (easy → hard). New templates should be added here, not hand-ordered.
+ */
+const WORKOUT_RECIPES: WorkoutRecipe[] = [
+  // --- Easy / recovery -------------------------------------------------
+  {
+    id: 'easy-30',
+    name: 'Easy 30',
+    blurb: 'Continuous easy effort with bookends.',
+    effort: 1,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'steady', label: 'Easy run', timeMs: min(20) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  {
+    id: 'easy-40',
+    name: 'Easy 40',
+    blurb: 'Conversational aerobic base — longer easy block.',
+    effort: 1,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'steady', label: 'Easy run', timeMs: min(30) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  {
+    id: 'long-easy-45',
+    name: 'Long easy 45',
+    blurb: 'Steady volume builder.',
+    effort: 1,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'steady', label: 'Easy', timeMs: min(35) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  {
+    id: 'long-easy-60',
+    name: 'Long easy 60',
+    blurb: 'Hour of easy volume for endurance base.',
+    effort: 2,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'steady', label: 'Easy', timeMs: min(50) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  {
+    id: 'recovery-strides',
+    name: 'Recovery + strides',
+    blurb: 'Easy run with 6 short form strides (20 s).',
+    effort: 2,
+    steps: [
+      { kind: 'warmup', label: 'Easy warm-up', timeMs: min(10) },
+      { kind: 'steady', label: 'Easy', timeMs: min(15) },
+      {
+        kind: 'repeat',
+        times: 6,
+        work: { label: 'Stride', timeMs: sec(20) },
+        rest: { label: 'Walk', timeMs: sec(40) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  // --- Walk/run progression --------------------------------------------
+  {
     id: 'beginner-walk-run',
     name: 'Beginner walk/run',
     blurb: '8 × 1 min run / 90 s walk — classic starter.',
+    effort: 2,
     steps: [
       { kind: 'warmup', label: 'Warm-up walk', timeMs: min(5) },
       {
@@ -106,11 +184,12 @@ export const WORKOUT_PRESETS: WorkoutTemplate[] = [
       },
       { kind: 'cooldown', label: 'Cool-down walk', timeMs: min(5) },
     ],
-  }),
-  expandRecipe({
+  },
+  {
     id: 'walk-run-2-1',
     name: 'Walk/run 2–1',
     blurb: '6 × 2 min run / 1 min walk.',
+    effort: 2,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
       {
@@ -121,61 +200,153 @@ export const WORKOUT_PRESETS: WorkoutTemplate[] = [
       },
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
     ],
-  }),
-  expandRecipe({
-    id: 'easy-30',
-    name: 'Easy 30',
-    blurb: 'Continuous easy effort with bookends.',
+  },
+  {
+    id: 'walk-run-3-1',
+    name: 'Walk/run 3–1',
+    blurb: '5 × 3 min run / 1 min walk — next step up.',
+    effort: 3,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
-      { kind: 'steady', label: 'Easy run', timeMs: min(20) },
+      {
+        kind: 'repeat',
+        times: 5,
+        work: { label: 'Run', timeMs: min(3) },
+        rest: { label: 'Walk', timeMs: min(1) },
+      },
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
     ],
-  }),
-  expandRecipe({
+  },
+  // --- Aerobic quality / progressive -----------------------------------
+  {
+    id: 'progressive-35',
+    name: 'Progressive 35',
+    blurb: 'Easy → steady → strong finish (builds without intervals).',
+    effort: 3,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'steady', label: 'Easy', timeMs: min(12) },
+      { kind: 'steady', label: 'Steady', timeMs: min(10) },
+      { kind: 'work', label: 'Strong', timeMs: min(8) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  {
+    id: 'fartlek-20',
+    name: 'Fartlek 20',
+    blurb: 'Playful surges: 1 hard / 1 easy, ten times.',
+    effort: 3,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      {
+        kind: 'repeat',
+        times: 10,
+        work: { label: 'Surge', timeMs: min(1) },
+        rest: { label: 'Easy', timeMs: min(1) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  {
+    id: 'ladder-fartlek',
+    name: 'Ladder 5–4–3–2–1',
+    blurb: 'Descending hard blocks with equal easy recovery.',
+    effort: 4,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'work', label: '5 min hard', timeMs: min(5) },
+      { kind: 'rest', label: 'Easy', timeMs: min(5) },
+      { kind: 'work', label: '4 min hard', timeMs: min(4) },
+      { kind: 'rest', label: 'Easy', timeMs: min(4) },
+      { kind: 'work', label: '3 min hard', timeMs: min(3) },
+      { kind: 'rest', label: 'Easy', timeMs: min(3) },
+      { kind: 'work', label: '2 min hard', timeMs: min(2) },
+      { kind: 'rest', label: 'Easy', timeMs: min(2) },
+      { kind: 'work', label: '1 min hard', timeMs: min(1) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  {
+    id: 'mona-fartlek',
+    name: 'Mona fartlek',
+    blurb: '2×90 s, 4×60 s, 4×30 s, 4×15 s hard / equal float.',
+    effort: 4,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      {
+        kind: 'repeat',
+        times: 2,
+        work: { label: 'Hard 90 s', timeMs: sec(90) },
+        rest: { label: 'Float', timeMs: sec(90) },
+      },
+      {
+        kind: 'repeat',
+        times: 4,
+        work: { label: 'Hard 60 s', timeMs: sec(60) },
+        rest: { label: 'Float', timeMs: sec(60) },
+      },
+      {
+        kind: 'repeat',
+        times: 4,
+        work: { label: 'Hard 30 s', timeMs: sec(30) },
+        rest: { label: 'Float', timeMs: sec(30) },
+      },
+      {
+        kind: 'repeat',
+        times: 4,
+        work: { label: 'Hard 15 s', timeMs: sec(15) },
+        rest: { label: 'Float', timeMs: sec(15) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  // --- Threshold / tempo -----------------------------------------------
+  {
     id: 'tempo-20',
     name: 'Tempo 20',
     blurb: 'Comfortably hard middle block.',
+    effort: 4,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
       { kind: 'work', label: 'Tempo', timeMs: min(20) },
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
     ],
-  }),
-  expandRecipe({
-    id: '400-repeats',
-    name: '6 × 400 m',
-    blurb: 'Speed work with 90 s recoveries (distance-based).',
-    steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
-      {
-        kind: 'repeat',
-        times: 6,
-        work: { label: '400 m', distanceM: 400 },
-        rest: { label: 'Recover', timeMs: 90_000 },
-      },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
-    ],
-  }),
-  expandRecipe({
-    id: 'vo2-3min',
-    name: '5 × 3 min',
-    blurb: 'Hard 3-minute efforts, equal rest.',
+  },
+  {
+    id: 'cruise-5x5',
+    name: 'Cruise 5 × 5',
+    blurb: 'Threshold intervals with short 1 min recoveries.',
+    effort: 4,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
       {
         kind: 'repeat',
         times: 5,
-        work: { label: 'Hard', timeMs: min(3) },
-        rest: { label: 'Easy', timeMs: min(3) },
+        work: { label: 'Cruise', timeMs: min(5) },
+        rest: { label: 'Easy', timeMs: min(1) },
       },
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
     ],
-  }),
-  expandRecipe({
+  },
+  {
+    id: 'double-tempo',
+    name: 'Double tempo 2 × 12',
+    blurb: 'Two threshold blocks with a 3 min jog between.',
+    effort: 4,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'work', label: 'Tempo 1', timeMs: min(12) },
+      { kind: 'rest', label: 'Easy jog', timeMs: min(3) },
+      { kind: 'work', label: 'Tempo 2', timeMs: min(12) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  // --- Speed / hills / VO2 ---------------------------------------------
+  {
     id: 'pyramid',
     name: 'Pyramid 1–2–3–2–1',
     blurb: 'Climb and descend the minutes.',
+    effort: 4,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(8) },
       { kind: 'work', label: '1 min hard', timeMs: min(1) },
@@ -189,33 +360,91 @@ export const WORKOUT_PRESETS: WorkoutTemplate[] = [
       { kind: 'work', label: '1 min hard', timeMs: min(1) },
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(8) },
     ],
-  }),
-  expandRecipe({
-    id: 'fartlek-20',
-    name: 'Fartlek 20',
-    blurb: 'Playful surges: 1 hard / 1 easy, ten times.',
+  },
+  {
+    id: 'hill-8x45',
+    name: 'Hills 8 × 45 s',
+    blurb: 'Hard uphill efforts, easy down / recover (or flat power).',
+    effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
       {
         kind: 'repeat',
-        times: 10,
-        work: { label: 'Surge', timeMs: min(1) },
-        rest: { label: 'Easy', timeMs: min(1) },
+        times: 8,
+        work: { label: 'Hill hard', timeMs: sec(45) },
+        rest: { label: 'Easy down', timeMs: sec(90) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
     ],
-  }),
-  expandRecipe({
-    id: 'long-easy-45',
-    name: 'Long easy 45',
-    blurb: 'Steady volume builder.',
+  },
+  {
+    id: '400-repeats',
+    name: '6 × 400 m',
+    blurb: 'Speed work with 90 s recoveries (distance-based).',
+    effort: 5,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
-      { kind: 'steady', label: 'Easy', timeMs: min(35) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      {
+        kind: 'repeat',
+        times: 6,
+        work: { label: '400 m', distanceM: 400 },
+        rest: { label: 'Recover', timeMs: 90_000 },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
     ],
-  }),
+  },
+  {
+    id: '800-repeats',
+    name: '5 × 800 m',
+    blurb: 'Classic track intervals, 2 min recoveries.',
+    effort: 5,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
+      {
+        kind: 'repeat',
+        times: 5,
+        work: { label: '800 m', distanceM: 800 },
+        rest: { label: 'Recover', timeMs: min(2) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  {
+    id: 'vo2-3min',
+    name: '5 × 3 min',
+    blurb: 'Hard 3-minute efforts, equal rest.',
+    effort: 5,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      {
+        kind: 'repeat',
+        times: 5,
+        work: { label: 'Hard', timeMs: min(3) },
+        rest: { label: 'Easy', timeMs: min(3) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  {
+    id: 'vo2-4x4',
+    name: '4 × 4 min',
+    blurb: 'Classic VO₂ intervals — hard with equal easy recovery.',
+    effort: 5,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
+      {
+        kind: 'repeat',
+        times: 4,
+        work: { label: 'Hard', timeMs: min(4) },
+        rest: { label: 'Easy', timeMs: min(4) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
 ];
+
+/** Built-in presets — sorted easiest → hardest for the workout picker. */
+export let WORKOUT_PRESETS: WorkoutTemplate[] = WORKOUT_RECIPES.map(expandRecipe);
 
 export function workoutById(id: string): WorkoutTemplate | null {
   return WORKOUT_PRESETS.find((w) => w.id === id) ?? null;
@@ -381,6 +610,7 @@ export function customIntervals(options: {
     id: `custom-${newId()}`,
     name: options.name ?? `Custom ${repeats}×`,
     blurb: `${repeats} × ${options.workMin} min / ${options.restMin} min rest`,
+    effort: 3,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(options.warmupMin) },
       {
@@ -410,9 +640,13 @@ export function workoutStripWeights(phases: WorkoutPhase[]): number[] {
 }
 
 /**
- * Rough effort 1–5 for tile dots. Weighted by hard work vs easy/rest volume.
+ * Effort 1–5 for tile dots and picker sort.
+ * Presets set `effort` explicitly; custom workouts fall back to phase mix.
  */
 export function workoutEffortLevel(template: WorkoutTemplate): number {
+  if (typeof template.effort === 'number' && template.effort >= 1 && template.effort <= 5) {
+    return Math.round(template.effort);
+  }
   const weights = workoutStripWeights(template.phases);
   const total = weights.reduce((a, b) => a + b, 0) || 1;
   let score = 0;
@@ -455,3 +689,16 @@ export function workoutTimeMs(template: WorkoutTemplate): number | null {
 export function workoutWorkCount(template: WorkoutTemplate): number {
   return template.phases.filter((p) => p.kind === 'work').length;
 }
+
+/** Easiest first, then name — used by the picker tile list. */
+function sortWorkoutsByEffort(list: WorkoutTemplate[]): WorkoutTemplate[] {
+  return [...list].sort((a, b) => {
+    const ea = workoutEffortLevel(a);
+    const eb = workoutEffortLevel(b);
+    if (ea !== eb) return ea - eb;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+// Re-order after effort helpers exist (recipes are declared above).
+WORKOUT_PRESETS = sortWorkoutsByEffort(WORKOUT_PRESETS);

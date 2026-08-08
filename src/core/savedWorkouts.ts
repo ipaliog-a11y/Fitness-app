@@ -96,6 +96,7 @@ export function templateFromSaved(saved: SavedWorkout): WorkoutTemplate {
     name: saved.name,
     blurb: saved.blurb,
     phases: saved.phases.map((p) => ({ ...p, target: { ...p.target } })),
+    // Derived in the picker via workoutEffortLevel when effort is omitted.
   };
 }
 
