@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RunLog — depth & motion proposals</title>
+<style>
+/* ==========================================================================
+   Page shell — deliberately near-monochrome. This page is about colour and
+   depth inside the phone, so the surroundings stay out of the way.
+   ========================================================================== */
+:root {
+  --paper: #f6f7f9;
+  --paper-2: #ffffff;
+  --ink: #111519;
+  --ink-muted: #5c6672;
+  --rule: #dfe3e9;
+  --rule-soft: #eceff3;
+  --mark: #1d3f66;
+  --mark-soft: rgba(29, 63, 102, 0.09);
+  --ok: #2f6b45;
+  --warn-ink: #7a4a00;
+
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+  --mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #0d0f13;
+    --paper-2: #14181e;
+    --ink: #e8ecf2;
+    --ink-muted: #8a94a2;
+    --rule: #212630;
+    --rule-soft: #191d24;
+    --mark: #86b2e0;
+    --mark-soft: rgba(134, 178, 224, 0.13);
+    --ok: #6fcf97;
+    --warn-ink: #e0b268;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --paper: #0d0f13;
+  --paper-2: #14181e;
+  --ink: #e8ecf2;
+  --ink-muted: #8a94a2;
+  --rule: #212630;
+  --rule-soft: #191d24;
+  --mark: #86b2e0;
+  --mark-soft: rgba(134, 178, 224, 0.13);
+  --ok: #6fcf97;
+  --warn-ink: #e0b268;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+
+/* --- Masthead ------------------------------------------------------------ */
+
+.masthead { padding: 56px 0 32px; border-bottom: 1px solid var(--rule); }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 0 14px;
+}
+
+h1 {
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.06;
+  letter-spacing: -0.033em;
+  font-weight: 780;
+  margin: 0 0 18px;
+  max-width: 17ch;
+  text-wrap: balance;
+}
+
+.standfirst {
+  max-width: 62ch;
+  font-size: 17px;
+  color: var(--ink-muted);
+  margin: 0;
+}
+.standfirst strong { color: var(--ink); font-weight: 620; }
+
+.rm-note {
+  display: none;
+  margin: 22px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--warn-ink);
+  background: var(--paper-2);
+  font-size: 14px;
+  max-width: 62ch;
+}
+@media (prefers-reduced-motion: reduce) { .rm-note { display: block; } }
+
+/* --- Two-column spec sheet ----------------------------------------------- */
+
+.sheet { display: grid; grid-template-columns: 1fr; gap: 40px; padding-top: 40px; }
+@media (min-width: 940px) {
+  .sheet { grid-template-columns: 330px 1fr; gap: 56px; align-items: start; }
+  .rig { position: sticky; top: 24px; }
+}
+
+/* --- The rig (phone + theme switch) -------------------------------------- */
+
+.rig-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.rig-head .eyebrow { margin: 0; }
+
+.theme-switch { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.theme-switch button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--rule);
+  background: var(--paper-2);
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.theme-switch button[aria-pressed='true'] {
+  border-color: var(--mark);
+  background: var(--mark-soft);
+  color: var(--ink);
+}
+.theme-switch button:focus-visible,
+.switch input:focus-visible,
+.mini-btn:focus-visible,
+.phone button:focus-visible {
+  outline: 2px solid var(--mark);
+  outline-offset: 2px;
+}
+
+.rig-foot {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  font-family: var(--mono);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   THE PHONE — carries RunLog's real tokens, verbatim from src/styles.css.
+   What you see here is what the app would render.
+   ========================================================================== */
+
+.phone {
+  width: 100%;
+  max-width: 330px;
+  height: 620px;
+  border-radius: 30px;
+  border: 1px solid var(--rule);
+  padding: 8px;
+  background: var(--paper-2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05), 0 24px 60px -30px rgba(0,0,0,0.4);
+}
+
+.phone-inner {
+  position: relative;
+  height: 100%;
+  border-radius: 23px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- RunLog token blocks (scoped to the frame) ---------------------------- */
+
+[data-app-theme='soft'] {
+  --bg: #0a0d12; --bg-elev: #0f141c; --surface: #151b25; --surface-2: #1c2430;
+  --surface-3: #242d3b; --line: #2e3848; --line-soft: rgba(148,163,184,0.12);
+  --text: #f1f5f9; --muted: #94a3b8; --muted-2: #7787a0;
+  --accent: #34d399; --accent-bright: #6ee7b7; --accent-dim: rgba(16,185,129,0.22);
+  --accent-ink: #042f1e; --warn: #fbbf24; --danger: #fb7185;
+  --radius: 16px; --radius-sm: 12px;
+  --tab-bg: rgba(15,20,28,0.92); --tab-inset: 10px; --tab-radius: 20px;
+  --tab-border: rgba(255,255,255,0.06); --btn-radius: 12px; --chip-radius: 999px;
+  --metric-font: inherit; --letter-label: 0.07em;
+  --zone-1: #6b7f9e; --zone-2: #3fa66a; --zone-3: #d8a13a; --zone-4: #e2703a; --zone-5: #d2453f;
+  /* PROPOSED */
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.4), 0 10px 26px -14px rgba(0,0,0,0.85);
+  --shadow-2: 0 2px 6px rgba(0,0,0,0.45), 0 18px 40px -18px rgba(0,0,0,0.9);
+  --press-scale: 0.972;
+}
+
+[data-app-theme='hud'] {
+  --bg: #050505; --bg-elev: #0a0a0a; --surface: #111111; --surface-2: #181818;
+  --surface-3: #222222; --line: #2a2a2a; --line-soft: #1a1a1a;
+  --text: #fafafa; --muted: #a3a3a3; --muted-2: #7d7d7d;
+  --accent: #c8ff00; --accent-bright: #d8ff4a; --accent-dim: rgba(200,255,0,0.12);
+  --accent-ink: #0a0f00; --warn: #ffb020; --danger: #ff2d55;
+  --radius: 10px; --radius-sm: 8px;
+  --tab-bg: #0a0a0a; --tab-inset: 0px; --tab-radius: 0px; --tab-border: #222222;
+  --btn-radius: 4px; --chip-radius: 4px;
+  --metric-font: var(--mono); --letter-label: 0.12em;
+  --zone-1: #7d90ad; --zone-2: #4ac47e; --zone-3: #f0b53f; --zone-4: #ff8140; --zone-5: #ff4d4d;
+  /* PROPOSED — HUD keeps hard edges on purpose. Its depth is the border. */
+  --shadow-1: none;
+  --shadow-2: none;
+  --press-scale: 1;
+}
+
+[data-app-theme='day'] {
+  --bg: #ffffff; --bg-elev: #f2f5f8; --surface: #ffffff; --surface-2: #eef2f6;
+  --surface-3: #e0e6ee; --line: #b3bfcc; --line-soft: rgba(11,15,20,0.14);
+  --text: #0b0f14; --muted: #3f4a56; --muted-2: #55616e;
+  --accent: #0b6b3a; --accent-bright: #08512c; --accent-dim: rgba(11,107,58,0.14);
+  --accent-ink: #ffffff; --warn: #7a4a00; --danger: #a4231d;
+  --radius: 14px; --radius-sm: 10px;
+  --tab-bg: #ffffff; --tab-inset: 0px; --tab-radius: 0px; --tab-border: #b3bfcc;
+  --btn-radius: 12px; --chip-radius: 999px;
+  --metric-font: inherit; --letter-label: 0.06em;
+  --zone-1: #4a5f80; --zone-2: #1f7a46; --zone-3: #8a6200; --zone-4: #a94b17; --zone-5: #a4231d;
+  /* PROPOSED — shadow replaces the heavy 2px border that Daylight leans on. */
+  --shadow-1: 0 1px 2px rgba(11,15,20,0.07), 0 6px 16px -10px rgba(11,15,20,0.35);
+  --shadow-2: 0 2px 5px rgba(11,15,20,0.09), 0 14px 30px -14px rgba(11,15,20,0.4);
+  --press-scale: 0.972;
+}
+
+/* --- App chrome ----------------------------------------------------------- */
+
+.phone-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px 14px 84px; scrollbar-width: thin; }
+.phone h2.app-h1 { font-size: 22px; margin: 0 0 3px; letter-spacing: -0.02em; font-weight: 720; }
+.phone .subtitle { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 13px;
+  margin-bottom: 10px;
+}
+
+.metric-hero { text-align: center; padding: 6px 0 10px; }
+.metric-hero .value {
+  font-size: 46px; font-weight: 700; letter-spacing: -0.03em;
+  font-family: var(--metric-font); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.metric-hero .label {
+  font-size: 10px; color: var(--muted-2); text-transform: uppercase;
+  letter-spacing: var(--letter-label); margin-top: 5px;
+}
+
+.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.metric { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 8px; text-align: center; }
+.metric .value {
+  font-size: 19px; font-weight: 700; font-family: var(--metric-font);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+}
+.metric .label {
+  font-size: 9px; color: var(--muted-2); text-transform: uppercase;
+  letter-spacing: var(--letter-label); margin-top: 3px;
+}
+
+.pills { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap; }
+.pill {
+  font-size: 11px; padding: 4px 10px; border-radius: var(--chip-radius);
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--muted);
+}
+.pill.hr { color: var(--text); font-weight: 640; }
+.pill.hr .z { color: var(--zone-4); font-weight: 700; }
+
+.routebox {
+  height: 96px; border-radius: var(--radius-sm); background: var(--surface-2);
+  border: 1px solid var(--line); margin-bottom: 10px; overflow: hidden; position: relative;
+}
+.routebox svg { width: 100%; height: 100%; display: block; }
+
+.btn-row { display: flex; gap: 8px; }
+.btn {
+  flex: 1; font: inherit; font-size: 13px; font-weight: 620; cursor: pointer;
+  border-radius: var(--btn-radius); padding: 11px 12px; text-align: center;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+[data-app-theme='hud'] .btn { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; font-size: 11px; }
+[data-app-theme='hud'] .btn.danger { background: var(--danger); color: #fff; border-color: transparent; }
+
+.run-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 11px 12px; margin-bottom: 8px; color: var(--text); font: inherit;
+}
+.run-item .thumb { width: 42px; height: 42px; border-radius: 9px; background: var(--surface-2); flex-shrink: 0; overflow: hidden; }
+.run-item .thumb svg { width: 100%; height: 100%; display: block; }
+.run-item .headline { display: block; font-weight: 650; font-size: 14px; }
+.run-item .meta { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
+
+.tabs {
+  position: absolute; z-index: 5;
+  bottom: var(--tab-inset); left: var(--tab-inset); right: var(--tab-inset);
+  display: flex; background: var(--tab-bg);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--tab-border); border-radius: var(--tab-radius);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+[data-app-theme='hud'] .tabs,
+[data-app-theme='day'] .tabs {
+  backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+  border-left: none; border-right: none; border-bottom: none;
+}
+.tabs button {
+  flex: 1; font: inherit; cursor: pointer; background: none; border: none;
+  padding: 8px 2px 10px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 9px; color: var(--muted-2);
+}
+.tabs button[aria-current='page'] { color: var(--accent); }
+.tabs .glyph { font-size: 16px; line-height: 1; }
+[data-app-theme='hud'] .tabs button { text-transform: uppercase; font-weight: 800; letter-spacing: 0.06em; font-size: 8px; }
+
+.app-screen { display: block; }
+.app-screen[hidden] { display: none; }
+
+/* ==========================================================================
+   PROPOSED EFFECTS — every one is inert until its switch is on.
+   ========================================================================== */
+
+/* 1 — Press response */
+.fx-press .btn,
+.fx-press .run-item,
+.fx-press .tabs button {
+  transition: transform 90ms ease-out, filter 90ms ease-out, background-color 140ms ease-out;
+}
+.fx-press .btn:active,
+.fx-press .run-item:active,
+.fx-press .tabs button:active {
+  transform: scale(var(--press-scale));
+  filter: brightness(1.14);
+}
+[data-app-theme='day'].fx-press .btn:active,
+[data-app-theme='day'].fx-press .run-item:active { filter: brightness(0.95); }
+[data-app-theme='hud'].fx-press .btn:active { filter: brightness(1.3); }
+
+/* 2 — Screen change */
+.fx-screen .app-screen {
+  transition: opacity 190ms ease-out, transform 190ms ease-out, display 190ms allow-discrete;
+  opacity: 1;
+  transform: none;
+}
+.fx-screen .app-screen[hidden] { opacity: 0; transform: translateY(6px); }
+@starting-style {
+  .fx-screen .app-screen { opacity: 0; transform: translateY(6px); }
+}
+
+/* 3 — Elevation ladder */
+.fx-depth .card,
+.fx-depth .run-item { box-shadow: var(--shadow-1); }
+.fx-depth .tabs { box-shadow: var(--shadow-2); }
+[data-app-theme='day'].fx-depth .card,
+[data-app-theme='day'].fx-depth .run-item { border-color: #dfe5ec; }
+
+/* 4 — Content scrim under the tab bar */
+.scrim {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 92px;
+  pointer-events: none; z-index: 4; opacity: 0;
+  transition: opacity 200ms ease-out;
+  background: linear-gradient(to top, var(--bg) 26%, color-mix(in srgb, var(--bg) 55%, transparent) 62%, transparent);
+}
+.fx-scrim .scrim { opacity: 1; }
+
+/* 5 — Zone halo on the live HR pill */
+.fx-halo .pill.hr {
+  border-color: color-mix(in srgb, var(--zone-4) 55%, transparent);
+  background: color-mix(in srgb, var(--zone-4) 13%, var(--surface-2));
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--zone-4) 60%, transparent);
+  transition: box-shadow 500ms ease-out, background-color 500ms ease-out, border-color 500ms ease-out;
+}
+
+/* 6 — Km tick */
+@keyframes km-tick {
+  0%   { transform: scale(1);    color: var(--text); }
+  22%  { transform: scale(1.07); color: var(--accent); }
+  100% { transform: scale(1);    color: var(--text); }
+}
+.fx-km .metric.dist.ticked .value {
+  animation: km-tick 620ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  display: inline-block;
+}
+
+/* 7 — Header condenses on scroll */
+@supports (animation-timeline: scroll()) {
+  .fx-header .app-head {
+    position: sticky; top: -6px; z-index: 3;
+    margin: -16px -14px 0; padding: 16px 14px 8px;
+    animation: head-condense linear both;
+    animation-timeline: scroll(nearest);
+    animation-range: 0 90px;
+  }
+  @keyframes head-condense {
+    to {
+      font-size: 0.72em;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 1px 0 var(--line-soft);
+    }
+  }
+  .fx-header .app-head .subtitle {
+    animation: head-fade linear both;
+    animation-timeline: scroll(nearest);
+    animation-range: 0 60px;
+  }
+  @keyframes head-fade { to { opacity: 0; margin-bottom: 0; } }
+}
+
+/* 8 — View-transition morph */
+.fx-vt .run-item.morphing .thumb { view-transition-name: run-thumb; }
+.fx-vt .run-item.morphing .headline { view-transition-name: run-title; }
+.fx-vt .detail-thumb { view-transition-name: run-thumb; }
+.fx-vt .detail-title { view-transition-name: run-title; }
+::view-transition-group(run-thumb),
+::view-transition-group(run-title) { animation-duration: 300ms; }
+
+.detail-thumb { width: 100%; height: 118px; border-radius: var(--radius-sm); background: var(--surface-2); overflow: hidden; margin-bottom: 12px; }
+.detail-thumb svg { width: 100%; height: 100%; display: block; }
+.detail-title { font-size: 24px; font-weight: 720; letter-spacing: -0.02em; margin: 0 0 2px; }
+
+/* Honest hygiene: everything above is gated. */
+@media (prefers-reduced-motion: reduce) {
+  .phone *, .phone *::before, .phone *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ==========================================================================
+   Proposal list
+   ========================================================================== */
+
+.group-head {
+  display: flex; align-items: baseline; gap: 12px;
+  margin: 0 0 4px; padding-top: 8px;
+}
+.group-head h2 {
+  font-size: 13px; font-family: var(--mono); text-transform: uppercase;
+  letter-spacing: 0.13em; font-weight: 600; margin: 0; color: var(--ink);
+}
+.group-head .rule { flex: 1; height: 1px; background: var(--rule); }
+.group-blurb { color: var(--ink-muted); font-size: 14px; margin: 0 0 20px; max-width: 60ch; }
+
+.prop {
+  border-top: 1px solid var(--rule);
+  padding: 22px 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 20px;
+  align-items: start;
+}
+.prop:last-of-type { border-bottom: 1px solid var(--rule); }
+
+.prop .surface {
+  grid-column: 1 / -1;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--mark);
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+.prop h3 {
+  margin: 0; font-size: 19px; font-weight: 660; letter-spacing: -0.018em;
+  grid-column: 1; text-wrap: balance;
+}
+.prop .body { grid-column: 1 / -1; max-width: 58ch; color: var(--ink-muted); font-size: 14.5px; }
+.prop .body p { margin: 8px 0 0; }
+.prop .body strong { color: var(--ink); font-weight: 620; }
+
+.tags { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.tag {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 4px; border: 1px solid var(--rule); color: var(--ink-muted);
+  background: var(--paper-2);
+}
+.tag.now { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.tag.lift { color: var(--warn-ink); border-color: color-mix(in srgb, var(--warn-ink) 40%, transparent); }
+
+/* Switch */
+.switch { grid-column: 2; grid-row: 2; display: inline-flex; align-items: center; gap: 9px; cursor: pointer; user-select: none; }
+.switch span { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-muted); }
+.switch input {
+  appearance: none; margin: 0; width: 42px; height: 24px; border-radius: 999px;
+  background: var(--rule); border: 1px solid var(--rule); position: relative; cursor: pointer;
+  transition: background-color 160ms ease-out;
+}
+.switch input::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--paper-2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 160ms cubic-bezier(0.3, 0.8, 0.4, 1);
+}
+.switch input:checked { background: var(--mark); border-color: var(--mark); }
+.switch input:checked::after { transform: translateX(18px); }
+.switch input:checked + span { color: var(--ink); }
+
+.mini-btn {
+  font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  padding: 6px 11px; border-radius: 7px; border: 1px solid var(--rule);
+  background: var(--paper-2); color: var(--ink);
+  /* Sits with the tags, not stretched across the proposal's grid column. */
+  grid-column: 1; justify-self: start; width: max-content; margin-top: 0;
+}
+.mini-btn:hover { border-color: var(--mark); color: var(--mark); }
+.mini-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+details { grid-column: 1 / -1; margin-top: 12px; }
+summary {
+  cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-muted); width: max-content;
+}
+summary:hover { color: var(--ink); }
+pre {
+  margin: 10px 0 0; padding: 14px; border-radius: 8px; overflow-x: auto;
+  background: var(--paper-2); border: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: var(--ink);
+}
+
+/* Closing */
+.closing { border-top: 3px solid var(--ink); margin-top: 56px; padding-top: 28px; }
+.closing h2 { font-size: 24px; letter-spacing: -0.02em; margin: 0 0 14px; font-weight: 720; }
+.closing p { max-width: 62ch; color: var(--ink-muted); margin: 0 0 14px; }
+.closing p strong { color: var(--ink); font-weight: 620; }
+.shortlist { margin: 0; padding: 0; list-style: none; max-width: 62ch; }
+.shortlist li {
+  display: grid; grid-template-columns: auto 1fr; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--rule-soft); align-items: baseline;
+}
+.shortlist code {
+  font-family: var(--mono); font-size: 12px; color: var(--mark);
+  white-space: nowrap;
+}
+.shortlist span { color: var(--ink-muted); font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">RunLog · design proposal · Aug 2026</p>
+    <h1>Depth and motion, without losing the run.</h1>
+    <p class="standfirst">
+      Eight additions to the interface, each one live below — <strong>flip a switch and watch the
+      phone</strong>. Every effect is built on the tokens already in <code>src/styles.css</code>, and
+      every one is evaluated against the constraint the rest of this app is built around: it has to
+      stay readable at arm's length, in sunlight, mid-run, on all three themes.
+    </p>
+    <p class="rm-note">
+      Your system is set to reduce motion, so the animations here are suppressed — which is exactly
+      what the real implementation does. Switch the setting off if you want to see them move; the
+      depth and transparency proposals still work either way.
+    </p>
+  </header>
+
+  <div class="sheet">
+
+    <!-- ============ THE RIG ============ -->
+    <div class="rig">
+      <div class="rig-head"><p class="eyebrow">Live preview</p></div>
+
+      <div class="theme-switch" role="group" aria-label="Theme">
+        <button type="button" data-theme-btn="soft" aria-pressed="true">Soft Emerald</button>
+        <button type="button" data-theme-btn="hud" aria-pressed="false">Athletic HUD</button>
+        <button type="button" data-theme-btn="day" aria-pressed="false">Daylight</button>
+      </div>
+
+      <div class="phone" id="phone" data-app-theme="soft">
+        <div class="phone-inner">
+
+          <div class="phone-scroll" id="scroller">
+
+            <!-- Run screen -->
+            <section class="app-screen" id="screen-run">
+              <div class="app-head">
+                <h2 class="app-h1">Evening run</h2>
+                <p class="subtitle">Outdoors · Riverside loop</p>
+              </div>
+
+              <div class="card">
+                <div class="metric-hero">
+                  <div class="value" id="clock">24:18</div>
+                  <div class="label">Moving time</div>
+                </div>
+                <div class="pills">
+                  <span class="pill hr">148 bpm · <span class="z">Z4</span></span>
+                  <span class="pill">GPS good</span>
+                </div>
+                <div class="metric-grid">
+                  <div class="metric dist" id="dist-pod">
+                    <div class="value" id="dist">4.02</div>
+                    <div class="label">km</div>
+                  </div>
+                  <div class="metric"><div class="value">5:42</div><div class="label">/km</div></div>
+                  <div class="metric"><div class="value">168</div><div class="label">spm</div></div>
+                </div>
+              </div>
+
+              <div class="routebox">
+                <svg viewBox="0 0 300 96" aria-hidden="true">
+                  <path d="M18 74 C 52 26, 82 84, 116 48 S 176 16, 208 52 S 258 78, 284 30"
+                        fill="none" stroke="var(--accent)" stroke-width="3.5"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="18" cy="74" r="4" fill="var(--text)"/>
+                  <circle cx="284" cy="30" r="4" fill="var(--danger)"/>
+                </svg>
+              </div>
+
+              <div class="btn-row">
+                <button class="btn" type="button">Pause</button>
+                <button class="btn danger" type="button">Finish</button>
+              </div>
+
+              <div class="card" style="margin-top:10px">
+                <div style="font-size:12px;color:var(--muted)">Last split</div>
+                <div style="font-weight:660;margin-top:2px">Km 4 — 5:38 /km</div>
+              </div>
+              <div class="card">
+                <div style="font-size:12px;color:var(--muted)">Sensors</div>
+                <div style="font-weight:660;margin-top:2px">HR strap · Zwift RunPod</div>
+              </div>
+            </section>
+
+            <!-- History screen -->
+            <section class="app-screen" id="screen-history" hidden>
+              <div class="app-head">
+                <h2 class="app-h1">History</h2>
+                <p class="subtitle">38 runs · 214 km this year</p>
+              </div>
+              <button class="run-item" type="button" data-run="0">
+                <span class="thumb">
+                  <svg viewBox="0 0 42 42" aria-hidden="true"><path d="M6 32 C 14 8, 22 36, 30 14 S 38 22, 38 10" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/></svg>
+                </span>
+                <span class="body">
+                  <span class="headline">8.04 km · 44:12</span>
+                  <span class="meta">Yesterday · 5:29 /km · Z3 avg</span>
+                </span>
+              </button>
+              <button class="run-item" type="button" data-run="1">
+                <span class="thumb">
+                  <svg viewBox="0 0 42 42" aria-hidden="true"><path d="M8 12 C 18 30, 26 6, 34 28" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/></svg>
+                </span>
+                <span class="body">
+                  <span class="headline">5.00 km · 28:40</span>
+                  <span class="meta">Sunday · Treadmill · Z2 avg</span>
+                </span>
+              </button>
+              <button class="run-item" type="button" data-run="2">
+                <span class="thumb">
+                  <svg viewBox="0 0 42 42" aria-hidden="true"><path d="M6 22 C 16 4, 20 38, 36 18" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/></svg>
+                </span>
+                <span class="body">
+                  <span class="headline">12.18 km · 1:09:04</span>
+                  <span class="meta">Friday · 5:40 /km · Z3 avg</span>
+                </span>
+              </button>
+              <div class="card"><div style="font-size:12px;color:var(--muted)">This week</div><div style="font-weight:660;margin-top:2px">25.2 km · 3 runs</div></div>
+              <div class="card"><div style="font-size:12px;color:var(--muted)">Longest</div><div style="font-weight:660;margin-top:2px">12.18 km · Friday</div></div>
+            </section>
+
+            <!-- Detail screen -->
+            <section class="app-screen" id="screen-detail" hidden>
+              <div class="detail-thumb">
+                <svg viewBox="0 0 300 118" aria-hidden="true">
+                  <path d="M20 90 C 60 20, 100 106, 150 56 S 230 20, 280 84" fill="none"
+                        stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h2 class="detail-title">8.04 km · 44:12</h2>
+              <p class="subtitle">Yesterday · Riverside loop</p>
+              <div class="metric-grid">
+                <div class="metric"><div class="value">5:29</div><div class="label">/km</div></div>
+                <div class="metric"><div class="value">151</div><div class="label">avg bpm</div></div>
+                <div class="metric"><div class="value">Z3</div><div class="label">zone</div></div>
+              </div>
+              <div class="card" style="margin-top:10px">
+                <div style="font-size:12px;color:var(--muted)">Splits</div>
+                <div style="font-weight:660;margin-top:2px">Even, +4s drift over 8 km</div>
+              </div>
+              <button class="btn" type="button" id="back-btn" style="width:100%">Back to history</button>
+            </section>
+
+          </div>
+
+          <div class="scrim" aria-hidden="true"></div>
+
+          <nav class="tabs">
+            <button type="button" data-tab="run" aria-current="page"><span class="glyph">🏃</span>Run</button>
+            <button type="button" data-tab="history"><span class="glyph">📅</span>History</button>
+            <button type="button"><span class="glyph">🎯</span>Coach</button>
+            <button type="button"><span class="glyph">📊</span>Stats</button>
+            <button type="button"><span class="glyph">👤</span>You</button>
+          </nav>
+
+        </div>
+      </div>
+
+      <p class="rig-foot">Tap the phone. It responds.<br>Scroll it. It scrolls.</p>
+    </div>
+
+    <!-- ============ PROPOSALS ============ -->
+    <div class="props">
+
+      <div class="group-head"><h2>Ready now</h2><span class="rule"></span></div>
+      <p class="group-blurb">
+        Six changes that are pure CSS, cost nothing at runtime, and touch no component logic.
+        Together they are roughly ninety lines.
+      </p>
+
+      <!-- 1 -->
+      <article class="prop">
+        <div class="surface">.btn:active · .run-item:active · .tabs button:active</div>
+        <h3>Make every tap answer back</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-press"><span>Off</span></label>
+        <div class="body">
+          <p>
+            This is the gap I'd close first. Right now <strong>nothing in the app has an
+            <code>:active</code> state</strong> except <code>.metric-pod</code> — buttons, history
+            rows and tabs all sit perfectly still under a thumb. On a touch screen with no hover to
+            fall back on, that reads as a dropped input, and the instinct is to tap again.
+          </p>
+          <p>
+            A 90 ms scale to 0.972 plus a brightness nudge fixes it. Note that
+            <strong>the amount is a token, not a constant</strong>: Soft and Daylight compress,
+            <code>--press-scale: 1</code> keeps HUD rigid and lets it answer with brightness alone,
+            because a springy button would contradict everything else that theme says. Daylight
+            darkens instead of brightening — on white, "brighter" is invisible.
+          </p>
+        </div>
+        <div class="tags"><span class="tag now">~14 lines</span><span class="tag">no JS</span><span class="tag">all themes</span></div>
+        <details>
+          <summary>CSS</summary>
+<pre>.btn, .run-item, .tabs button {
+  transition: transform 90ms ease-out, filter 90ms ease-out;
+}
+.btn:active, .run-item:active, .tabs button:active {
+  transform: scale(var(--press-scale, 0.972));
+  filter: brightness(1.14);
+}
+[data-theme='day'] .btn:active { filter: brightness(0.95); }</pre>
+        </details>
+      </article>
+
+      <!-- 2 -->
+      <article class="prop">
+        <div class="surface">.screen-host[hidden] · @starting-style</div>
+        <h3>Cross-fade between tabs</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-screen"><span>Off</span></label>
+        <div class="body">
+          <p>
+            Tab changes are a hard cut today. A 190 ms fade with a 6 px rise tells you the screen
+            replaced the last one rather than the last one having redrawn — worth more than it
+            sounds when five tabs share a layout.
+          </p>
+          <p>
+            The reason this is cheap for <em>you</em> specifically: <code>App.tsx</code> keeps all
+            five screens mounted and toggles the <code>hidden</code> attribute. That is a
+            <code>display</code> change, which used to be unanimatable and needed a JS timing hack.
+            <strong><code>transition-behavior: allow-discrete</code> and <code>@starting-style</code>
+            went cross-browser baseline this year</strong>, so it is now four lines and no
+            JavaScript. Switch tabs in the preview to compare.
+          </p>
+        </div>
+        <div class="tags"><span class="tag now">~10 lines</span><span class="tag">no JS</span><span class="tag">baseline 2026</span></div>
+        <details>
+          <summary>CSS</summary>
+<pre>.screen-host {
+  transition: opacity 190ms ease-out, transform 190ms ease-out,
+              display 190ms allow-discrete;
+  opacity: 1;
+}
+.screen-host[hidden] { opacity: 0; transform: translateY(6px); }
+@starting-style {
+  .screen-host { opacity: 0; transform: translateY(6px); }
+}</pre>
+        </details>
+      </article>
+
+      <!-- 3 -->
+      <article class="prop">
+        <div class="surface">--shadow-1 · --shadow-2</div>
+        <h3>An elevation ladder each theme controls</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-depth"><span>Off</span></label>
+        <div class="body">
+          <p>
+            You asked about shades, and this is where they belong. <code>.card</code> has
+            <strong>no shadow at all</strong> — surfaces are separated purely by a 1 px border, so
+            everything sits on one plane.
+          </p>
+          <p>
+            The trap is a single global shadow. Try each theme with this on: Soft takes a soft
+            ambient cast; <strong>HUD sets <code>--shadow-1: none</code> and stays flat</strong>,
+            because a glow under a hard-edged instrument panel just looks like a mistake; and
+            Daylight benefits most of all, trading its heavy <code>#b3bfcc</code> 2 px border for a
+            crisp low-alpha shadow and a lighter line, which is the single biggest thing holding
+            that theme back right now.
+          </p>
+        </div>
+        <div class="tags"><span class="tag now">~12 lines</span><span class="tag">no JS</span><span class="tag">per-theme values</span></div>
+        <details>
+          <summary>CSS</summary>
+<pre>[data-theme='soft'] {
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4), 0 10px 26px -14px rgba(0,0,0,.85);
+}
+[data-theme='hud'] { --shadow-1: none; }   /* deliberate */
+[data-theme='day'] {
+  --shadow-1: 0 1px 2px rgba(11,15,20,.07), 0 6px 16px -10px rgba(11,15,20,.35);
+}
+.card, .run-item { box-shadow: var(--shadow-1); }</pre>
+        </details>
+      </article>
+
+      <!-- 4 -->
+      <article class="prop">
+        <div class="surface">.screen::after — new element</div>
+        <h3>Let content fade out under the tab bar</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-scrim"><span>Off</span></label>
+        <div class="body">
+          <p>
+            The transparency you already have is the tab bar's <code>blur(16px)</code>. The problem
+            is what happens at its top edge: content slides under a hard line and is simply
+            guillotined. <strong>Scroll the preview with this off, then on.</strong>
+          </p>
+          <p>
+            A 92 px gradient scrim from <code>var(--bg)</code> to transparent makes content dissolve
+            instead of getting cut, which reads as depth and — more usefully — signals that there is
+            more below. It's also the honest fix for a real bug: with a floating bar and
+            <code>--tab-inset: 10px</code>, Soft currently shows a sliver of live content in the gap
+            beneath the bar.
+          </p>
+        </div>
+        <div class="tags"><span class="tag now">~8 lines</span><span class="tag">no JS</span><span class="tag">fixes a clip</span></div>
+        <details>
+          <summary>CSS</summary>
+<pre>.screen-host::after {
+  content: '';
+  position: fixed; left: 0; right: 0; bottom: 0; height: 92px;
+  pointer-events: none; z-index: 19;
+  background: linear-gradient(to top,
+    var(--bg) 26%,
+    color-mix(in srgb, var(--bg) 55%, transparent) 62%,
+    transparent);
+}</pre>
+        </details>
+      </article>
+
+      <!-- 5 -->
+      <article class="prop">
+        <div class="surface">.live-hr-pill · --zone-1..5</div>
+        <h3>Tint the heart-rate pill with its own zone</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-halo"><span>Off</span></label>
+        <div class="body">
+          <p>
+            You already have a five-rung colour ladder that is per-theme and contrast-checked, and it
+            is currently only used in charts and the history strip. The live HR pill — the thing you
+            actually glance at while running — is neutral grey.
+          </p>
+          <p>
+            Tinting its background, border and a soft outer halo from <code>--zone-N</code> means
+            <strong>zone becomes readable peripherally, without focusing on the number</strong>. The
+            500 ms transition matters: zone crossings should drift, not snap, or a heart rate
+            hovering on a boundary makes the pill strobe. Reusing the existing tokens means Daylight
+            gets its darker ladder for free.
+          </p>
+        </div>
+        <div class="tags"><span class="tag now">~9 lines</span><span class="tag">1 line TSX</span><span class="tag">reuses --zone-N</span></div>
+        <details>
+          <summary>CSS + the one JS change</summary>
+<pre>/* RunScreen sets style={{ '--z': zoneSwatch(zone) }} on the pill */
+.live-hr-pill {
+  border-color: color-mix(in srgb, var(--z) 55%, transparent);
+  background:   color-mix(in srgb, var(--z) 13%, var(--surface-2));
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--z) 60%, transparent);
+  transition: box-shadow 500ms ease-out, background-color 500ms ease-out,
+              border-color 500ms ease-out;
+}</pre>
+        </details>
+      </article>
+
+      <!-- 6 -->
+      <article class="prop">
+        <div class="surface">.metric.dist</div>
+        <h3>Mark the kilometre, ignore the second</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-km"><span>Off</span></label>
+        <div class="body">
+          <p>
+            The restraint is the whole proposal. The obvious move is animating numbers as they
+            change, but your clock ticks <strong>once a second for an hour</strong> — animate that
+            and you have built a distraction you cannot switch off.
+          </p>
+          <p>
+            So: animate nothing on tick, and flash the distance for 620 ms only when the whole-km
+            digit rolls over. That's a real event worth reporting, it happens roughly every five
+            minutes, and it pairs with the split you already log. Turn it on and press the button.
+          </p>
+        </div>
+        <div class="tags">
+          <span class="tag now">~10 lines</span><span class="tag">1 line TSX</span><span class="tag">event-gated</span>
+        </div>
+        <button class="mini-btn" type="button" id="km-btn">Cross a kilometre →</button>
+        <details>
+          <summary>CSS</summary>
+<pre>@keyframes km-tick {
+  0%   { transform: scale(1);    color: var(--text); }
+  22%  { transform: scale(1.07); color: var(--accent); }
+  100% { transform: scale(1);    color: var(--text); }
+}
+.metric.dist.ticked .value {
+  display: inline-block;
+  animation: km-tick 620ms cubic-bezier(.2,.7,.3,1);
+}</pre>
+        </details>
+      </article>
+
+      <div class="group-head" style="margin-top:44px"><h2>Bigger lift</h2><span class="rule"></span></div>
+      <p class="group-blurb">
+        Both are the genuinely current techniques, and both are worth doing — but they touch markup
+        and component structure, so they're separate decisions.
+      </p>
+
+      <!-- 7 -->
+      <article class="prop">
+        <div class="surface">animation-timeline: scroll()</div>
+        <h3>Condense the header as you scroll</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-header"><span>Off</span></label>
+        <div class="body">
+          <p>
+            Every screen spends 26 px of vertical space on an <code>h1</code> and a subtitle that
+            stop being useful the moment you start reading. Turn this on and scroll the preview: the
+            title shrinks to 72%, the subtitle fades, and a blurred bar picks up behind it —
+            the same material as the tab bar, so the chrome bookends the content.
+          </p>
+          <p>
+            The notable part is that <strong>this is scroll-linked with zero JavaScript</strong>. No
+            listener, no <code>IntersectionObserver</code>, no re-render — it runs on the compositor,
+            which is why it holds 60 fps on a phone. <code>scroll()</code> and <code>view()</code>
+            reached cross-browser baseline this year. It needs the heading wrapped in a sticky
+            element on each screen, which is the actual cost.
+          </p>
+        </div>
+        <div class="tags"><span class="tag lift">markup change</span><span class="tag">no JS</span><span class="tag">×5 screens</span></div>
+        <details>
+          <summary>CSS</summary>
+<pre>@supports (animation-timeline: scroll()) {
+  .screen-head {
+    position: sticky; top: 0; z-index: 3;
+    animation: head-condense linear both;
+    animation-timeline: scroll(nearest);
+    animation-range: 0 90px;
+  }
+  @keyframes head-condense {
+    to {
+      font-size: .72em;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 1px 0 var(--line-soft);
+    }
+  }
+}</pre>
+        </details>
+      </article>
+
+      <!-- 8 -->
+      <article class="prop">
+        <div class="surface">document.startViewTransition()</div>
+        <h3>Morph a history row into its run</h3>
+        <label class="switch"><input type="checkbox" data-fx="fx-vt"><span>Off</span></label>
+        <div class="body">
+          <p>
+            Turn this on, go to History in the preview, and tap a run. The route thumbnail and the
+            headline <strong>fly from the row into the detail screen</strong> rather than the whole
+            view being swapped out — so the run you chose is visibly the run you are now looking at.
+          </p>
+          <p>
+            This is the one that most changes how the app feels, and it is also the one with a real
+            prerequisite: history rows need route thumbnails, which don't exist yet. That's a small
+            <code>RouteMap</code> variant rendering a simplified polyline with no tiles — worth
+            building on its own merits, since it turns a list of numbers into something scannable.
+            Then the transition is about fifteen lines.
+          </p>
+          <p>
+            Browser support is less of a caveat than it used to be for you: <strong>the Capacitor
+            Android shell runs on Chromium</strong>, so the installed app always gets this. Desktop
+            Firefox falls back to a plain cut &mdash; which is exactly today's behaviour, so nothing
+            regresses.
+          </p>
+        </div>
+        <div class="tags"><span class="tag lift">needs thumbnails</span><span class="tag">~15 lines JS</span><span class="tag">graceful fallback</span></div>
+        <details>
+          <summary>The pattern</summary>
+<pre>function openRun(id) {
+  if (!document.startViewTransition) return setDetail(id);  // Firefox
+  document.startViewTransition(() =&gt; flushSync(() =&gt; setDetail(id)));
+}
+
+/* the two shared elements, named identically on both screens */
+.run-item[data-open] .thumb,
+.detail .route      { view-transition-name: run-thumb; }
+.run-item[data-open] .headline,
+.detail h1          { view-transition-name: run-title; }</pre>
+        </details>
+      </article>
+
+      <div class="closing">
+        <h2>One thing to fix regardless</h2>
+        <p>
+          <code>prefers-reduced-motion</code> is honoured in exactly one place in the stylesheet —
+          <code>.dot.live</code>. Three animations are already running past it:
+          <strong><code>goal-pulse</code>, <code>live-rec-pulse</code> and <code>pulse</code></strong>,
+          the last of which loops forever. Before adding anything above, the gate should be a blanket
+          rule rather than per-animation opt-in, so new motion is covered by default instead of
+          being remembered.
+        </p>
+        <pre>@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}</pre>
+        <p style="margin-top:26px">
+          <strong>If you only take three:</strong> press response, the elevation ladder, and the
+          scrim. Those are the ones people read as "modern" without being able to name why, they are
+          about thirty lines between them, and none of them moves anything while you are trying to
+          read a number at running pace.
+        </p>
+        <ul class="shortlist">
+          <li><code>:active</code><span>Removes the dropped-input feeling. Biggest gain per line in the whole list.</span></li>
+          <li><code>--shadow-1</code><span>Gives Daylight a way off its heavy border, and gives every theme a second plane.</span></li>
+          <li><code>scrim</code><span>Stops content being guillotined by the tab bar, and closes the sliver under it.</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var phone = document.getElementById('phone');
+  var scroller = document.getElementById('scroller');
+
+  /* Theme */
+  document.querySelectorAll('[data-theme-btn]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('[data-theme-btn]').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      phone.setAttribute('data-app-theme', btn.dataset.themeBtn);
+    });
+  });
+
+  /* Effect switches */
+  document.querySelectorAll('[data-fx]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      phone.classList.toggle(input.dataset.fx, input.checked);
+      input.nextElementSibling.textContent = input.checked ? 'On' : 'Off';
+    });
+  });
+
+  /* Screens */
+  var screens = {
+    run: document.getElementById('screen-run'),
+    history: document.getElementById('screen-history'),
+    detail: document.getElementById('screen-detail')
+  };
+
+  function show(name) {
+    Object.keys(screens).forEach(function (key) {
+      screens[key].hidden = key !== name;
+    });
+    scroller.scrollTop = 0;
+  }
+
+  document.querySelectorAll('.tabs [data-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tabs button').forEach(function (b) {
+        b.removeAttribute('aria-current');
+      });
+      btn.setAttribute('aria-current', 'page');
+      show(btn.dataset.tab);
+    });
+  });
+
+  /* Row -> detail, with a view transition when the switch is on */
+  document.querySelectorAll('.run-item').forEach(function (row) {
+    row.addEventListener('click', function () {
+      var useVT = phone.classList.contains('fx-vt') && document.startViewTransition;
+      if (!useVT) return show('detail');
+      // Two elements sharing a view-transition-name aborts the transition, so
+      // clear any row a previous run left marked before marking this one.
+      document.querySelectorAll('.run-item.morphing').forEach(function (r) {
+        r.classList.remove('morphing');
+      });
+      row.classList.add('morphing');
+      var t = document.startViewTransition(function () { show('detail'); });
+      t.finished.finally(function () { row.classList.remove('morphing'); });
+    });
+  });
+
+  document.getElementById('back-btn').addEventListener('click', function () {
+    show('history');
+  });
+
+  /* Km tick */
+  var distEl = document.getElementById('dist');
+  var pod = document.getElementById('dist-pod');
+  var km = 4.02;
+  document.getElementById('km-btn').addEventListener('click', function () {
+    km = Math.floor(km) + 1;
+    distEl.textContent = km.toFixed(2);
+    pod.classList.remove('ticked');
+    void pod.offsetWidth;
+    pod.classList.add('ticked');
+  });
+
+  /* A clock that actually ticks, so "don't animate this" is arguable */
+  var secs = 24 * 60 + 18;
+  setInterval(function () {
+    secs++;
+    var m = Math.floor(secs / 60), s = secs % 60;
+    document.getElementById('clock').textContent = m + ':' + String(s).padStart(2, '0');
+  }, 1000);
+})();
+</script>
+
+</body>
+</html>
