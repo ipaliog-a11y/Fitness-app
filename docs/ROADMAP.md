@@ -37,7 +37,7 @@ Last updated from product discussion (2026).
 | 9 | **Lap button + virtual partner** | Nike, Garmin | Laps shipped. Ghost racing designed and parked — [`GHOST_RUNS.md`](./GHOST_RUNS.md) |
 | 10 | **Post-run depth** | Garmin analytics lite | Load/recovery hints, pace distribution, elevation profile |
 | 11 | **Weather at start** | MapMyRun premium-ish | Optional; one-shot at arming |
-| 12 | **Cadence coaching** | Watches / form tools | Target spm range + soft cues from pod/phone |
+| 12 | **Cadence coaching** | Watches / form tools | Audible metronome designed — [`CADENCE_TRAINER.md`](./CADENCE_TRAINER.md) |
 
 ---
 
