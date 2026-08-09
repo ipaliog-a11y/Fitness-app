@@ -308,9 +308,10 @@ function WorkoutIntervalStrip({ phases }: { phases: WorkoutPhase[] }) {
 }
 
 function EffortDots({ level }: { level: number }) {
+  const t = useT();
   const n = Math.min(5, Math.max(1, Math.round(level)));
   return (
-    <span className="effort-dots" aria-label={`Effort ${n} of 5`}>
+    <span className="effort-dots" aria-label={t('run.effortDots', { level: n })}>
       {Array.from({ length: 5 }, (_, i) => (
         <span key={i} className={`effort-dot${i < n ? ' on' : ''}`} />
       ))}
@@ -409,7 +410,7 @@ export function RunScreen({
   const lockRef = useRef<ScreenLock | null>(null);
 
   const [geoStatus, setGeoStatus] = useState<GeoStatus>('idle');
-  const [geoDetail, setGeoDetail] = useState<string>();
+  const [geoDetail, setGeoDetail] = useState<MessageKey>();
   /** Latest GPS reading for the live map (even before two track points exist). */
   const [lastGeo, setLastGeo] = useState<GeoPoint | null>(null);
   const [heartStatus, setHeartStatus] = useState<HeartStatus>('disconnected');
@@ -1104,7 +1105,7 @@ export function RunScreen({
                       onToast(t('run.workoutDeleted'));
                     }}
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
               );
@@ -1123,7 +1124,7 @@ export function RunScreen({
             className="back"
             onClick={() => setWorkoutPickerView('main')}
           >
-            ‹ Workouts
+            {t('run.picker.backToWorkouts')}
           </button>
           <h1>{t(openGroup.name)}</h1>
           <p className="subtitle">{t(openGroup.blurb)}</p>
@@ -1167,11 +1168,11 @@ export function RunScreen({
             setWorkoutPickerView('main');
           }}
         >
-          ‹ Back
+          {t('run.picker.back')}
         </button>
         <h1>{t('run.workout')}</h1>
         <p className="subtitle">
-          Free run, your saves, or open a group — each preset lists purpose and benefits
+          {t('run.picker.subtitle')}
         </p>
 
         <div className="workout-tile-grid">
@@ -1365,12 +1366,12 @@ export function RunScreen({
                       const tpl = buildCustomFromForm();
                       setCustomTemplate(tpl);
                       setWorkoutId('custom');
-                      onToast(`Custom workout: ${tpl.blurb}`);
+                      onToast(t('run.customWorkoutSet', { blurb: tpl.blurb }));
                       setWorkoutPickerOpen(false);
                       setWorkoutPickerView('main');
                     }}
                   >
-                    Use this workout
+                    {t('run.picker.use')}
                   </button>
                   <button
                     type="button"
@@ -1384,7 +1385,7 @@ export function RunScreen({
                       setMyWorkouts(loadSavedWorkouts());
                       setCustomTemplate(templateFromSaved(saved));
                       setWorkoutId(saved.id);
-                      onToast(`Saved “${saved.name}” to My Workouts`);
+                      onToast(t('run.savedWorkout', { name: saved.name }));
                       void allActivities().then((acts) => {
                         const { newly } = refreshAchievements(acts, profile);
                         if (newly.length === 1) {
@@ -1393,7 +1394,7 @@ export function RunScreen({
                       });
                     }}
                   >
-                    Save workout
+                    {t('run.picker.save')}
                   </button>
                 </div>
               </div>
@@ -1441,7 +1442,7 @@ export function RunScreen({
           </div>
         </div>
 
-        <div className="mode-switch" role="group" aria-label="Run mode">
+        <div className="mode-switch" role="group" aria-label={t('a11y.runMode')}>
           <button type="button" aria-pressed={mode === 'outdoor'} onClick={() => setMode('outdoor')}>
             {t('run.outdoor')}
           </button>
@@ -1521,7 +1522,7 @@ export function RunScreen({
                   <div className="field" style={{ marginTop: 14 }}>
                     <label htmlFor="run-goal">
                       {goalPick === 'distance'
-                        ? `Target (${distanceLabel(profile.units)})`
+                        ? t('run.goal.targetUnit', { unit: distanceLabel(profile.units) })
                         : goalPick === 'time'
                           ? t('run.goal.targetMinutes')
                           : t('run.goal.targetKcal')}
@@ -1576,8 +1577,9 @@ export function RunScreen({
 
                   {resolveGoal() ? (
                     <p className="hint">
-                      Goal: {formatGoalTarget(resolveGoal()!, profile.units)}. Progress shows live
-                      once you start.
+                      {t('run.goal.summary', {
+                        target: formatGoalTarget(resolveGoal()!, profile.units),
+                      })}
                     </p>
                   ) : (
                     <p className="hint">{t('run.goal.enterTarget')}</p>
@@ -1619,19 +1621,20 @@ export function RunScreen({
                       className="chip"
                       onClick={() => setPaceTargetInput('')}
                     >
-                      Off
+                      {t('run.paceBandOff')}
                     </button>
                   )}
                 </div>
                 {parsePaceInput(paceTargetInput) ? (
                   <p className="hint">
-                    Band ±{Math.round(DEFAULT_PACE_BAND * 100)}% around{' '}
-                    {formatTargetPace(parsePaceInput(paceTargetInput)!, profile.units)}. Live cue
-                    if you drift.
+                    {t('run.paceBandAround', {
+                      percent: Math.round(DEFAULT_PACE_BAND * 100),
+                      pace: formatTargetPace(parsePaceInput(paceTargetInput)!, profile.units),
+                    })}
                   </p>
                 ) : paceTargetInput.trim() ? (
                   <p className="hint" style={{ color: 'var(--warn)' }}>
-                    Use m:ss (e.g. 5:30).
+                    {t('run.paceBadFormat')}
                   </p>
                 ) : (
                   <p className="hint">
@@ -1699,7 +1702,7 @@ export function RunScreen({
                   <div className="kv-row" style={{ marginTop: 12 }}>
                     <span className="kv-k">{t('run.ghostRoute')}</span>
                     <span className="kv-v">
-                      {routeId ? routes.find((r) => r.id === routeId)?.name ?? '—' : 'None'}
+                      {routeId ? routes.find((r) => r.id === routeId)?.name ?? '—' : t('run.none')}
                     </span>
                   </div>
                   <select
@@ -1707,7 +1710,7 @@ export function RunScreen({
                     value={routeId}
                     onChange={(e) => setRouteId(e.target.value)}
                   >
-                    <option value="">None</option>
+                    <option value="">{t('run.none')}</option>
                     {routes.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} · {formatDistance(r.distanceM, profile.units)}{' '}
@@ -1724,7 +1727,7 @@ export function RunScreen({
                         aria-pressed={routeReversed}
                         onClick={() => setRouteReversed((v) => !v)}
                       >
-                        {routeReversed ? 'On' : 'Off'}
+                        {routeReversed ? t('common.on') : t('common.off')}
                       </button>
                     </div>
                   )}
@@ -1737,7 +1740,7 @@ export function RunScreen({
                 <span className="kv-v">{shoeSummary}</span>
               </div>
               <p className="hint" style={{ marginBottom: 0 }}>
-                Pair assignment is on the Get ready screen after you arm.
+                {t('run.pairOnGetReady')}
               </p>
             </div>
           )}
@@ -1788,7 +1791,7 @@ export function RunScreen({
               <button
                 type="button"
                 className={`sensor-info${podInfoOpen ? ' open' : ''}`}
-                aria-label="Foot pod information"
+                aria-label={t('a11y.podInfo')}
                 aria-expanded={podInfoOpen}
                 onClick={() => setPodInfoOpen((v) => !v)}
               >
@@ -1839,7 +1842,7 @@ export function RunScreen({
               <button
                 type="button"
                 className={`sensor-info${hrInfoOpen ? ' open' : ''}`}
-                aria-label="Heart rate information"
+                aria-label={t('a11y.hrInfo')}
                 aria-expanded={hrInfoOpen}
                 onClick={() => setHrInfoOpen((v) => !v)}
               >
@@ -1879,15 +1882,13 @@ export function RunScreen({
     return (
       <div className="screen">
         <h1>{t('run.getReady')}</h1>
-        <p className="subtitle">
-          Check sensors before the clock starts. Wait for a fix, or start immediately.
-        </p>
+        <p className="subtitle">{t('run.arming.subtitle')}</p>
 
         {armedGoal && (
           <div className="card">
             <h2>{t('stats.goal')}</h2>
             <p className="goal-summary">
-              {goalKindLabel(armedGoal.kind)} · {formatGoalTarget(armedGoal, profile.units)}
+              {t(goalKindLabel(armedGoal.kind))} · {formatGoalTarget(armedGoal, profile.units)}
             </p>
           </div>
         )}
@@ -1896,8 +1897,7 @@ export function RunScreen({
           <h2>{t('profile.shoes.title')}</h2>
           {activeShoes(shoes).length === 0 ? (
             <p className="hint" style={{ marginTop: 0 }}>
-              No active pairs yet. Add shoes under <strong>{t('run.profileShoes')}</strong>, then return
-              here to assign them.
+              {t('run.arming.noShoes', { screen: t('run.profileShoes') })}
             </p>
           ) : (
             <>
@@ -1911,7 +1911,7 @@ export function RunScreen({
                   session.setShoeId(id || null);
                 }}
               >
-                <option value="">None</option>
+                <option value="">{t('run.none')}</option>
                 {activeShoes(shoes).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -1925,7 +1925,7 @@ export function RunScreen({
                 const shoe = shoes.find((s) => s.id === shoeId);
                 return shoe && shoeNeedsWarning(shoe) ? (
                   <p className="hint" style={{ color: 'var(--warn)' }}>
-                    This pair is at or past its wear limit — consider retiring it in Profile.
+                    {t('run.shoeWorn')}
                   </p>
                 ) : (
                   <p className="hint">{t('run.shoesMileageHint')}</p>
@@ -1940,12 +1940,12 @@ export function RunScreen({
 
           {mode === 'outdoor' && (
             <div className="row">
-              <span className="sensor-name">GPS</span>
+              <span className="sensor-name">{t('run.gps')}</span>
               <span
                 className={sensorPillClass(gpsReady ? 'good' : gpsBad ? 'bad' : 'warn')}
               >
                 <span className={`dot${gpsReady ? ' live' : ''}`} />
-                {geoDetail || t(geoLabel(geoStatus))}
+                {t(geoDetail ?? geoLabel(geoStatus))}
               </span>
             </div>
           )}
@@ -1960,7 +1960,7 @@ export function RunScreen({
                   </span>
                 ) : (
                   <span className="pill warn">
-                    <span className="dot" /> Not connected
+                    <span className="dot" /> {t('run.sensor.notConnected')}
                   </span>
                 )}
               </div>
@@ -1992,15 +1992,14 @@ export function RunScreen({
               </span>
             ) : (
               <span className="pill">
-                <span className="dot" /> Optional — not connected
+                <span className="dot" /> {t('run.sensor.optional')}
               </span>
             )}
           </div>
 
           {mode === 'outdoor' && !gpsReady && !gpsBad && (
             <p className="hint">
-              Waiting for GPS… stay outdoors with a clear view of the sky if you can. You can
-              still start now; distance begins once the first good fix lands.
+              {t('run.waitingGpsHint')}
             </p>
           )}
           {mode === 'outdoor' && gpsReady && (
@@ -2018,7 +2017,7 @@ export function RunScreen({
             onClick={connectPod}
             disabled={!bluetoothSupported()}
           >
-            Connect a foot pod
+            {t('run.connectPod')}
           </button>
         )}
 
@@ -2029,7 +2028,7 @@ export function RunScreen({
             onClick={connectStrap}
             disabled={!bluetoothSupported()}
           >
-            Connect a heart rate strap
+            {t('run.connectStrap')}
           </button>
         )}
 
@@ -2037,7 +2036,7 @@ export function RunScreen({
           <button type="button" className="start-control" onClick={begin}>
             <span className="start-control-face" aria-hidden />
             <span className="start-control-label">
-              {profile.theme === 'hud' ? 'GO' : 'START'}
+              {profile.theme === 'hud' ? t('run.go') : t('run.start')}
             </span>
             <span className="start-control-sub">
               {mode === 'outdoor' && !gpsReady ? t('run.startNoFix') : t('run.startClock')}
@@ -2069,7 +2068,7 @@ export function RunScreen({
         )}
 
         <button className="btn wide" style={{ marginTop: 10 }} onClick={cancelArming}>
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     );
@@ -2127,7 +2126,7 @@ export function RunScreen({
       <div className="live-top">
         <span className={`live-status-pill${modeReady ? ' ok' : ' warn'}`}>
           {isHud && running && <i className="live-rec" aria-hidden />}
-          {isHud && running ? `Live · ${modeLabel}` : modeLabel}
+          {isHud && running ? t('run.liveMode', { mode: modeLabel }) : modeLabel}
         </span>
         <div className="live-top-right">
           {bpm !== null && (
@@ -2170,17 +2169,20 @@ export function RunScreen({
         <div className={`pace-band-track pace-band-${bandStatus}`}>
           <div className="goal-track-head">
             <span>
-              Target pace · {formatTargetPace(targetPaceSec, profile.units)}
+              {t('run.band.target', { pace: formatTargetPace(targetPaceSec, profile.units) })}
               {bandStatus === 'ok'
-                ? ' · on band'
+                ? ` · ${t('run.band.ok')}`
                 : bandStatus === 'fast'
-                  ? ' · too fast'
+                  ? ` · ${t('run.band.fast')}`
                   : bandStatus === 'slow'
-                    ? ' · too slow'
+                    ? ` · ${t('run.band.slow')}`
                     : ''}
             </span>
             <span>
-              now {formatPace(current ?? average)} {paceLabel(profile.units)}
+              {t('run.band.now', {
+                pace: formatPace(current ?? average),
+                unit: paceLabel(profile.units),
+              })}
             </span>
           </div>
           <div className="pace-band-bar" aria-hidden>
@@ -2217,7 +2219,10 @@ export function RunScreen({
             {phaseProgress.remainingMs !== null
               ? formatDuration(phaseProgress.remainingMs, { tenths: true })
               : phaseProgress.remainingM !== null
-                ? `${formatDistance(phaseProgress.remainingM, profile.units)} ${distanceLabel(profile.units)} left`
+                ? t('run.distanceLeft', {
+                    distance: formatDistance(phaseProgress.remainingM, profile.units),
+                    unit: distanceLabel(profile.units),
+                  })
                 : '—'}
           </div>
           <div
@@ -2238,14 +2243,14 @@ export function RunScreen({
               setTick((t) => t + 1);
             }}
           >
-            Skip phase
+            {t('run.skipPhase')}
           </button>
         </div>
       )}
 
       {workoutRef.current?.done && (
         <div className="pill good" style={{ marginTop: 12, display: 'inline-flex' }}>
-          Workout complete
+          {t('run.workoutComplete')}
         </div>
       )}
 
@@ -2255,8 +2260,8 @@ export function RunScreen({
         >
           <div className="goal-track-head">
             <span>
-              Goal · {goalKindLabel(goal.kind)}
-              {(met || goalFlash) ? ' · done' : ''}
+              {t('run.goalHead', { kind: t(goalKindLabel(goal.kind)) })}
+              {met || goalFlash ? ` · ${t('run.goalDone')}` : ''}
             </span>
             <strong>{formatGoalProgress(goal, snap, profile.units)}</strong>
           </div>
@@ -2281,20 +2286,20 @@ export function RunScreen({
 
         // Goal remaining: distance left, time left, or kcal left.
         let remainValue = '—';
-        let remainLabel = 'remaining';
+        let remainLabel = t('run.remaining');
         if (goal) {
           if (goal.kind === 'distance') {
             const left = Math.max(0, goal.target - distance);
             remainValue = formatDistance(left, profile.units);
-            remainLabel = `${distanceLabel(profile.units)} left`;
+            remainLabel = t('run.unitLeft', { unit: distanceLabel(profile.units) });
           } else if (goal.kind === 'time') {
             const left = Math.max(0, goal.target - elapsed);
             remainValue = formatDuration(left);
-            remainLabel = 'time left';
+            remainLabel = t('run.timeLeft');
           } else {
             const left = Math.max(0, Math.round(goal.target - calories));
             remainValue = formatCalories(left);
-            remainLabel = 'kcal left';
+            remainLabel = t('run.kcalLeft');
           }
         }
 
@@ -2371,18 +2376,18 @@ export function RunScreen({
             },
             face1: {
               value: remainValue,
-              label: goal ? remainLabel : 'set a goal',
+              label: goal ? remainLabel : t('run.setAGoal'),
             },
           },
           {
             id: 'hr',
             face0: {
               value: hrZone ? `Z${hrZone.index}` : bpm !== null ? '—' : '—',
-              label: hrZone ? hrZone.name : 'HR zone',
+              label: hrZone ? hrZone.name : t('run.pod.hrZone'),
             },
             face1: {
               value: bpm !== null ? String(bpm) : '—',
-              label: bpm !== null ? 'bpm' : 'no strap',
+              label: bpm !== null ? t('run.pod.bpm') : t('run.pod.noStrap'),
             },
           },
           {
@@ -2393,18 +2398,18 @@ export function RunScreen({
             },
             face1: {
               value: kcalPerHour !== null ? String(kcalPerHour) : '—',
-              label: 'kcal/h',
+              label: t('run.pod.kcalPerHour'),
             },
           },
           {
             id: 'avg',
             face0: {
               value: formatPace(paceAvg),
-              label: `avg ${paceLabel(profile.units)}`,
+              label: t('run.pod.avgOf', { unit: paceLabel(profile.units) }),
             },
             face1: {
               value: formatPace(paceNow),
-              label: `now ${paceLabel(profile.units)}`,
+              label: t('run.pod.nowOf', { unit: paceLabel(profile.units) }),
             },
           },
           {
@@ -2630,7 +2635,7 @@ export function RunScreen({
             </p>
             <div className="btn-row">
               <button type="button" className="btn" onClick={() => setConfirmAction(null)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"

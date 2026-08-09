@@ -305,16 +305,20 @@ export function DetailScreen({
               onToast?.(t('detail.routeSaved', { name: route.name }));
             }}
           >
-            Save route
+            {t('detail.saveRoute')}
           </button>
         </div>
       )}
 
       {(activity.shoeId || activity.workoutName) && (
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          {activity.workoutName ? `Workout: ${activity.workoutName}. ` : ''}
+          {activity.workoutName ? `${t('detail.workoutLine', { name: activity.workoutName })} ` : ''}
           {activity.shoeId
-            ? `Shoes: ${loadShoes().find((s) => s.id === activity.shoeId)?.name ?? 'unknown'}.`
+            ? t('detail.shoesLine', {
+                name:
+                  loadShoes().find((s) => s.id === activity.shoeId)?.name ??
+                  t('detail.unknownShoe'),
+              })
             : ''}
         </p>
       )}
@@ -326,15 +330,15 @@ export function DetailScreen({
         </div>
         <div className="metric">
           <div className="value">{formatPace(averagePace(activity, profile.units))}</div>
-          <div className="label">Avg {paceLabel(profile.units)}</div>
+          <div className="label">{t('common.avgOf', { unit: paceLabel(profile.units) })}</div>
         </div>
         <div className="metric">
           <div className="value">{formatCalories(calories)}</div>
-          <div className="label">kcal</div>
+          <div className="label">{t('detail.kcal')}</div>
         </div>
       </div>
       <p className="hint" style={{ marginTop: -4, marginBottom: 12, textAlign: 'center' }}>
-        Estimated {calorieSourceLabel(calorieSource)}
+        {t('detail.estimated', { source: t(calorieSourceLabel(calorieSource)) })}
       </p>
 
       {activity.mode === 'treadmill' && onConsoleEntry && (
@@ -350,9 +354,11 @@ export function DetailScreen({
         <div className={`goal-track${goalHit ? ' met' : ''}`} style={{ marginBottom: 12 }}>
           <div className="goal-track-head">
             <span>
-              {goalKindLabel(activity.goal.kind)} goal ·{' '}
-              {formatGoalTarget(activity.goal, profile.units)}
-              {goalHit ? ' · met' : ''}
+              {t('detail.goalLine', {
+                kind: t(goalKindLabel(activity.goal.kind)),
+                target: formatGoalTarget(activity.goal, profile.units),
+              })}
+              {goalHit ? ` · ${t('detail.goalMet')}` : ''}
             </span>
             <span>{Math.round(goalShare * 100)}%</span>
           </div>
@@ -374,7 +380,7 @@ export function DetailScreen({
           <ul className="lap-list">
             {activity.manualLaps.map((lap) => (
               <li key={lap.index}>
-                <span>Lap {lap.index}</span>
+                <span>{t('detail.lap', { index: lap.index })}</span>
                 <span>
                   {formatDistance(lap.splitDistanceM, profile.units)} {distanceLabel(profile.units)}
                   {' · '}
@@ -403,7 +409,7 @@ export function DetailScreen({
           {ascent > 1 && (
             <div className="metric">
               <div className="value">{Math.round(ascent)}</div>
-              <div className="label">m climbed</div>
+              <div className="label">{t('detail.climbed')}</div>
             </div>
           )}
           {activity.steps !== null && (
@@ -530,10 +536,10 @@ export function DetailScreen({
               onSave();
             }}
           >
-            Save
+            {t('common.save')}
           </button>
           <button type="button" className="btn danger" onClick={() => setConfirming(true)}>
-            Delete
+            {t('common.delete')}
           </button>
         </div>
       )}

@@ -5,6 +5,7 @@
  * screen and the finished detail view agree on "did they hit it".
  */
 
+import type { MessageKey } from '../i18n';
 import { formatCalories } from './calories';
 import {
   distanceLabel,
@@ -54,14 +55,14 @@ export function goalMet(goal: RunGoal, snap: GoalSnapshot): boolean {
   return goalProgress(goal, snap) >= 1;
 }
 
-export function goalKindLabel(kind: GoalKind): string {
+export function goalKindLabel(kind: GoalKind): MessageKey {
   switch (kind) {
     case 'distance':
-      return 'Distance';
+      return 'goalKind.distance';
     case 'time':
-      return 'Time';
+      return 'goalKind.time';
     case 'calories':
-      return 'Calories';
+      return 'goalKind.calories';
   }
 }
 

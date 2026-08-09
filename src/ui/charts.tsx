@@ -452,7 +452,7 @@ export function HeartChart({
               aria-pressed={showPace}
               onClick={() => setShowPace((v) => !v)}
             >
-              Pace
+              {t('chart.pace')}
             </button>
           )}
           {hasSpeed && (
@@ -463,7 +463,7 @@ export function HeartChart({
               aria-pressed={showSpeed}
               onClick={() => setShowSpeed((v) => !v)}
             >
-              Speed
+              {t('chart.speed')}
             </button>
           )}
         </div>
@@ -637,7 +637,7 @@ export function HeartChart({
         <div className="run-chart-placeholder" aria-hidden>
           <div className="run-chart-toolbar">
             <span className="hint" style={{ margin: 0 }}>
-              Chart open full screen
+              {t('chart.fullscreenNote')}
             </span>
           </div>
         </div>

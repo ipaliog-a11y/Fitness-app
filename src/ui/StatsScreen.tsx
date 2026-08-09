@@ -122,7 +122,7 @@ export function StatsScreen({ activities, profile, onOpen }: Props) {
                       onClick={() => onOpen(record.activityId!)}
                       style={{ cursor: 'pointer' }}
                     >
-                      View
+                      {t('common.view')}
                     </button>
                   )}
                 </span>

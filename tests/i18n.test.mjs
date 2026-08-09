@@ -16,11 +16,13 @@
 
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const DIST = join(ROOT, 'dist');
+const SRC = join(ROOT, 'src');
 
 const TYPES = {
   '.html': 'text/html',
@@ -66,6 +68,9 @@ const ALLOWED = new Set(
     'HUD', 'Arcade',
     // Greek prose says "browser"; "περιηγητής" is correct and nobody uses it.
     'browser',
+    // The info-button glyph. A lowercase i in a circle is a symbol, not a
+    // word — its aria-label is the part that had to be translated.
+    'i',
   ].map((w) => w.toLowerCase()),
 );
 
@@ -92,6 +97,53 @@ function serve() {
   });
 }
 
+/*
+ * Part one: read the sources.
+ *
+ * The crawl below is the better check where it reaches, because it sees what
+ * actually renders. But it only sees states it can drive itself into — it
+ * missed "Not connected" for a whole pass because that pill only exists on the
+ * treadmill arming screen, and the crawler had armed an outdoor run. A source
+ * scan has no such blind spot: an English sentence sitting between two JSX
+ * tags is findable whether or not anything can be clicked to show it.
+ *
+ * Neither check subsumes the other. This one cannot see strings built by
+ * concatenation or returned from a helper; the crawl cannot see screens it
+ * cannot open.
+ */
+const JSX_TEXT = />([^<>{}]*?[A-Za-z]{3}[^<>{}]*?)</g;
+/*
+ * Fragments of TypeScript that land between a `>` and a `<` — generics closing
+ * into JSX, comparisons, ternary arms. Prose is what is wanted, not code.
+ *
+ * Straight quotes and backticks are the giveaway for the ternaries: this
+ * codebase writes apostrophes as ’ in copy, so a ' between two tags is a string
+ * literal in an expression rather than a word.
+ */
+const LOOKS_LIKE_CODE = /[=;()[\]'"`]|=>|\.\w|^\w+\.\w+$/;
+
+const sourceHits = [];
+for (const file of await readdir(SRC, { recursive: true })) {
+  if (!file.endsWith('.tsx')) continue;
+  const full = join(SRC, file);
+  const text = await readFile(full, 'utf8');
+  for (const match of text.matchAll(JSX_TEXT)) {
+    const value = match[1].replace(/\s+/g, ' ').trim();
+    if (!value || LOOKS_LIKE_CODE.test(value)) continue;
+    if (!/[A-Za-z]{3}/.test(value)) continue;
+    const line = text.slice(0, match.index).split('\n').length;
+    sourceHits.push(`${file}:${line}  ${value.slice(0, 70)}`);
+  }
+}
+
+if (sourceHits.length > 0) {
+  console.error(`\n${sourceHits.length} untranslated literals in JSX:\n`);
+  for (const hit of sourceHits) console.error(`  ${hit}`);
+  console.error('\nWrap each in t() with a key in src/i18n/en.ts and src/i18n/el.ts.\n');
+  process.exit(1);
+}
+
+// Part two: drive the app and read the screen.
 const { server, port } = await serve();
 const browser = await chromium.launch({
   executablePath: process.env.PLAYWRIGHT_CHROMIUM ?? undefined,

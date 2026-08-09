@@ -107,7 +107,7 @@ function RunRow({
         {variant === 'cal-run' ? (
           <>
             <b>✓</b>
-            <small>run</small>
+            <small>{t('history.badge.run')}</small>
           </>
         ) : (
           <>
@@ -125,7 +125,7 @@ function RunRow({
             {formatDuration(activity.durationMs)}
             {' · '}
             {formatCalories(calories)} kcal
-            {hit ? ' · ✓ goal' : ''}
+            {hit ? ` · ✓ ${t('history.goalHit')}` : ''}
           </span>
           <span className="run-item-when">{monoWhen}</span>
         </span>
@@ -136,7 +136,7 @@ function RunRow({
           })}{' '}·{' '}
           {formatPace(averagePace(activity, profile.units))} {paceLabel(profile.units)}
           {hasHr ? ' · ❤' : ''}
-          {report ? ` · avg ${report.averageBpm} bpm` : ''}
+          {report ? ` · ${t('history.avgBpm', { bpm: report.averageBpm })}` : ''}
           {activity.workoutName ? ` · ${activity.workoutName}` : ''}
         </span>
         {report && report.measuredMs > 0 && (
@@ -238,7 +238,7 @@ function CalendarView({
             <button
               type="button"
               className="cal-nav-btn"
-              aria-label="Previous month"
+              aria-label={t('a11y.prevMonth')}
               onClick={() => {
                 const next = addMonths(monthStart, -1);
                 setMonthStart(next);
@@ -250,7 +250,7 @@ function CalendarView({
             <button
               type="button"
               className="cal-nav-btn"
-              aria-label="Next month"
+              aria-label={t('a11y.nextMonth')}
               onClick={() => {
                 const next = addMonths(monthStart, 1);
                 setMonthStart(next);
@@ -268,7 +268,7 @@ function CalendarView({
           ))}
         </div>
 
-        <div className="cal-grid" role="grid" aria-label="Training calendar">
+        <div className="cal-grid" role="grid" aria-label={t('a11y.calendar')}>
           {cells.map((cell, i) => {
             if (cell.dayStart === null || cell.day === null) {
               return <div className="cal-cell empty" key={`pad-${i}`} aria-hidden />;
@@ -362,7 +362,7 @@ function CalendarView({
                 <span className="run-item-bar plan" aria-hidden />
                 <span className="run-item-day plan" aria-hidden>
                   <b>{ev.done ? '✓' : 'P'}</b>
-                  <small>plan</small>
+                  <small>{t('history.badge.plan')}</small>
                 </span>
                 <span className="body">
                   <span className="headline">{t(ev.session.title)}</span>
@@ -438,14 +438,14 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
         </div>
         <div className="view-toggle-compact" role="group" aria-label={t('history.viewLabel')}>
           <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
-            List
+            {t('history.view.list')}
           </button>
           <button
             type="button"
             aria-pressed={view === 'calendar'}
             onClick={() => setView('calendar')}
           >
-            Cal
+            {t('history.view.calendar')}
           </button>
         </div>
       </div>
@@ -460,9 +460,9 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
       ) : activities.length === 0 ? (
         <div className="empty">
           <span className="glyph">🏃</span>
-          No runs yet.
+          {t('history.emptyTitle')}
           <br />
-          Your first one will appear here.
+          {t('history.emptyBody')}
           {hasPlan && (
             <>
               <br />
@@ -472,7 +472,7 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
                 style={{ marginTop: 12 }}
                 onClick={() => setView('calendar')}
               >
-                See planned sessions
+                {t('history.seePlanned')}
               </button>
             </>
           )}
@@ -490,21 +490,21 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
                 })
               }
             >
-              All
+              {t('history.filter.all')}
             </button>
             <button
               type="button"
               className={`chip${filters.range === 'week' ? ' active' : ''}`}
               onClick={() => set('range', filters.range === 'week' ? 'all' : 'week')}
             >
-              This week
+              {t('history.filter.week')}
             </button>
             <button
               type="button"
               className={`chip${filters.mode === 'outdoor' ? ' active' : ''}`}
               onClick={() => set('mode', filters.mode === 'outdoor' ? 'all' : 'outdoor')}
             >
-              Outdoor
+              {t('history.filter.outdoor')}
             </button>
             <button
               type="button"
@@ -570,7 +570,7 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
                     setMoreFilters(false);
                   }}
                 >
-                  Reset filters
+                  {t('history.filter.reset')}
                 </button>
               )}
             </div>
@@ -578,7 +578,7 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
 
           {filtered.length === 0 ? (
             <div className="empty" style={{ marginTop: 12 }}>
-              No runs match these filters.
+              {t('history.noMatches')}
             </div>
           ) : (
             groups.map((group) => (

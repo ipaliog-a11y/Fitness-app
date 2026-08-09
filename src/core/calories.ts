@@ -10,6 +10,7 @@
  * bout), matching what most consumer trackers show.
  */
 
+import type { MessageKey } from '../i18n';
 import type { HeartSample } from './activity';
 
 /** Resting VO2 in mL/kg/min (1 MET). */
@@ -200,6 +201,6 @@ export function formatCalories(kcal: number): string {
 }
 
 /** Short label for where the number came from. */
-export function calorieSourceLabel(source: CalorieSource): string {
-  return source === 'heart' ? 'from heart rate' : 'from pace';
+export function calorieSourceLabel(source: CalorieSource): MessageKey {
+  return source === 'heart' ? 'calorieSource.heart' : 'calorieSource.pace';
 }

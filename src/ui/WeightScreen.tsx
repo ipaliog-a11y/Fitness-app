@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Profile } from '../core/settings';
-import { useT } from '../i18n/react';
+import { useLocale, useT } from '../i18n/react';
 import {
   addWeightEntry,
   deleteWeightEntry,
@@ -31,8 +31,8 @@ interface Props {
   onBack?(): void;
 }
 
-function formatDay(ts: number): string {
-  return new Date(ts).toLocaleDateString(undefined, {
+function formatDay(ts: number, tag: string): string {
+  return new Date(ts).toLocaleDateString(tag, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -51,7 +51,7 @@ function WeightChart({
   if (points.length < 2) {
     return (
       <p className="hint" style={{ margin: 0 }}>
-        Log at least two weigh-ins to see a trend line.
+        {t('weight.needTwo')}
       </p>
     );
   }
@@ -134,6 +134,7 @@ export function WeightScreen({
   onBack,
 }: Props) {
   const t = useT();
+  const { tag } = useLocale();
   const [store, setStore] = useState<WeightStore>(() => loadWeightStore());
   const unit = weightUnitLabel(profile.units);
   const latest = latestWeightKg(store);
@@ -171,7 +172,7 @@ export function WeightScreen({
   const logWeight = () => {
     const kg = parseDraft(entryDraft);
     if (kg === null) {
-      onToast(`Enter a weight in ${unit}.`);
+      onToast(t('weight.needWeight', { unit }));
       return;
     }
     const next = addWeightEntry(store, { weightKg: kg, note: noteDraft });
@@ -180,8 +181,8 @@ export function WeightScreen({
     setEntryDraft(String(toDisplayWeight(kg, profile.units)));
     onToast(
       store.entries.length === 0
-        ? `Starting weight saved: ${toDisplayWeight(kg, profile.units)} ${unit}.`
-        : `Logged ${toDisplayWeight(kg, profile.units)} ${unit}.`,
+        ? t('weight.startingSaved', { weight: toDisplayWeight(kg, profile.units), unit })
+        : t('weight.logged', { weight: toDisplayWeight(kg, profile.units), unit }),
     );
   };
 
@@ -194,11 +195,11 @@ export function WeightScreen({
     }
     const kg = parseDraft(goalDraft);
     if (kg === null) {
-      onToast(`Enter a goal in ${unit}, or clear the field.`);
+      onToast(t('weight.needGoal', { unit }));
       return;
     }
     persist(setWeightGoal(store, kg), false);
-    onToast(`Goal set to ${toDisplayWeight(kg, profile.units)} ${unit}.`);
+    onToast(t('weight.goalSet', { weight: toDisplayWeight(kg, profile.units), unit }));
   };
 
   const trend = weightTrendKg(store);
@@ -242,7 +243,7 @@ export function WeightScreen({
             />
           </div>
           <button type="button" className="btn primary wide" onClick={logWeight}>
-            Save starting weight
+            {t('weight.saveStarting')}
           </button>
         </div>
       ) : (
@@ -366,7 +367,7 @@ export function WeightScreen({
                         {toDisplayWeight(e.weightKg, profile.units).toFixed(1)} {unit}
                       </strong>
                       <span className="meta">
-                        {formatDay(e.at)}
+                        {formatDay(e.at, tag)}
                         {e.note ? ` · ${e.note}` : ''}
                       </span>
                     </span>

@@ -2,6 +2,7 @@
  * The Geolocation API, wrapped so the rest of the app never touches it.
  */
 
+import type { MessageKey } from '../i18n';
 import type { GeoPoint } from '../core/geo';
 
 export type GeoStatus = 'idle' | 'acquiring' | 'tracking' | 'denied' | 'unavailable' | 'error';
@@ -12,7 +13,14 @@ export interface GeoWatcher {
 
 export interface GeoHandlers {
   onPoint(point: GeoPoint): void;
-  onStatus(status: GeoStatus, detail?: string): void;
+  /**
+   * `detail` is a message key, not prose.
+   *
+   * It used to be an English sentence, which the run screen preferred over its
+   * own translated label — so the one place with something specific to say said
+   * it in English regardless of locale.
+   */
+  onStatus(status: GeoStatus, detail?: MessageKey): void;
 }
 
 function toPoint(position: GeolocationPosition): GeoPoint {
@@ -29,7 +37,7 @@ function toPoint(position: GeolocationPosition): GeoPoint {
 
 export function watchPosition(handlers: GeoHandlers): GeoWatcher {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
-    handlers.onStatus('unavailable', 'This browser has no location support.');
+    handlers.onStatus('unavailable', 'geo.noSupport');
     return { stop: () => {} };
   }
 
@@ -46,13 +54,13 @@ export function watchPosition(handlers: GeoHandlers): GeoWatcher {
     },
     (error) => {
       if (error.code === error.PERMISSION_DENIED) {
-        handlers.onStatus('denied', 'Location permission was refused.');
+        handlers.onStatus('denied', 'geo.denied');
       } else if (error.code === error.POSITION_UNAVAILABLE) {
-        handlers.onStatus('error', 'No position available — is GPS on?');
+        handlers.onStatus('error', 'geo.noPosition');
       } else {
         // A timeout mid-run is normal in a tunnel or a stairwell; it is not
         // worth tearing the run down over, so the watch keeps running.
-        handlers.onStatus(seenFix ? 'tracking' : 'acquiring', 'Waiting for a fix…');
+        handlers.onStatus(seenFix ? 'tracking' : 'acquiring', 'geo.waiting');
       }
     },
     {

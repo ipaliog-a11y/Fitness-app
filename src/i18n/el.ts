@@ -27,6 +27,116 @@ export const el: Messages = {
   'common.save': 'Αποθήκευση',
   'common.delete': 'Διαγραφή',
 
+  'calorieSource.heart': 'από τους παλμούς',
+  'calorieSource.pace': 'από τον ρυθμό',
+
+  'run.connectPod': 'Σύνδεση αισθητήρα ποδιού',
+  'run.connectStrap': 'Σύνδεση ζώνης καρδιακών παλμών',
+  'geo.denied': 'Η άδεια τοποθεσίας απορρίφθηκε.',
+
+  'geo.noSupport': 'Αυτός ο browser δεν υποστηρίζει τοποθεσία.',
+  'geo.noPosition': 'Δεν υπάρχει διαθέσιμη θέση — είναι ανοιχτό το GPS;',
+  'geo.waiting': 'Αναμονή για σήμα…',
+
+  'a11y.runMode': 'Είδος τρεξίματος',
+  'a11y.podInfo': 'Πληροφορίες αισθητήρα ποδιού',
+  'a11y.hrInfo': 'Πληροφορίες καρδιακών παλμών',
+  'a11y.prevMonth': 'Προηγούμενος μήνας',
+  'a11y.nextMonth': 'Επόμενος μήνας',
+  'a11y.calendar': 'Ημερολόγιο προπονήσεων',
+
+  'run.picker.backToWorkouts': '‹ Προπονήσεις',
+  'run.picker.back': '‹ Πίσω',
+  'run.picker.subtitle': 'Ελεύθερο τρέξιμο, οι δικές σου, ή άνοιξε μια ομάδα — κάθε πρόγραμμα εξηγεί σκοπό και οφέλη',
+  'run.picker.use': 'Χρήση αυτής της προπόνησης',
+  'run.picker.save': 'Αποθήκευση προπόνησης',
+  'run.paceBandOff': 'Κλειστό',
+  'run.paceBandAround': 'Ζώνη ±{percent}% γύρω από {pace}. Ζωντανή ειδοποίηση αν ξεφύγεις.',
+  'run.paceBadFormat': 'Γράψε λ:δδ (π.χ. 5:30).',
+  'run.shoeWorn': 'Αυτό το ζευγάρι έφτασε ή πέρασε το όριο φθοράς — σκέψου να το αποσύρεις στο Προφίλ.',
+  'run.gps': 'GPS',
+  'run.sensor.notConnected': 'Μη συνδεδεμένο',
+  'run.waitingGpsHint':
+    'Αναμονή για GPS… μείνε σε ανοιχτό χώρο με καθαρή θέα στον ουρανό αν γίνεται. Μπορείς να ξεκινήσεις και τώρα· η απόσταση αρχίζει με το πρώτο καλό σήμα.',
+  'run.skipPhase': 'Παράλειψη φάσης',
+  'history.seePlanned': 'Δες τις προγραμματισμένες προπονήσεις',
+  'history.filter.week': 'Αυτή την εβδομάδα',
+  'history.filter.outdoor': 'Εξωτερικός χώρος',
+  'history.filter.reset': 'Καθαρισμός φίλτρων',
+  'history.noMatches': 'Κανένα τρέξιμο δεν ταιριάζει με αυτά τα φίλτρα.',
+  'weight.needTwo': 'Κατέγραψε τουλάχιστον δύο ζυγίσεις για να δεις γραμμή τάσης.',
+  'weight.saveStarting': 'Αποθήκευση αρχικού βάρους',
+  'chart.fullscreenNote': 'Το γράφημα άνοιξε σε πλήρη οθόνη',
+  'chart.pace': 'Ρυθμός',
+  'chart.speed': 'Ταχύτητα',
+
+  // --- Goal kinds -----------------------------------------------------------
+  'goalKind.distance': 'Απόσταση',
+  'goalKind.time': 'Χρόνος',
+  'goalKind.calories': 'Θερμίδες',
+
+  // --- Run: setup and arming ------------------------------------------------
+  'run.effortDots': 'Ένταση {level} στα 5',
+  'run.customWorkoutSet': 'Δική σου προπόνηση: {blurb}',
+  'run.savedWorkout': 'Αποθηκεύτηκε «{name}» στις Προπονήσεις μου',
+  'run.goal.targetUnit': 'Στόχος ({unit})',
+  'run.goal.summary': 'Στόχος: {target}. Η πρόοδος φαίνεται ζωντανά μόλις ξεκινήσεις.',
+  'run.pairOnGetReady': 'Η ανάθεση παπουτσιών γίνεται στην οθόνη ετοιμασίας, αφού οπλίσεις.',
+  'run.arming.subtitle': 'Έλεγξε τους αισθητήρες πριν ξεκινήσει το ρολόι. Περίμενε σήμα ή ξεκίνα αμέσως.',
+  'run.arming.noShoes': 'Δεν υπάρχουν ενεργά ζευγάρια. Πρόσθεσε παπούτσια στο {screen} και γύρνα εδώ για να τα αναθέσεις.',
+  'run.sensor.optional': 'Προαιρετικό — μη συνδεδεμένο',
+  'run.liveMode': 'Ζωντανά · {mode}',
+
+  // --- Run: live readouts ---------------------------------------------------
+  'run.goalHead': 'Στόχος · {kind}',
+  'run.goalDone': 'ολοκληρώθηκε',
+  'run.remaining': 'απομένουν',
+  'run.unitLeft': '{unit} ακόμη',
+  'run.timeLeft': 'χρόνος ακόμη',
+  'run.kcalLeft': 'kcal ακόμη',
+  'run.setAGoal': 'βάλε στόχο',
+  'run.distanceLeft': '{distance} {unit} ακόμη',
+  'run.pod.hrZone': 'ζώνη HR',
+  'run.pod.bpm': 'bpm',
+  'run.pod.noStrap': 'χωρίς ζώνη',
+  'run.pod.kcalPerHour': 'kcal/ώρα',
+  'run.pod.avgOf': 'μ.ό. {unit}',
+  'run.pod.nowOf': 'τώρα {unit}',
+  'run.band.target': 'Ρυθμός στόχος · {pace}',
+  'run.band.ok': 'εντός',
+  'run.band.fast': 'πολύ γρήγορα',
+  'run.band.slow': 'πολύ αργά',
+  'run.band.now': 'τώρα {pace} {unit}',
+
+  // --- History --------------------------------------------------------------
+  'history.view.list': 'Λίστα',
+  'history.view.calendar': 'Ημερ.',
+  'history.badge.run': 'τρέξ.',
+  'history.badge.plan': 'πλάνο',
+  'history.avgBpm': 'μ.ό. {bpm} bpm',
+  'history.goalHit': 'στόχος',
+  'history.emptyTitle': 'Κανένα τρέξιμο ακόμη.',
+  'history.emptyBody': 'Το πρώτο σου θα εμφανιστεί εδώ.',
+
+  // --- Detail ---------------------------------------------------------------
+  'detail.workoutLine': 'Προπόνηση: {name}.',
+  'detail.shoesLine': 'Παπούτσια: {name}.',
+  'detail.unknownShoe': 'άγνωστα',
+  'detail.kcal': 'kcal',
+  'detail.estimated': 'Εκτίμηση {source}',
+  'detail.climbed': 'μ. ανάβασης',
+  'detail.goalLine': 'στόχος {kind} · {target}',
+  'detail.goalMet': 'επιτεύχθηκε',
+  'detail.lap': 'Γύρος {index}',
+  'detail.saveRoute': 'Αποθήκευση διαδρομής',
+
+  // --- Weight ---------------------------------------------------------------
+  'weight.needWeight': 'Γράψε ένα βάρος σε {unit}.',
+  'weight.startingSaved': 'Το αρχικό βάρος αποθηκεύτηκε: {weight} {unit}.',
+  'weight.logged': 'Καταγράφηκε {weight} {unit}.',
+  'weight.needGoal': 'Γράψε έναν στόχο σε {unit} ή άδειασε το πεδίο.',
+  'weight.goalSet': 'Ο στόχος ορίστηκε στα {weight} {unit}.',
+
   // --- Tab bar -----------------------------------------------------------
   // Five tabs share 390 px at 10 px type. "Προπονητής" is the tight one, so
   // the short arm is abbreviated harder than the English needs.

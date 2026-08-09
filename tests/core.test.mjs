@@ -2336,8 +2336,11 @@ const SHARED = new Set([
   'run.panel.splits',
   // The HUD theme's two-letter start face. 'GO' is what it says in Greek too.
   'run.go',
-  // kcal is the unit symbol, the same in both languages.
+  // Unit symbols and initialisms, identical in both languages.
   'run.pod.kcal',
+  'run.gps',
+  'run.pod.bpm',
+  'detail.kcal',
   // Product names: Health Connect and Samsung Health are not translated by
   // their own vendors either, and a Greek rendering would be unfindable.
   'settings.hc.title',
