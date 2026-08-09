@@ -7,7 +7,14 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { createTranslator, localeTag, type LocaleId, type Translate } from './index';
+import {
+  createTranslator,
+  localeTag,
+  type LocaleId,
+  type MessageKey,
+  type Translate,
+  type Vars,
+} from './index';
 
 interface I18nValue {
   t: Translate;
@@ -48,4 +55,25 @@ export function useT(): Translate {
 export function useLocale(): { locale: LocaleId; tag: string } {
   const { locale, tag } = useContext(I18nContext);
   return { locale, tag };
+}
+
+/**
+ * Render a coach tip.
+ *
+ * Tips are the only content carrying keys *and* substitutions, and three
+ * screens render them identically. Without this, each one repeats the same
+ * `t(tip.title, tip.titleVars)` pairing — and the failure mode of forgetting
+ * the vars is a sentence full of visible `{distance}` placeholders.
+ */
+export function useTipText(): (tip: {
+  title: MessageKey;
+  titleVars?: Vars;
+  body: MessageKey;
+  bodyVars?: Vars;
+}) => { title: string; body: string } {
+  const t = useT();
+  return (tip) => ({
+    title: t(tip.title, tip.titleVars),
+    body: t(tip.body, tip.bodyVars),
+  });
 }

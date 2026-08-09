@@ -49,7 +49,7 @@ import {
   paceLabel,
 } from '../core/units';
 import { WeeklyBars } from './charts';
-import { useT } from '../i18n/react';
+import { useT, useTipText } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -111,6 +111,7 @@ export function CoachScreen({
   guideOpen: guideOpenProp,
   onGuideOpenChange,
 }: Props) {
+  const tipText = useTipText();
   const t = useT();
   const now = Date.now();
   const [active, setActive] = useState<ActivePlanState | null>(() => loadActivePlan());
@@ -316,11 +317,11 @@ export function CoachScreen({
             </span>
           </div>
           <div className="recovery-copy">
-            <span className={`pill ${statusClass(load.status)}`}>{recoveryLabel(load.status)}</span>
+            <span className={`pill ${statusClass(load.status)}`}>{t(recoveryLabel(load.status))}</span>
             <h2 className="recovery-title">Recovery</h2>
             {recoveryTips.slice(0, 1).map((tip, i) => (
               <p className="hint" key={i} style={{ marginTop: 6, marginBottom: 0 }}>
-                {tip.body}
+                {tipText(tip).body}
               </p>
             ))}
           </div>
@@ -328,7 +329,7 @@ export function CoachScreen({
         {recoveryTips.length > 1 &&
           recoveryTips.slice(1).map((tip, i) => (
             <p className="hint" key={`more-${i}`} style={{ marginTop: 10, marginBottom: 0 }}>
-              {tip.body}
+              {tipText(tip).body}
             </p>
           ))}
         <div className="metric-grid recovery-metrics" style={{ marginTop: 14 }}>
@@ -488,8 +489,8 @@ export function CoachScreen({
           <h2>Coach notes</h2>
           {weekTips.map((tip, i) => (
             <div className={`tip ${tip.tone}`} key={i}>
-              <div className="title">{tip.title}</div>
-              <div className="body">{tip.body}</div>
+              <div className="title">{tipText(tip).title}</div>
+              <div className="body">{tipText(tip).body}</div>
             </div>
           ))}
         </div>

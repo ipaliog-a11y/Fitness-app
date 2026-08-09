@@ -186,4 +186,102 @@ export const el: Messages = {
   },
   'achievements.title': 'Επιτεύγματα',
   'achievements.subtitle': '{unlocked} από {total} ξεκλειδωμένα · κερδισμένα σε αυτή τη συσκευή',
+
+  // --- Heart rate zones ----------------------------------------------------
+  'zone.recovery.name': 'Αποκατάσταση',
+  'zone.recovery.blurb': 'Πολύ ελαφρύ. Ζέσταμα, χαλάρωμα και το πιο χαλαρό χαλαρό.',
+  'zone.easy.name': 'Χαλαρό',
+  'zone.easy.blurb': 'Μιλάς άνετα. Εδώ ζει το μεγαλύτερο μέρος μιας λογικής εβδομάδας.',
+  'zone.aerobic.name': 'Αερόβιο',
+  'zone.aerobic.blurb': 'Σταθερό και με σκοπό. Η κουβέντα αρχίζει να κόβεται.',
+  'zone.threshold.name': 'Κατώφλι',
+  'zone.threshold.blurb': 'Σκληρό αλλά διατηρήσιμο. Εδώ αγοράζεται η ταχύτητα.',
+  'zone.maximum.name': 'Μέγιστο',
+  'zone.maximum.blurb': 'Όλα έξω. Λεπτά, όχι ώρες.',
+
+  // --- Recovery status -----------------------------------------------------
+  // "Φορτίο" throughout for load, matching the Coach screen's own labels.
+  'recovery.fresh.label': 'Φρέσκος',
+  'recovery.fresh.blurb':
+    'Η πρόσφατη προπόνηση είναι ελαφριά. Χτίσε σταδιακά — μια ποιοτική προπόνηση είναι μια χαρά αν νιώθεις καλά.',
+  'recovery.balanced.label': 'Ισορροπημένος',
+  'recovery.balanced.blurb':
+    'Το φορτίο δείχνει σταθερό. Κράτα τα περισσότερα τρεξίματα χαλαρά και άφησε τις σκληρές προσπάθειες για τις προγραμματισμένες μέρες.',
+  'recovery.loaded.label': 'Φορτωμένος',
+  'recovery.loaded.blurb':
+    'Η τελευταία εβδομάδα είναι πιο βαριά από τον πρόσφατο μέσο όρο σου. Προτίμησε χαλαρό ρυθμό και ύπνο.',
+  'recovery.high.label': 'Υψηλό φορτίο',
+  'recovery.high.blurb':
+    'Το οξύ φορτίο είναι πολύ πάνω από την πρόσφατη βάση σου — κλασικό παράθυρο κινδύνου τραυματισμού. Χαμήλωσε όγκο και ένταση.',
+  'recovery.unknown.label': 'Δεν φτάνουν τα δεδομένα',
+  'recovery.unknown.blurb':
+    'Κατέγραψε μερικά τρεξίματα ακόμη και ο προπονητής θα μπορεί να εκτιμήσει την αποκατάσταση από το μοτίβο του φορτίου σου.',
+
+  // --- Map basemaps --------------------------------------------------------
+  'mapStyle.auto.label': 'Ακολουθεί το θέμα',
+  'mapStyle.auto.blurb': 'Φωτεινοί δρόμοι στο Φως ημέρας· σκούρος χάρτης στο Απαλό και το HUD.',
+  'mapStyle.standard.label': 'Κανονικός',
+  'mapStyle.standard.blurb': 'Κλασικοί δρόμοι OpenStreetMap.',
+  'mapStyle.dark.label': 'Σκούρος',
+  'mapStyle.dark.blurb': 'Σκούρος χάρτης Carto — πιο ήπιος για Απαλό / HUD.',
+  'mapStyle.terrain.label': 'Ανάγλυφο',
+  'mapStyle.terrain.blurb': 'Ανάγλυφο και ισοϋψείς OpenTopoMap για μονοπάτια.',
+
+  // --- Coach tips -----------------------------------------------------------
+  /*
+   * Two places where Greek grammar forces a different shape from English:
+   * coach.tip.average.body needs the count agreeing with «εβδομάδα/εβδομάδες»,
+   * and coach.tip.away.body the same for «μέρα/μέρες». Both are plural
+   * messages here even though the English got away with a bare string.
+   */
+  'coach.tip.run.title': 'Το τρέξιμο',
+  'coach.tip.run.body': '{distance} {unit} σε {duration}, με μέσο όρο {pace} {paceUnit}.',
+  'coach.tip.longest.title': 'Το μακρύτερο ως τώρα',
+  'coach.tip.longest.body':
+    'Είναι το μακρύτερο τρέξιμό σου μέχρι τώρα, ξεπερνώντας τα {distance} {unit}. Δώσε στην επόμενη μέρα ή δύο λίγο χαλαρό τρέξιμο.',
+  'coach.tip.hard.title': 'Αυτό ήταν σκληρό',
+  'coach.tip.hard.body':
+    'Πάνω από το μισό τρέξιμο ήταν στη ζώνη 4 ή 5 (μέσος όρος {bpm} παλμοί). Τέτοιες προπονήσεις αξίζουν, και αξίζει να ακολουθούνται από μια χαλαρή μέρα.',
+  'coach.tip.easy.title': 'Σωστά χαλαρό',
+  'coach.tip.easy.body':
+    'Το {percent}% του τρεξίματος έμεινε στις ζώνες 1–2. Έτσι πρέπει να δείχνει ο περισσότερος εβδομαδιαίος όγκος.',
+  'coach.tip.noHr.title': 'Δεν καταγράφηκαν παλμοί',
+  'coach.tip.noHr.body':
+    'Σύνδεσε ζώνη στήθους πριν το επόμενο τρέξιμο για ανάλυση ζωνών μαζί με τον ρυθμό.',
+  'coach.tip.jump.title': 'Μεγάλο άλμα σε όγκο',
+  'coach.tip.jump.body':
+    'Αυτή η εβδομάδα είναι ήδη {thisWeek} {unit} έναντι {lastWeek} {unit} την προηγούμενη. Αυξήσεις γύρω στο 10% την εβδομάδα είναι η συνήθης σύσταση για να μένεις χωρίς τραυματισμό.',
+  'coach.tip.goalMet.title': 'Ο εβδομαδιαίος στόχος πιάστηκε',
+  'coach.tip.goalMet.body': '{distance} {unit} αυτή την εβδομάδα, πάνω από τον στόχο των {goal} {unit}.',
+  'coach.tip.goal.title': 'Εβδομαδιαίος στόχος',
+  'coach.tip.goal.body': 'Μένουν {remaining} {unit} για να φτάσεις τα {goal} {unit} αυτή την εβδομάδα.',
+  'coach.tip.empty.title': 'Τίποτα καταγεγραμμένο ακόμη',
+  'coach.tip.empty.body':
+    'Ξεκίνα ένα τρέξιμο και θα εμφανιστεί εδώ. Έξω χρησιμοποιείται GPS· στον διάδρομο μπορείς να μετράς βήματα ή να γράφεις την απόσταση.',
+  'coach.tip.weekGoalMet.title': 'Ο στόχος πιάστηκε',
+  'coach.tip.weekSoFar.title': 'Αυτή η εβδομάδα ως τώρα',
+  'coach.tip.weekProgress.body': '{distance} από {goal} {unit} — {percent}%.',
+  'coach.tip.streak.title': {
+    one: 'Σερί {count} ημέρας',
+    other: 'Σερί {count} ημερών',
+  },
+  'coach.tip.streak.body': 'Η συνέπεια κάνει περισσότερα για τη φυσική κατάσταση από οποιαδήποτε μεμονωμένη προπόνηση.',
+  'coach.tip.away.title': 'Καιρό είχαμε',
+  'coach.tip.away.body': {
+    one: '{days} μέρα από το τελευταίο τρέξιμο. Η επιστροφή λίγο πιο σύντομη και πιο αργή απ’ ό,τι σταμάτησες συνήθως κρατάει καλύτερα.',
+    other: '{days} μέρες από το τελευταίο τρέξιμο. Η επιστροφή λίγο πιο σύντομη και πιο αργή απ’ ό,τι σταμάτησες συνήθως κρατάει καλύτερα.',
+  },
+  'coach.tip.average.title': 'Πρόσφατος μέσος όρος',
+  'coach.tip.average.body': {
+    one: '{distance} {unit} την εβδομάδα, στην τελευταία {weeks} εβδομάδα με τρέξιμο μέσα.',
+    other: '{distance} {unit} την εβδομάδα, στις τελευταίες {weeks} εβδομάδες με τρέξιμο μέσα.',
+  },
+  'coach.tip.loadJump.title': 'Άλμα φορτίου από εβδομάδα σε εβδομάδα',
+  'coach.tip.loadJump.body':
+    'Το φορτίο προπόνησης αυτής της εβδομάδας είναι ήδη πολύ πάνω από την προηγούμενη. Κράτα τις υπόλοιπες προπονήσεις χαλαρές, εκτός αν είχες προγραμματίσει ποιοτική μέρα.',
+  'coach.tip.recovery.fresh': 'Αποκατάσταση: Φρέσκος',
+  'coach.tip.recovery.balanced': 'Αποκατάσταση: Ισορροπημένος',
+  'coach.tip.recovery.loaded': 'Αποκατάσταση: Φορτωμένος',
+  'coach.tip.recovery.high': 'Αποκατάσταση: Υψηλό φορτίο',
+  'coach.tip.recovery.unknown': 'Αποκατάσταση: Δεν φτάνουν τα δεδομένα',
 };

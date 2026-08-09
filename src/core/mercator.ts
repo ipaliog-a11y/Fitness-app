@@ -5,6 +5,8 @@
  * track drawn with these numbers lands exactly where the streets are.
  */
 
+import type { MessageKey } from '../i18n';
+
 import { boundsOf, type GeoPoint } from './geo';
 /*
  * Type-only, and deliberately so: settings.ts imports parseMapStyle from here,
@@ -138,28 +140,28 @@ export type MapBasemapId = 'standard' | 'dark' | 'terrain';
 
 export const MAP_STYLE_OPTIONS: Array<{
   id: MapStyleId;
-  label: string;
-  blurb: string;
+  label: MessageKey;
+  blurb: MessageKey;
 }> = [
   {
     id: 'auto',
-    label: 'Match theme',
-    blurb: 'Light streets in Daylight; dark basemap in Soft and HUD.',
+    label: 'mapStyle.auto.label',
+    blurb: 'mapStyle.auto.blurb',
   },
   {
     id: 'standard',
-    label: 'Standard',
-    blurb: 'Classic OpenStreetMap streets.',
+    label: 'mapStyle.standard.label',
+    blurb: 'mapStyle.standard.blurb',
   },
   {
     id: 'dark',
-    label: 'Dark',
-    blurb: 'Carto dark basemap — easier on Soft / HUD.',
+    label: 'mapStyle.dark.label',
+    blurb: 'mapStyle.dark.blurb',
   },
   {
     id: 'terrain',
-    label: 'Terrain',
-    blurb: 'OpenTopoMap relief and contours for trails.',
+    label: 'mapStyle.terrain.label',
+    blurb: 'mapStyle.terrain.blurb',
   },
 ];
 

@@ -50,7 +50,7 @@ import {
 } from '../src/i18n/index.ts';
 import { en } from '../src/i18n/en.ts';
 import { el } from '../src/i18n/el.ts';
-import { tipsForRun, tipsForWeek } from '../src/core/coach.ts';
+import { tipsForRecovery, tipsForRun, tipsForWeek } from '../src/core/coach.ts';
 import {
   project,
   fitBounds,
@@ -928,7 +928,11 @@ check('the coach describes the run it was given', () => {
     now,
   });
   assert(tips.length > 0, 'says something');
-  assert(tips.some((t) => t.body.includes('5.00')), 'mentions the distance');
+  // The distance moved from the sentence into bodyVars when tips became keys.
+  assert(
+    tips.some((tip) => Object.values(tip.bodyVars ?? {}).some((v) => String(v).includes('5.00'))),
+    'mentions the distance',
+  );
 });
 
 check('the coach flags a big jump in weekly volume', () => {
@@ -964,13 +968,13 @@ check('the coach reads heart zones', () => {
   };
   const tips = tipsForRun(activity, [], { units: 'metric', maxHeartRate: 200, weeklyGoalM: 0, now });
   // 120/200 is 60% — zone 2, comfortably easy.
-  assert(tips.some((t) => t.title === 'Properly easy'), 'notices an easy run');
+  assert(tips.some((tip) => tip.title === 'coach.tip.easy.title'), 'notices an easy run');
 });
 
 check('the coach has something to say about an empty history', () => {
   const tips = tipsForWeek([], { units: 'metric', maxHeartRate: 190, weeklyGoalM: 20000, now: Date.now() });
   equal(tips.length, 1);
-  equal(tips[0].title, 'Nothing logged yet');
+  equal(tips[0].title, 'coach.tip.empty.title');
 });
 
 check('the coach tracks the weekly goal', () => {
@@ -987,7 +991,17 @@ check('the coach tracks the weekly goal', () => {
     weeklyGoalM: 20_000,
     now,
   });
-  assert(tips.some((t) => t.title === 'Goal met'), 'notices the goal was met');
+  // Tips carry keys now, so this asserts on the key and then that the key
+  // actually resolves — the pair catches both a wrong tip and a missing
+  // translation, which asserting on English text no longer can.
+  const goalTip = tips.find((tip) => tip.title === 'coach.tip.weekGoalMet.title');
+  assert(goalTip, 'notices the goal was met');
+  // LOCALE_IDS is declared further down the file and check() runs its body
+  // immediately, so derive the list from the import instead of the const.
+  for (const opt of LOCALE_OPTIONS) {
+    const translated = createTranslator(opt.id)(goalTip.title);
+    assert(translated !== goalTip.title, `${opt.id} names the met-goal tip`);
+  }
 });
 
 // --- mercator -------------------------------------------------------------
@@ -2209,6 +2223,41 @@ check('a saved profile round-trips every locale', () => {
   }
   equal(sanitise({}).locale, 'en', 'default');
   equal(sanitise({ locale: 'gr' }).locale, 'el', 'legacy gr alias');
+});
+
+check('every coach tip resolves in every locale, vars and all', () => {
+  const now = Date.UTC(2026, 0, 14, 12);
+  const mk = (daysAgo, distanceM, durationMs) => ({
+    ...activityFrom([straightTrack({ points: 3 })]),
+    startedAt: now - daysAgo * 86_400_000,
+    distanceM,
+    durationMs,
+  });
+  const history = [mk(20, 8000, 2_700_000), mk(13, 9000, 3_000_000), mk(6, 10_000, 3_300_000)];
+  const activity = mk(0, 12_000, 3_900_000);
+  const ctx = { units: 'metric', maxHeartRate: 190, weeklyGoalM: 20_000, now };
+
+  const all = [
+    ...tipsForRun(activity, history, ctx),
+    ...tipsForWeek([...history, activity], ctx),
+    ...tipsForWeek([], ctx),
+    ...tipsForRecovery([...history, activity], ctx),
+  ];
+  assert(all.length > 0, 'produced tips at all');
+
+  for (const opt of LOCALE_OPTIONS) {
+    const id = opt.id;
+    const t = createTranslator(id);
+    for (const tip of all) {
+      for (const [key, vars] of [[tip.title, tip.titleVars], [tip.body, tip.bodyVars]]) {
+        const out = t(key, vars);
+        assert(out !== key, `${id}: ${key} has no translation`);
+        // A leftover brace means the catalogue asks for a var the tip never
+        // supplies — the exact bug the shared renderer exists to prevent.
+        assert(!/\{\w+\}/.test(out), `${id}: ${key} left a placeholder in "${out}"`);
+      }
+    }
+  }
 });
 
 // --- report ---------------------------------------------------------------

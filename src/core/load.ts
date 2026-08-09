@@ -6,6 +6,7 @@
  * precision. Pure functions for unit tests.
  */
 
+import type { MessageKey } from '../i18n';
 import type { Activity } from './activity';
 import { averagePace } from './activity';
 import { addWeeks, startOfWeek } from './stats';
@@ -137,32 +138,39 @@ export function loadSnapshot(
   return { acute, chronic, ratio, status, thisWeek, lastWeek };
 }
 
-export function recoveryLabel(status: RecoveryStatus): string {
+/**
+ * These return keys, not text.
+ *
+ * The alternative was passing a translator into pure core, which would make
+ * every load calculation depend on a locale it has no business knowing about.
+ * A key is just an identifier for a status the UI already has to render.
+ */
+export function recoveryLabel(status: RecoveryStatus): MessageKey {
   switch (status) {
     case 'fresh':
-      return 'Fresh';
+      return 'recovery.fresh.label';
     case 'balanced':
-      return 'Balanced';
+      return 'recovery.balanced.label';
     case 'loaded':
-      return 'Loaded';
+      return 'recovery.loaded.label';
     case 'high':
-      return 'High load';
+      return 'recovery.high.label';
     default:
-      return 'Not enough data';
+      return 'recovery.unknown.label';
   }
 }
 
-export function recoveryBlurb(snap: LoadSnapshot): string {
+export function recoveryBlurb(snap: LoadSnapshot): MessageKey {
   switch (snap.status) {
     case 'fresh':
-      return 'Recent training is light. Build gradually — a quality session is fine if you feel good.';
+      return 'recovery.fresh.blurb';
     case 'balanced':
-      return 'Load looks steady. Keep most running easy and save hard efforts for planned days.';
+      return 'recovery.balanced.blurb';
     case 'loaded':
-      return 'The last week is heavier than your recent average. Favour easy pace and sleep.';
+      return 'recovery.loaded.blurb';
     case 'high':
-      return 'Acute load is well above your recent base — a classic injury risk window. Ease volume and intensity.';
+      return 'recovery.high.blurb';
     default:
-      return 'Log a few more runs and the coach can estimate recovery from your load pattern.';
+      return 'recovery.unknown.blurb';
   }
 }

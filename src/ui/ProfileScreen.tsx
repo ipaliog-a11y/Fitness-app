@@ -571,9 +571,9 @@ function ProfileScreenInner({
               <div className="zone-row" key={zone.index}>
                 <span className="swatch" style={{ background: zoneSwatch(zone) }} />
                 <span className="name">
-                  Z{zone.index} {zone.name}
+                  Z{zone.index} {t(zone.name)}
                 </span>
-                <span style={{ flex: 1, fontSize: 12, color: 'var(--muted)' }}>{zone.blurb}</span>
+                <span style={{ flex: 1, fontSize: 12, color: 'var(--muted)' }}>{t(zone.blurb)}</span>
                 <span className="time">
                   {range.from}
                   {range.to ? `–${range.to}` : '+'}

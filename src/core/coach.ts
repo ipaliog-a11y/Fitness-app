@@ -8,6 +8,7 @@
  * feel has no business doing any of those things.
  */
 
+import type { MessageKey, Vars } from '../i18n';
 import { averagePace, type Activity } from './activity';
 import { summariseHeart } from './heart';
 import {
@@ -18,7 +19,7 @@ import {
   paceLabel,
   type UnitSystem,
 } from './units';
-import { loadSnapshot, recoveryBlurb, recoveryLabel } from './load';
+import { loadSnapshot, recoveryBlurb, recoveryLabel, type RecoveryStatus } from './load';
 import {
   activitiesBetween,
   addWeeks,
@@ -32,8 +33,19 @@ export type TipTone = 'praise' | 'note' | 'caution';
 
 export interface Tip {
   tone: TipTone;
-  title: string;
-  body: string;
+  /**
+   * Message keys plus their substitutions, not finished sentences.
+   *
+   * Coach tips are the one place where core genuinely has to *compose* text —
+   * distances, paces and counts only exist at runtime. Handing the UI a key
+   * and a bag of already-formatted values keeps the locale out of here while
+   * still letting the translation decide word order, which matters: Greek does
+   * not put the number where English does in every one of these.
+   */
+  title: MessageKey;
+  titleVars?: Vars;
+  body: MessageKey;
+  bodyVars?: Vars;
 }
 
 export interface CoachContext {
@@ -58,10 +70,15 @@ export function tipsForRun(activity: Activity, history: Activity[], ctx: CoachCo
   if (activity.distanceM > 0 && pace !== null) {
     tips.push({
       tone: 'note',
-      title: 'The run',
-      body: `${formatDistance(activity.distanceM, ctx.units)} ${unit} in ${formatDuration(
-        activity.durationMs,
-      )}, averaging ${formatPace(pace)} ${paceLabel(ctx.units)}.`,
+      title: 'coach.tip.run.title',
+      body: 'coach.tip.run.body',
+      bodyVars: {
+        distance: formatDistance(activity.distanceM, ctx.units),
+        unit,
+        duration: formatDuration(activity.durationMs),
+        pace: formatPace(pace),
+        paceUnit: paceLabel(ctx.units),
+      },
     });
   }
 
@@ -71,11 +88,9 @@ export function tipsForRun(activity: Activity, history: Activity[], ctx: CoachCo
   if (activity.distanceM > longest && history.length >= 3) {
     tips.push({
       tone: 'praise',
-      title: 'Longest run yet',
-      body: `That is your longest run so far, beating ${formatDistance(
-        longest,
-        ctx.units,
-      )} ${unit}. Give the next day or two some easy running.`,
+      title: 'coach.tip.longest.title',
+      body: 'coach.tip.longest.body',
+      bodyVars: { distance: formatDistance(longest, ctx.units), unit },
     });
   }
 
@@ -91,23 +106,23 @@ export function tipsForRun(activity: Activity, history: Activity[], ctx: CoachCo
     if (hard > 0.5) {
       tips.push({
         tone: 'caution',
-        title: 'That was a hard one',
-        body: `Over half the run sat in zone 4 or 5 (average ${heart.averageBpm} bpm). Sessions like this are worth having, and worth following with an easy day.`,
+        title: 'coach.tip.hard.title',
+        body: 'coach.tip.hard.body',
+        bodyVars: { bpm: heart.averageBpm },
       });
     } else if (easy > 0.8) {
       tips.push({
         tone: 'praise',
-        title: 'Properly easy',
-        body: `${Math.round(
-          easy * 100,
-        )}% of the run stayed in zones 1–2. Easy running is what most weekly volume should look like.`,
+        title: 'coach.tip.easy.title',
+        body: 'coach.tip.easy.body',
+        bodyVars: { percent: Math.round(easy * 100) },
       });
     }
   } else if (activity.mode === 'outdoor') {
     tips.push({
       tone: 'note',
-      title: 'No heart rate recorded',
-      body: 'Connect a strap before the next run to get zone analysis alongside the pace.',
+      title: 'coach.tip.noHr.title',
+      body: 'coach.tip.noHr.body',
     });
   }
 
@@ -126,14 +141,13 @@ export function tipsForRun(activity: Activity, history: Activity[], ctx: CoachCo
   if (lastWeek.distanceM > 1000 && thisWeek.distanceM > lastWeek.distanceM * 1.3) {
     tips.push({
       tone: 'caution',
-      title: 'Big jump in volume',
-      body: `This week is already ${formatDistance(
-        thisWeek.distanceM,
-        ctx.units,
-      )} ${unit} against ${formatDistance(
-        lastWeek.distanceM,
-        ctx.units,
-      )} ${unit} last week. Increases of roughly 10% a week are the usual advice for staying uninjured.`,
+      title: 'coach.tip.jump.title',
+      body: 'coach.tip.jump.body',
+      bodyVars: {
+        thisWeek: formatDistance(thisWeek.distanceM, ctx.units),
+        lastWeek: formatDistance(lastWeek.distanceM, ctx.units),
+        unit,
+      },
     });
   }
 
@@ -143,19 +157,23 @@ export function tipsForRun(activity: Activity, history: Activity[], ctx: CoachCo
       remaining <= 0
         ? {
             tone: 'praise',
-            title: 'Weekly goal met',
-            body: `${formatDistance(thisWeek.distanceM, ctx.units)} ${unit} this week, past your ${formatDistance(
-              ctx.weeklyGoalM,
-              ctx.units,
-            )} ${unit} goal.`,
+            title: 'coach.tip.goalMet.title',
+            body: 'coach.tip.goalMet.body',
+            bodyVars: {
+              distance: formatDistance(thisWeek.distanceM, ctx.units),
+              goal: formatDistance(ctx.weeklyGoalM, ctx.units),
+              unit,
+            },
           }
         : {
             tone: 'note',
-            title: 'Weekly goal',
-            body: `${formatDistance(remaining, ctx.units)} ${unit} left to reach ${formatDistance(
-              ctx.weeklyGoalM,
-              ctx.units,
-            )} ${unit} this week.`,
+            title: 'coach.tip.goal.title',
+            body: 'coach.tip.goal.body',
+            bodyVars: {
+              remaining: formatDistance(remaining, ctx.units),
+              goal: formatDistance(ctx.weeklyGoalM, ctx.units),
+              unit,
+            },
           },
     );
   }
@@ -172,8 +190,8 @@ export function tipsForWeek(activities: Activity[], ctx: CoachContext): Tip[] {
     return [
       {
         tone: 'note',
-        title: 'Nothing logged yet',
-        body: 'Start a run and it will show up here. Outdoors uses GPS; on a treadmill you can count steps or type the distance in.',
+        title: 'coach.tip.empty.title',
+        body: 'coach.tip.empty.body',
       },
     ];
   }
@@ -186,11 +204,14 @@ export function tipsForWeek(activities: Activity[], ctx: CoachContext): Tip[] {
     const share = thisWeek.distanceM / ctx.weeklyGoalM;
     tips.push({
       tone: share >= 1 ? 'praise' : 'note',
-      title: share >= 1 ? 'Goal met' : 'This week so far',
-      body: `${formatDistance(thisWeek.distanceM, ctx.units)} of ${formatDistance(
-        ctx.weeklyGoalM,
-        ctx.units,
-      )} ${unit} — ${Math.round(share * 100)}%.`,
+      title: share >= 1 ? 'coach.tip.weekGoalMet.title' : 'coach.tip.weekSoFar.title',
+      body: 'coach.tip.weekProgress.body',
+      bodyVars: {
+        distance: formatDistance(thisWeek.distanceM, ctx.units),
+        goal: formatDistance(ctx.weeklyGoalM, ctx.units),
+        unit,
+        percent: Math.round(share * 100),
+      },
     });
   }
 
@@ -198,8 +219,9 @@ export function tipsForWeek(activities: Activity[], ctx: CoachContext): Tip[] {
   if (streak >= 3) {
     tips.push({
       tone: 'praise',
-      title: `${streak}-day streak`,
-      body: 'Consistency does more for fitness than any single session.',
+      title: 'coach.tip.streak.title',
+      titleVars: { count: streak },
+      body: 'coach.tip.streak.body',
     });
   }
 
@@ -210,8 +232,9 @@ export function tipsForWeek(activities: Activity[], ctx: CoachContext): Tip[] {
   if (daysSince >= 14) {
     tips.push({
       tone: 'note',
-      title: 'Been a while',
-      body: `${daysSince} days since the last run. Coming back a little shorter and slower than you left off tends to stick better.`,
+      title: 'coach.tip.away.title',
+      body: 'coach.tip.away.body',
+      bodyVars: { days: daysSince },
     });
   }
 
@@ -221,10 +244,13 @@ export function tipsForWeek(activities: Activity[], ctx: CoachContext): Tip[] {
     if (average > 0) {
       tips.push({
         tone: 'note',
-        title: 'Recent average',
-        body: `${formatDistance(average, ctx.units)} ${unit} a week over the last ${
-          previous.length
-        } weeks with running in them.`,
+        title: 'coach.tip.average.title',
+        body: 'coach.tip.average.body',
+        bodyVars: {
+          distance: formatDistance(average, ctx.units),
+          unit,
+          weeks: previous.length,
+        },
       });
     }
   }
@@ -246,12 +272,27 @@ export function tipsForWeek(activities: Activity[], ctx: CoachContext): Tip[] {
   } else if (load.lastWeek > 0 && load.thisWeek > load.lastWeek * 1.25) {
     tips.push({
       tone: 'caution',
-      title: 'Week-on-week load jump',
-      body: 'This week’s training load is already well above last week. Keep remaining sessions easy unless you planned a quality day.',
+      title: 'coach.tip.loadJump.title',
+      body: 'coach.tip.loadJump.body',
     });
   }
 
   return tips;
+}
+
+function recoveryTitle(status: RecoveryStatus): MessageKey {
+  switch (status) {
+    case 'fresh':
+      return 'coach.tip.recovery.fresh';
+    case 'balanced':
+      return 'coach.tip.recovery.balanced';
+    case 'loaded':
+      return 'coach.tip.recovery.loaded';
+    case 'high':
+      return 'coach.tip.recovery.high';
+    default:
+      return 'coach.tip.recovery.unknown';
+  }
 }
 
 /** Dedicated recovery note for the Coach screen. */
@@ -266,7 +307,11 @@ export function tipsForRecovery(activities: Activity[], ctx: CoachContext): Tip[
   return [
     {
       tone,
-      title: `Recovery: ${recoveryLabel(load.status)}`,
+      // One key per status rather than "Recovery: {status}" with the status
+      // itself as a nested key. Nesting would need the renderer to know that
+      // one particular var holds a key and not a value, and Greek would be
+      // stuck with English word order either way.
+      title: recoveryTitle(load.status),
       body: recoveryBlurb(load),
     },
   ];

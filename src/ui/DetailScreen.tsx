@@ -44,6 +44,7 @@ import {
 import { resolveMapBasemap } from '../core/mercator';
 import { HeartChart, SplitsTable, ZoneBars } from './charts';
 import { RouteMap } from './RouteMap';
+import { useTipText } from '../i18n/react';
 
 interface Props {
   activity: Activity;
@@ -72,6 +73,7 @@ export function DetailScreen({
   onNoteChange,
   onToast,
 }: Props) {
+  const tipText = useTipText();
   const [note, setNote] = useState(activity.note);
   const [confirming, setConfirming] = useState(false);
 
@@ -344,8 +346,8 @@ export function DetailScreen({
           <h2>Notes from the coach</h2>
           {tips.map((tip, i) => (
             <div className={`tip ${tip.tone}`} key={i}>
-              <div className="title">{tip.title}</div>
-              <div className="body">{tip.body}</div>
+              <div className="title">{tipText(tip).title}</div>
+              <div className="body">{tipText(tip).body}</div>
             </div>
           ))}
         </div>

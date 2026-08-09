@@ -312,8 +312,8 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                 onClick={() => set('mapStyle', opt.id as MapStyleId)}
               >
                 <span className="theme-option-body">
-                  <span className="theme-option-label">{opt.label}</span>
-                  <span className="theme-option-blurb">{opt.blurb}</span>
+                  <span className="theme-option-label">{t(opt.label)}</span>
+                  <span className="theme-option-blurb">{t(opt.blurb)}</span>
                 </span>
                 <span className="theme-option-check" aria-hidden>
                   {selected ? '✓' : ''}

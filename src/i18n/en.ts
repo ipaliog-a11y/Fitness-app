@@ -176,6 +176,99 @@ export const en = {
   },
   'achievements.title': 'Achievements',
   'achievements.subtitle': '{unlocked} of {total} unlocked · earned on this device',
+
+  // --- Heart rate zones ----------------------------------------------------
+  'zone.recovery.name': 'Recovery',
+  'zone.recovery.blurb': 'Very light. Warm-ups, cool-downs, and the easy end of easy.',
+  'zone.easy.name': 'Easy',
+  'zone.easy.blurb': 'Conversational. Where most of a sane training week lives.',
+  'zone.aerobic.name': 'Aerobic',
+  'zone.aerobic.blurb': 'Steady and purposeful. Talking gets clipped.',
+  'zone.threshold.name': 'Threshold',
+  'zone.threshold.blurb': 'Hard, sustainable for a while. This is where speed is bought.',
+  'zone.maximum.name': 'Maximum',
+  'zone.maximum.blurb': 'All out. Minutes, not hours.',
+
+  // --- Recovery status -----------------------------------------------------
+  'recovery.fresh.label': 'Fresh',
+  'recovery.fresh.blurb':
+    'Recent training is light. Build gradually — a quality session is fine if you feel good.',
+  'recovery.balanced.label': 'Balanced',
+  'recovery.balanced.blurb':
+    'Load looks steady. Keep most running easy and save hard efforts for planned days.',
+  'recovery.loaded.label': 'Loaded',
+  'recovery.loaded.blurb':
+    'The last week is heavier than your recent average. Favour easy pace and sleep.',
+  'recovery.high.label': 'High load',
+  'recovery.high.blurb':
+    'Acute load is well above your recent base — a classic injury risk window. Ease volume and intensity.',
+  'recovery.unknown.label': 'Not enough data',
+  'recovery.unknown.blurb':
+    'Log a few more runs and the coach can estimate recovery from your load pattern.',
+
+  // --- Map basemaps --------------------------------------------------------
+  'mapStyle.auto.label': 'Match theme',
+  'mapStyle.auto.blurb': 'Light streets in Daylight; dark basemap in Soft and HUD.',
+  'mapStyle.standard.label': 'Standard',
+  'mapStyle.standard.blurb': 'Classic OpenStreetMap streets.',
+  'mapStyle.dark.label': 'Dark',
+  'mapStyle.dark.blurb': 'Carto dark basemap — easier on Soft / HUD.',
+  'mapStyle.terrain.label': 'Terrain',
+  'mapStyle.terrain.blurb': 'OpenTopoMap relief and contours for trails.',
+
+  // --- Coach tips -----------------------------------------------------------
+  // Numbers arrive already formatted for the unit system, so placeholders can
+  // sit wherever the sentence needs them rather than where English put them.
+  'coach.tip.run.title': 'The run',
+  'coach.tip.run.body': '{distance} {unit} in {duration}, averaging {pace} {paceUnit}.',
+  'coach.tip.longest.title': 'Longest run yet',
+  'coach.tip.longest.body':
+    'That is your longest run so far, beating {distance} {unit}. Give the next day or two some easy running.',
+  'coach.tip.hard.title': 'That was a hard one',
+  'coach.tip.hard.body':
+    'Over half the run sat in zone 4 or 5 (average {bpm} bpm). Sessions like this are worth having, and worth following with an easy day.',
+  'coach.tip.easy.title': 'Properly easy',
+  'coach.tip.easy.body':
+    '{percent}% of the run stayed in zones 1–2. Easy running is what most weekly volume should look like.',
+  'coach.tip.noHr.title': 'No heart rate recorded',
+  'coach.tip.noHr.body':
+    'Connect a strap before the next run to get zone analysis alongside the pace.',
+  'coach.tip.jump.title': 'Big jump in volume',
+  'coach.tip.jump.body':
+    'This week is already {thisWeek} {unit} against {lastWeek} {unit} last week. Increases of roughly 10% a week are the usual advice for staying uninjured.',
+  'coach.tip.goalMet.title': 'Weekly goal met',
+  'coach.tip.goalMet.body': '{distance} {unit} this week, past your {goal} {unit} goal.',
+  'coach.tip.goal.title': 'Weekly goal',
+  'coach.tip.goal.body': '{remaining} {unit} left to reach {goal} {unit} this week.',
+  'coach.tip.empty.title': 'Nothing logged yet',
+  'coach.tip.empty.body':
+    'Start a run and it will show up here. Outdoors uses GPS; on a treadmill you can count steps or type the distance in.',
+  'coach.tip.weekGoalMet.title': 'Goal met',
+  'coach.tip.weekSoFar.title': 'This week so far',
+  'coach.tip.weekProgress.body': '{distance} of {goal} {unit} — {percent}%.',
+  'coach.tip.streak.title': {
+    one: '{count}-day streak',
+    other: '{count}-day streak',
+  },
+  'coach.tip.streak.body': 'Consistency does more for fitness than any single session.',
+  'coach.tip.away.title': 'Been a while',
+  'coach.tip.away.body': {
+    one: '{days} day since the last run. Coming back a little shorter and slower than you left off tends to stick better.',
+    other: '{days} days since the last run. Coming back a little shorter and slower than you left off tends to stick better.',
+  },
+  'coach.tip.average.title': 'Recent average',
+  'coach.tip.average.body': {
+    one: '{distance} {unit} a week over the last {weeks} week with running in it.',
+    other: '{distance} {unit} a week over the last {weeks} weeks with running in them.',
+  },
+  'coach.tip.loadJump.title': 'Week-on-week load jump',
+  'coach.tip.loadJump.body':
+    'This week’s training load is already well above last week. Keep remaining sessions easy unless you planned a quality day.',
+  'coach.tip.recovery.fresh': 'Recovery: Fresh',
+  'coach.tip.recovery.balanced': 'Recovery: Balanced',
+  'coach.tip.recovery.loaded': 'Recovery: Loaded',
+  'coach.tip.recovery.high': 'Recovery: High load',
+  'coach.tip.recovery.unknown': 'Recovery: Not enough data',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */

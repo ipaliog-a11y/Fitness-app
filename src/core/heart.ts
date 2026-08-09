@@ -7,17 +7,19 @@
  * estimate, and a zone chart nobody can configure is a zone chart nobody uses.
  */
 
+import type { MessageKey } from '../i18n';
+
 import type { HeartSample } from './activity';
 
 export interface Zone {
   /** 1–5, low to high. */
   index: number;
-  name: string;
+  name: MessageKey;
   /** Inclusive lower bound as a fraction of max HR. */
   from: number;
   /** Exclusive upper bound, except zone 5 which has no ceiling. */
   to: number;
-  blurb: string;
+  blurb: MessageKey;
   /**
    * The zone's colour on a dark ground. Kept as a literal because it is the
    * fallback when no theme has defined `--zone-N`, and because tests and any
@@ -45,42 +47,42 @@ export function zoneSwatch(zone: Zone): string {
 export const ZONES: Zone[] = [
   {
     index: 1,
-    name: 'Recovery',
+    name: 'zone.recovery.name',
     from: 0.5,
     to: 0.6,
-    blurb: 'Very light. Warm-ups, cool-downs, and the easy end of easy.',
+    blurb: 'zone.recovery.blurb',
     colour: '#6b7f9e',
   },
   {
     index: 2,
-    name: 'Easy',
+    name: 'zone.easy.name',
     from: 0.6,
     to: 0.7,
-    blurb: 'Conversational. Where most of a sane training week lives.',
+    blurb: 'zone.easy.blurb',
     colour: '#3fa66a',
   },
   {
     index: 3,
-    name: 'Aerobic',
+    name: 'zone.aerobic.name',
     from: 0.7,
     to: 0.8,
-    blurb: 'Steady and purposeful. Talking gets clipped.',
+    blurb: 'zone.aerobic.blurb',
     colour: '#d8a13a',
   },
   {
     index: 4,
-    name: 'Threshold',
+    name: 'zone.threshold.name',
     from: 0.8,
     to: 0.9,
-    blurb: 'Hard, sustainable for a while. This is where speed is bought.',
+    blurb: 'zone.threshold.blurb',
     colour: '#e2703a',
   },
   {
     index: 5,
-    name: 'Maximum',
+    name: 'zone.maximum.name',
     from: 0.9,
     to: Infinity,
-    blurb: 'All out. Minutes, not hours.',
+    blurb: 'zone.maximum.blurb',
     colour: '#d2453f',
   },
 ];

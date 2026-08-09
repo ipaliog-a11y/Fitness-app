@@ -14,6 +14,7 @@ import {
 } from '../core/stats';
 import { distanceLabel, formatDistance, formatDuration, formatPace, paceLabel } from '../core/units';
 import { WeeklyBars } from './charts';
+import { useTipText } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function StatsScreen({ activities, profile, onOpen }: Props) {
+  const tipText = useTipText();
   const now = Date.now();
   const weekStart = startOfWeek(now);
 
@@ -131,8 +133,8 @@ export function StatsScreen({ activities, profile, onOpen }: Props) {
           <h2>Coach</h2>
           {tips.map((tip, i) => (
             <div className={`tip ${tip.tone}`} key={i}>
-              <div className="title">{tip.title}</div>
-              <div className="body">{tip.body}</div>
+              <div className="title">{tipText(tip).title}</div>
+              <div className="body">{tipText(tip).body}</div>
             </div>
           ))}
         </div>
