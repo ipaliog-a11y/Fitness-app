@@ -34,7 +34,7 @@ Last updated from product discussion (2026).
 |---|---------|-------------|--------|
 | 7 | **Simple training plans** | NRC, Runna (lite) | C25K-style, first 10K, volume builder — not a paid AI coach |
 | 8 | **Route library** | MapMyRun | Save/reuse/reverse past outdoor routes |
-| 9 | **Lap button + virtual partner** | Nike, Garmin | Manual/auto laps; ghost of last similar run later |
+| 9 | **Lap button + virtual partner** | Nike, Garmin | Laps shipped. Ghost racing designed and parked — [`GHOST_RUNS.md`](./GHOST_RUNS.md) |
 | 10 | **Post-run depth** | Garmin analytics lite | Load/recovery hints, pace distribution, elevation profile |
 | 11 | **Weather at start** | MapMyRun premium-ish | Optional; one-shot at arming |
 | 12 | **Cadence coaching** | Watches / form tools | Target spm range + soft cues from pod/phone |
