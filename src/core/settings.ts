@@ -47,12 +47,12 @@ export const THEME_OPTIONS: Array<{
   {
     id: 'crimson',
     label: 'Crimson Ember',
-    blurb: 'Dark charcoal with hot red accent — night runs, bold contrast.',
+    blurb: 'Hot red, cut-gem corners, edge dock — bold night-run chrome.',
   },
   {
     id: 'sky',
     label: 'Skyline',
-    blurb: 'Cool navy with sky blue accent — calm, clear metrics.',
+    blurb: 'Sky blue, full pills, floating capsule tab — calm aviation feel.',
   },
 ];
 

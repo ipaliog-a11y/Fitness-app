@@ -137,7 +137,11 @@
 }
 
 [data-theme='crimson'] {
-  /* Crimson Ember — warm charcoal, hot red accent, soft rounded chrome */
+  /*
+   * Crimson Ember — identity: cut gemstone.
+   * Warm charcoal, hot red, tighter angles than Soft (not as square as HUD).
+   * Slightly condensed display type via letter-spacing on labels/titles.
+   */
   --bg: #12080a;
   --bg-elev: #1a0c10;
   --surface: #221016;
@@ -157,23 +161,24 @@
   --danger: #fda4af;
   --info: #7dd3fc;
 
-  --radius: 16px;
-  --radius-sm: 12px;
-  --radius-lg: 22px;
-  --tab-bg: rgba(26, 12, 16, 0.94);
-  --tab-inset: 10px;
-  --tab-radius: 20px;
-  --tab-border: rgba(255, 255, 255, 0.06);
-  --btn-radius: 12px;
-  --chip-radius: 999px;
-  --metric-font: inherit;
-  --letter-label: 0.07em;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+  --tab-bg: #1a0c10;
+  --tab-inset: 0px;
+  --tab-radius: 0px;
+  --tab-border: #4a2830;
+  --btn-radius: 6px;
+  --chip-radius: 6px;
+  /* Condensed display stack — system fonts that read “sharp” on Windows/iOS. */
+  --metric-font: 'Segoe UI Semibold', 'SF Pro Display', system-ui, sans-serif;
+  --letter-label: 0.14em;
 
   --map-casing: rgba(0, 0, 0, 0.5);
   --map-tile-dim: 0.7;
-  --press-scale: 0.972;
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 12px 28px -14px rgba(80, 10, 24, 0.75);
-  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.5), 0 18px 40px -16px rgba(80, 10, 24, 0.85);
+  --press-scale: 0.96;
+  --shadow-1: 0 0 0 1px rgba(244, 63, 94, 0.08), 0 8px 24px -12px rgba(80, 10, 24, 0.9);
+  --shadow-2: 0 0 0 1px rgba(244, 63, 94, 0.12), 0 16px 36px -14px rgba(80, 10, 24, 0.95);
   --line-card: var(--line);
 
   --zone-1: #8a7a8e;
@@ -186,7 +191,11 @@
 }
 
 [data-theme='sky'] {
-  /* Skyline — cool navy, sky blue accent, soft chrome */
+  /*
+   * Skyline — identity: soft aviation / capsule.
+   * Cool navy, sky blue, pillier than Soft, open letter-spacing on labels,
+   * rounded metric type feel (no mono — contrast to HUD).
+   */
   --bg: #070d16;
   --bg-elev: #0b1420;
   --surface: #111c2c;
@@ -206,23 +215,23 @@
   --danger: #fb7185;
   --info: #67e8f9;
 
-  --radius: 16px;
-  --radius-sm: 12px;
-  --radius-lg: 22px;
-  --tab-bg: rgba(11, 20, 32, 0.94);
-  --tab-inset: 10px;
-  --tab-radius: 20px;
-  --tab-border: rgba(255, 255, 255, 0.06);
-  --btn-radius: 12px;
+  --radius: 22px;
+  --radius-sm: 16px;
+  --radius-lg: 28px;
+  --tab-bg: rgba(11, 20, 32, 0.92);
+  --tab-inset: 14px;
+  --tab-radius: 999px;
+  --tab-border: rgba(125, 211, 252, 0.12);
+  --btn-radius: 999px;
   --chip-radius: 999px;
-  --metric-font: inherit;
-  --letter-label: 0.07em;
+  --metric-font: 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif;
+  --letter-label: 0.1em;
 
   --map-casing: rgba(0, 0, 0, 0.45);
   --map-tile-dim: 0.72;
-  --press-scale: 0.972;
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -14px rgba(8, 40, 70, 0.75);
-  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.45), 0 18px 40px -16px rgba(8, 40, 70, 0.85);
+  --press-scale: 0.968;
+  --shadow-1: 0 4px 16px -6px rgba(8, 60, 110, 0.55);
+  --shadow-2: 0 12px 32px -10px rgba(8, 60, 110, 0.65);
   --line-card: var(--line);
 
   --zone-1: #7d90ad;
@@ -263,18 +272,22 @@
   --danger: #a4231d;
   --info: #0b5cad;
 
-  --radius: 14px;
-  --radius-sm: 10px;
-  --radius-lg: 18px;
+  /*
+   * Daylight identity: high-sun editorial.
+   * Squarer cards, solid edge dock, heavier type weight (not mono like HUD).
+   */
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
   /* Edge-to-edge and opaque: a floating, blurred bar is invisible in sun. */
   --tab-bg: #ffffff;
   --tab-inset: 0px;
   --tab-radius: 0px;
   --tab-border: #b3bfcc;
-  --btn-radius: 12px;
-  --chip-radius: 999px;
-  --metric-font: inherit;
-  --letter-label: 0.06em;
+  --btn-radius: 6px;
+  --chip-radius: 6px;
+  --metric-font: 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif;
+  --letter-label: 0.08em;
 
   /* A white casing under the route, and undimmed tiles — OSM's own style is
      already light, and dimming it on a white page just makes mud. */
@@ -4131,6 +4144,18 @@ button.cal-event {
   box-shadow: none;
 }
 
+[data-theme='day'] .tabs button {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+[data-theme='day'] .tabs .tab-label,
+[data-theme='day'] .tabs .tab-label-short {
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
 /* The base fill is a gradient ending in a bright green, and --accent-bright is
    *darker* than --accent here — inherited, it would read as a lit button on a
    lit page. Flat fill with a ring instead. */
@@ -4138,11 +4163,37 @@ button.cal-event {
   background: var(--accent);
   border: 3px solid var(--accent-bright);
   box-shadow: none;
+  border-radius: 8px;
 }
 
 [data-theme='day'] .start-control-label,
 [data-theme='day'] .start-control-sub {
   color: var(--accent-ink);
+}
+
+[data-theme='day'] .start-control-label {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+[data-theme='day'] .btn.primary {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+[data-theme='day'] .mode-switch {
+  border-radius: 8px;
+  border-width: 2px;
+}
+
+[data-theme='day'] .mode-switch button[aria-pressed='true'] {
+  font-weight: 800;
+}
+
+[data-theme='day'] .chip {
+  border-radius: var(--chip-radius);
+  font-weight: 700;
 }
 
 /*
@@ -4158,17 +4209,21 @@ button.cal-event {
 
 [data-theme='day'] .card,
 [data-theme='day'] .run-item {
-  border-width: 1px;
+  border-width: 2px;
 }
 
 [data-theme='day'] .screen h1,
 [data-theme='day'] .metric .value,
 [data-theme='day'] .metric-hero .value {
   font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 [data-theme='day'] .card h2 {
   color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
 }
 
 /* Toast is a floating chip over content; on white it needs to invert to stay
@@ -4177,4 +4232,323 @@ button.cal-event {
   background: var(--text);
   color: #ffffff;
   border-color: var(--text);
+  border-radius: 6px;
+}
+
+/* --- Crimson Ember structural identity (cut gem) ------------------------- */
+
+[data-theme='crimson'] .tabs {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 -8px 24px rgba(80, 10, 24, 0.35);
+}
+
+[data-theme='crimson'] .tabs button {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+[data-theme='crimson'] .tabs .tab-label,
+[data-theme='crimson'] .tabs .tab-label-short {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 9px;
+}
+
+[data-theme='crimson'] .screen h1 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-stretch: condensed;
+}
+
+[data-theme='crimson'] .card h2,
+[data-theme='crimson'] .setup-panel-head h2,
+[data-theme='crimson'] .metric .label,
+[data-theme='crimson'] .metric-hero .label {
+  text-transform: uppercase;
+  letter-spacing: var(--letter-label);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+[data-theme='crimson'] .metric .value,
+[data-theme='crimson'] .metric-hero .value {
+  font-family: var(--metric-font);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+[data-theme='crimson'] .btn.primary {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+  box-shadow: 0 0 16px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+[data-theme='crimson'] .btn[aria-pressed='true'] {
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+[data-theme='crimson'] .chip {
+  border-radius: var(--chip-radius);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+[data-theme='crimson'] .goal-kinds button {
+  border-radius: var(--chip-radius);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+[data-theme='crimson'] .segmented {
+  border-radius: var(--radius-sm);
+}
+
+[data-theme='crimson'] .mode-switch {
+  border-radius: var(--radius-sm);
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+}
+
+[data-theme='crimson'] .mode-switch button {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+[data-theme='crimson'] .mode-switch button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+[data-theme='crimson'] .start-control-face {
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 12px 32px -8px rgba(244, 63, 94, 0.45);
+}
+
+[data-theme='crimson'] .start-control-label {
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+[data-theme='crimson'] .start-control-sub {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+[data-theme='crimson'] .live-status-pill,
+[data-theme='crimson'] .live-hr-pill,
+[data-theme='crimson'] .live-meta-pill {
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+[data-theme='crimson'] .workout-tile,
+[data-theme='crimson'] .run-item,
+[data-theme='crimson'] .card {
+  border-radius: var(--radius);
+}
+
+[data-theme='crimson'] .workout-tile-name {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+[data-theme='crimson'] .metric-pod {
+  border-radius: var(--radius-sm);
+}
+
+[data-theme='crimson'] .toast {
+  border-radius: 6px;
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+/* --- Skyline structural identity (capsule / aviation) -------------------- */
+
+[data-theme='sky'] .tabs {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
+    0 10px 28px rgba(4, 20, 40, 0.45);
+}
+
+[data-theme='sky'] .tabs button {
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+[data-theme='sky'] .tabs button[aria-current='page'] {
+  color: var(--accent-bright);
+}
+
+[data-theme='sky'] .screen h1 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+[data-theme='sky'] .card h2,
+[data-theme='sky'] .setup-panel-head h2 {
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+[data-theme='sky'] .metric .value,
+[data-theme='sky'] .metric-hero .value,
+[data-theme='sky'] .value-timer {
+  font-family: var(--metric-font);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-feature-settings: 'tnum' 1;
+}
+
+[data-theme='sky'] .metric .label,
+[data-theme='sky'] .metric-hero .label {
+  letter-spacing: var(--letter-label);
+  font-weight: 600;
+}
+
+[data-theme='sky'] .btn {
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+[data-theme='sky'] .btn.primary {
+  font-weight: 700;
+  box-shadow: 0 4px 16px -4px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+[data-theme='sky'] .btn[aria-pressed='true'] {
+  font-weight: 700;
+}
+
+[data-theme='sky'] .chip {
+  border-radius: var(--chip-radius);
+  font-weight: 650;
+}
+
+[data-theme='sky'] .goal-kinds button {
+  border-radius: var(--chip-radius);
+  font-weight: 650;
+}
+
+[data-theme='sky'] .segmented {
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+[data-theme='sky'] .segmented button[aria-pressed='true'] {
+  font-weight: 700;
+}
+
+[data-theme='sky'] .mode-switch {
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+
+[data-theme='sky'] .mode-switch button {
+  border-radius: 999px;
+  font-weight: 650;
+}
+
+[data-theme='sky'] .mode-switch button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 2px 10px -2px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+[data-theme='sky'] .start-control-face {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 12px 36px -8px rgba(56, 189, 248, 0.4);
+}
+
+[data-theme='sky'] .start-control-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+[data-theme='sky'] .start-control-sub {
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+[data-theme='sky'] .live-status-pill,
+[data-theme='sky'] .live-hr-pill,
+[data-theme='sky'] .live-meta-pill {
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+}
+
+[data-theme='sky'] .workout-tile {
+  border-radius: var(--radius);
+}
+
+[data-theme='sky'] .workout-tile.selected {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+[data-theme='sky'] .metric-pod {
+  border-radius: var(--radius-sm);
+}
+
+[data-theme='sky'] .card,
+[data-theme='sky'] .run-item {
+  border-radius: var(--radius);
+}
+
+[data-theme='sky'] .toast {
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  box-shadow: 0 8px 24px rgba(4, 20, 40, 0.4);
+}
+
+[data-theme='sky'] .splash-logo {
+  border-radius: 28px;
+}
+
+[data-theme='crimson'] .splash-logo {
+  border-radius: 10px;
+}
+
+[data-theme='crimson'] .splash-title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+[data-theme='sky'] .splash-title {
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
