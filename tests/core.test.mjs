@@ -21,7 +21,7 @@ import {
   paceSecondsPerUnit,
   toDisplayDistance,
 } from '../src/core/units.ts';
-import { splits, bestEffort } from '../src/core/activity.ts';
+import { splits, bestEffort, exportBaseName } from '../src/core/activity.ts';
 import { applyConsoleEntry } from '../src/core/consoleEntry.ts';
 import { pickEnglishVoice } from '../src/platform/speech.ts';
 import { RunSession } from '../src/core/session.ts';
@@ -2614,6 +2614,55 @@ check('every coach tip resolves in every locale, vars and all', () => {
         assert(!/\{\w+\}/.test(out), `${id}: ${key} left a placeholder in "${out}"`);
       }
     }
+  }
+});
+
+// --- export filenames -----------------------------------------------------
+
+check('an exported run is named for its local start, to the minute', () => {
+  // Built from local parts, so this is the same string in any zone.
+  equal(
+    exportBaseName({ startedAt: new Date(2025, 7, 12, 7, 18).getTime() }),
+    'runlog-2025-08-12-0718',
+  );
+  // Padding is where a sortable name usually goes wrong.
+  equal(
+    exportBaseName({ startedAt: new Date(2025, 0, 3, 6, 4).getTime() }),
+    'runlog-2025-01-03-0604',
+  );
+  equal(
+    exportBaseName({ startedAt: new Date(2025, 11, 31, 23, 59).getTime() }),
+    'runlog-2025-12-31-2359',
+  );
+});
+
+check('two runs on one day do not export to one filename', () => {
+  // They did, and the second either arrived as "(1)" or replaced the first.
+  const morning = exportBaseName({ startedAt: new Date(2025, 7, 12, 7, 18).getTime() });
+  const evening = exportBaseName({ startedAt: new Date(2025, 7, 12, 19, 2).getTime() });
+  assert(morning !== evening, `${morning} collides with the evening run`);
+});
+
+check('the filename follows the local calendar, not UTC', () => {
+  /*
+   * The reported bug: an early-morning run in Athens filed under the previous
+   * day, because toISOString() is UTC. Anywhere east of Greenwich this stamp
+   * is the 12th locally and the 11th in UTC. Under TZ=UTC the two agree, so
+   * the second assertion is skipped rather than made to pass vacuously — this
+   * is as far as a portable test reaches without moving the whole suite into
+   * a fixed zone.
+   */
+  const ts = Date.UTC(2025, 7, 11, 23, 30);
+  const local = new Date(ts);
+  const expected = [
+    local.getFullYear(),
+    String(local.getMonth() + 1).padStart(2, '0'),
+    String(local.getDate()).padStart(2, '0'),
+  ].join('-');
+  const name = exportBaseName({ startedAt: ts });
+  equal(name.slice(7, 17), expected);
+  if (local.getTimezoneOffset() !== 0) {
+    assert(!name.includes(local.toISOString().slice(0, 10)), `${name} is still UTC-dated`);
   }
 });
 

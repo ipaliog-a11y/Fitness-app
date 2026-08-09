@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   averagePace,
+  exportBaseName,
   hasRoute,
   modeName,
   splits,
@@ -22,7 +23,8 @@ import {
   goalMet,
   goalProgress,
 } from '../core/goal';
-import { activityToGpx, downloadText } from '../core/gpx';
+import { activityToGpx } from '../core/gpx';
+import { saveTextFile } from '../platform/saveFile';
 import { activityToTcx } from '../core/tcx';
 import {
   heartSummaryFromReport,
@@ -46,6 +48,7 @@ import { resolveMapBasemap } from '../core/mercator';
 import { HeartChart, SplitsTable, ZoneBars } from './charts';
 import { RouteMap } from './RouteMap';
 import { useDateText, useT, useTipText } from '../i18n/react';
+import type { MessageKey } from '../i18n';
 
 interface Props {
   activity: Activity;
@@ -199,6 +202,27 @@ export function DetailScreen({
   const [note, setNote] = useState(activity.note);
   const [confirming, setConfirming] = useState(false);
 
+  /**
+   * Hand a generated file to the athlete and say what really happened.
+   *
+   * The old code announced "TCX downloaded" the instant it had built a string,
+   * whether or not anything reached the disk — which is how a lost export
+   * looked exactly like a successful one. A dismissed share sheet says nothing
+   * at all: the athlete just cancelled, and they know.
+   */
+  const exportRun = async (
+    filename: string,
+    text: string,
+    mime: string,
+    sharedKey: MessageKey,
+    downloadedKey: MessageKey,
+  ) => {
+    const outcome = await saveTextFile(filename, text, mime);
+    if (outcome === 'shared') onToast?.(t(sharedKey));
+    else if (outcome === 'downloaded') onToast?.(t(downloadedKey, { filename }));
+    else if (outcome === 'failed') onToast?.(t('detail.exportFailed'));
+  };
+
   // Prefer the zone report frozen at finish (stable if max HR changes later).
   const heart: HeartSummary | null = activity.heartReport
     ? heartSummaryFromReport(activity.heartReport)
@@ -279,10 +303,13 @@ export function DetailScreen({
             type="button"
             className="btn"
             onClick={() => {
-              const gpx = activityToGpx(activity);
-              const day = new Date(activity.startedAt).toISOString().slice(0, 10);
-              downloadText(`runlog-${day}.gpx`, gpx, 'application/gpx+xml');
-              onToast?.(t('detail.gpxDone'));
+              void exportRun(
+                `${exportBaseName(activity)}.gpx`,
+                activityToGpx(activity),
+                'application/gpx+xml',
+                'detail.gpxShared',
+                'detail.gpxDone',
+              );
             }}
           >
             {t('detail.exportGpx')}
@@ -507,10 +534,13 @@ export function DetailScreen({
           type="button"
           className="btn wide"
           onClick={() => {
-            const tcx = activityToTcx(activity);
-            const day = new Date(activity.startedAt).toISOString().slice(0, 10);
-            downloadText(`runlog-${day}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
-            onToast?.(t('detail.tcxDone'));
+            void exportRun(
+              `${exportBaseName(activity)}.tcx`,
+              activityToTcx(activity),
+              'application/vnd.garmin.tcx+xml',
+              'detail.tcxShared',
+              'detail.tcxDone',
+            );
           }}
         >
           {t('detail.exportTcx')}

@@ -758,8 +758,11 @@ export const el: Messages = {
   'detail.notePlaceholder': 'Πώς σου φάνηκε;',
   'detail.exportGpx': 'Εξαγωγή GPX',
   'detail.exportTcx': 'Εξαγωγή TCX',
-  'detail.gpxDone': 'Το GPX κατέβηκε (με παλμούς όπου υπάρχουν).',
-  'detail.tcxDone': 'Το TCX κατέβηκε — βολικό για Strava / Garmin.',
+  'detail.gpxDone': 'Αποθηκεύτηκε στις Λήψεις ως {filename}',
+  'detail.tcxDone': 'Αποθηκεύτηκε στις Λήψεις ως {filename}',
+  'detail.gpxShared': 'Το GPX στάλθηκε (με παλμούς όπου υπάρχουν).',
+  'detail.tcxShared': 'Το TCX στάλθηκε — βολικό για Strava / Garmin.',
+  'detail.exportFailed': 'Δεν ήταν δυνατή η αποθήκευση του αρχείου.',
   'detail.noRoute': 'Δεν υπάρχει διαδρομή για αποθήκευση.',
   'detail.routeExists': 'Αυτή η διαδρομή είναι ήδη αποθηκευμένη.',
   'detail.routeSaved': 'Αποθηκεύτηκε η διαδρομή «{name}».',
@@ -878,7 +881,8 @@ export const el: Messages = {
   'settings.routeDeleted': 'Η διαδρομή διαγράφηκε.',
   'settings.data.title': 'Τα δεδομένα σου',
   'settings.backup.done':
-    'Κατέβηκε πλήρες αντίγραφο ασφαλείας (τρεξίματα, προφίλ, παπούτσια, διαδρομές, πλάνο).',
+    'Στάλθηκε πλήρες αντίγραφο ασφαλείας (τρεξίματα, προφίλ, παπούτσια, διαδρομές, πλάνο).',
+  'settings.backup.saved': 'Το αντίγραφο αποθηκεύτηκε στις Λήψεις ως {filename}',
   'settings.backup.unreadable': 'Δεν ήταν δυνατή η ανάγνωση αυτού του αρχείου.',
   'settings.gpxFailed': 'Η εισαγωγή GPX απέτυχε.',
   'settings.wiped':

@@ -245,12 +245,6 @@ export function activityFromGpx(xml: string, note = ''): Activity {
   };
 }
 
-
-export function downloadText(filename: string, text: string, mime: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: mime }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
+// Getting the file onto the device lives in src/platform/saveFile.ts. It is
+// browser plumbing, and this module is meant to be pure — it only knows how to
+// turn a run into text.

@@ -14,6 +14,7 @@ import {
 import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
 import { LOCALE_OPTIONS, type LocaleId } from '../i18n';
 import { useDateText, useT } from '../i18n/react';
+import { saveTextFile } from '../platform/saveFile';
 import { estimateStride } from '../core/steps';
 import {
   distanceLabel,
@@ -169,13 +170,16 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
 
   const download = async () => {
     const json = await exportFullBackup();
-    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `runlog-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    onToast(t('settings.backup.done'));
+    const at = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    // Local date, matching the run exports. A backup filed under yesterday
+    // because the clock passed midnight in London is a backup you distrust.
+    const day = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+    const filename = `runlog-backup-${day}.json`;
+    const outcome = await saveTextFile(filename, json, 'application/json');
+    if (outcome === 'shared') onToast(t('settings.backup.done'));
+    else if (outcome === 'downloaded') onToast(t('settings.backup.saved', { filename }));
+    else if (outcome === 'failed') onToast(t('detail.exportFailed'));
   };
 
   const upload = async (file: File) => {

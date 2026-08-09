@@ -108,6 +108,27 @@ export function modeIcon(mode: RunMode): string {
   return mode === 'outdoor' ? '🏃' : '🎽';
 }
 
+/**
+ * Filename stem for an exported run: `runlog-2025-08-12-0718`.
+ *
+ * Local time, deliberately. The exports used to name themselves out of
+ * `toISOString()`, which is UTC — so a run started at 01:30 in Athens was filed
+ * under the previous day, and the file the athlete went looking for was not
+ * there under the date they remembered.
+ *
+ * The clock time is in the name because the date alone is not unique. Two runs
+ * on one day exported to one name, and the second either arrived as "(1)" or
+ * replaced the first, depending on the browser.
+ */
+export function exportBaseName(activity: Activity): string {
+  const at = new Date(activity.startedAt);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `runlog-${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}` +
+    `-${pad(at.getHours())}${pad(at.getMinutes())}`
+  );
+}
+
 /** Newest first — the order the history list wants. */
 export function byNewest(a: Activity, b: Activity): number {
   return b.startedAt - a.startedAt;
