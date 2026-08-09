@@ -40,6 +40,7 @@ import {
   paceLabel,
 } from '../core/units';
 import { toDisplayWeight, weightUnitLabel } from '../core/weight';
+import { useT } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -203,6 +204,7 @@ function CalendarView({
   onOpen(id: string): void;
   weightTick?: number;
 }) {
+  const t = useT();
   const now = Date.now();
   const [monthStart, setMonthStart] = useState(() => startOfMonth(now));
   const [selected, setSelected] = useState<number>(() => startOfDay(now));
@@ -361,12 +363,14 @@ function CalendarView({
                   <small>plan</small>
                 </span>
                 <span className="body">
-                  <span className="headline">{ev.session.title}</span>
+                  <span className="headline">{t(ev.session.title)}</span>
                   <span className="meta">
-                    {ev.planName} · {ev.kindLabel}
-                    {ev.at >= startOfDay(now) && !ev.done ? ' · upcoming' : ''}
-                    {ev.done ? ' · done' : ''}
-                    {ev.session.blurb ? ` · ${ev.session.blurb}` : ''}
+                    {t(ev.planName)} · {t(ev.kindLabel)}
+                    {ev.at >= startOfDay(now) && !ev.done ? ` · ${t('history.upcoming')}` : ''}
+                    {ev.done ? ` · ${t('history.done')}` : ''}
+                    {ev.session.blurb
+                      ? ` · ${t(ev.session.blurb, ev.session.blurbVars)}`
+                      : ''}
                   </span>
                 </span>
               </div>

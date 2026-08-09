@@ -2165,6 +2165,7 @@ const SHARED = new Set([
   'phase.float',
   'phase.stride',
   'workout.tempo-20.name',
+  'planKind.tempo',
   'workout.cruise-5x5.name',
   'workout.fartlek-20.name',
   'workout.mona-fartlek.name',

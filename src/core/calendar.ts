@@ -4,6 +4,8 @@
  * Weeks start on Monday to match the rest of the training week model.
  */
 
+import type { MessageKey } from '../i18n';
+
 import type { Activity } from './activity';
 import {
   isSessionComplete,
@@ -57,9 +59,9 @@ export type CalendarPlanEvent = {
   id: string;
   at: number;
   session: PlanSession;
-  planName: string;
+  planName: MessageKey;
   done: boolean;
-  kindLabel: string;
+  kindLabel: MessageKey;
 };
 
 export type CalendarWeightEvent = {

@@ -49,7 +49,8 @@ import {
   paceLabel,
 } from '../core/units';
 import { WeeklyBars } from './charts';
-import { useT, useTipText } from '../i18n/react';
+import type { MessageKey } from '../i18n';
+import { useLocale, useT, useTipText } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -94,12 +95,16 @@ function recoveryRingLabel(status: RecoveryStatus): string {
   }
 }
 
-function sessionTarget(s: PlanSession, units: Profile['units']): string {
+function sessionTarget(
+  s: PlanSession,
+  units: Profile['units'],
+  t: (key: MessageKey) => string,
+): string {
   if (s.targetDistanceM) {
     return `${formatDistance(s.targetDistanceM, units)} ${distanceLabel(units)}`;
   }
   if (s.targetDurationMs) return formatDuration(s.targetDurationMs);
-  return kindLabel(s.kind);
+  return t(kindLabel(s.kind));
 }
 
 export function CoachScreen({
@@ -113,6 +118,7 @@ export function CoachScreen({
 }: Props) {
   const tipText = useTipText();
   const t = useT();
+  const { tag } = useLocale();
   const now = Date.now();
   const [active, setActive] = useState<ActivePlanState | null>(() => loadActivePlan());
   const [browse, setBrowse] = useState(false);
@@ -393,11 +399,11 @@ export function CoachScreen({
                 {PLAN_TEMPLATES.map((p) => (
                   <div className="plan-card" key={p.id}>
                     <div className="row">
-                      <strong>{p.name}</strong>
+                      <strong>{t(p.name)}</strong>
                       <span className="pill">{p.weeks} wk</span>
                     </div>
                     <p className="hint" style={{ marginTop: 6 }}>
-                      {p.blurb}
+                      {t(p.blurb)}
                     </p>
                     <button
                       type="button"
@@ -418,7 +424,7 @@ export function CoachScreen({
         ) : (
           <>
             <p className="goal-summary" style={{ marginTop: 10 }}>
-              {plan.name}
+              {t(plan.name)}
             </p>
             <p className="hint">
               Week {planWeek + 1} of {plan.weeks}
@@ -433,15 +439,16 @@ export function CoachScreen({
               <div className="next-session next-session-hero">
                 <div className="next-session-label">Next session</div>
                 <div className="row">
-                  <span className="pill">{kindLabel(upcoming.kind)}</span>
+                  <span className="pill">{t(kindLabel(upcoming.kind))}</span>
                   <span className="hint" style={{ margin: 0 }}>
-                    {dayName(upcoming.dayOfWeek)}
+                    {dayName(upcoming.dayOfWeek, tag)}
                     {upcoming.week !== planWeek ? ` · week ${upcoming.week + 1}` : ''}
                   </span>
                 </div>
-                <strong>{upcoming.title}</strong>
+                <strong>{t(upcoming.title)}</strong>
                 <p className="hint" style={{ marginBottom: 8 }}>
-                  {upcoming.blurb} · {sessionTarget(upcoming, profile.units)}
+                  {t(upcoming.blurb, upcoming.blurbVars)} ·{' '}
+                  {sessionTarget(upcoming, profile.units, t)}
                 </p>
                 {onStartRun && (
                   <button type="button" className="btn primary wide" onClick={onStartRun}>
@@ -467,10 +474,10 @@ export function CoachScreen({
                       </span>
                       <span className="body">
                         <span className="headline">
-                          {dayName(s.dayOfWeek)} · {s.title}
+                          {dayName(s.dayOfWeek, tag)} · {t(s.title)}
                         </span>
                         <span className="meta">
-                          {kindLabel(s.kind)} · {sessionTarget(s, profile.units)}
+                          {t(kindLabel(s.kind))} · {sessionTarget(s, profile.units, t)}
                         </span>
                       </span>
                     </button>

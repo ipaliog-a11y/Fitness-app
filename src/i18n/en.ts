@@ -376,6 +376,49 @@ export const en = {
   'toast.workout': 'Workout: {name}',
   'workout.savedFallback': 'Saved custom workout',
   'workout.customFallback': 'Build your own work / rest repeats.',
+
+  // --- Training plans -------------------------------------------------------
+  'plan.start-to-run.name': 'Start to run',
+  'plan.start-to-run.blurb': '8 weeks from walk-breaks to a steady 30-minute jog. Three days a week.',
+  'plan.first-5k.name': 'First 5K',
+  'plan.first-5k.blurb': '6 weeks aimed at covering 5 km without stress. Mix of easy days and one longer effort.',
+  'plan.base-builder.name': 'Base builder',
+  'plan.base-builder.blurb': '4 weeks of steady volume for runners who already run. Mostly easy, one longer day.',
+  'plan.return-to-run.name': 'Return to run',
+  'plan.return-to-run.blurb': '3 gentle weeks after time off. Short, easy, frequent enough to rebuild habit.',
+
+  'planSession.easyWithWalkBreaks.title': 'Easy with walk breaks',
+  'planSession.easy.title': 'Easy',
+  'planSession.longerEasy.title': 'Longer easy',
+  'planSession.longRun.title': 'Long run',
+  'planSession.easyOrStrides.title': 'Easy or strides',
+  'planSession.quality.title': 'Quality',
+
+  'planSession.keepItConversationalShorterI.blurb': 'Keep it conversational. Shorter is fine.',
+  'planSession.relaxedPaceAbout2030Minutes.blurb': 'Relaxed pace, about 20–30 minutes.',
+  'planSession.keepItLightOptionalShortStri.blurb': 'Keep it light. Optional short strides at the end.',
+  'planSession.oneFocusedSessionTempoOrShor.blurb': 'One focused session — tempo or short repeats if you feel good.',
+  'planSession.sameIdeaKeepItShort.blurb': 'Same idea, keep it short.',
+  'planSession.finishTheWeekWithoutChasingP.blurb': 'Finish the week without chasing pace.',
+
+  'planSession.aboutMinEasy.blurb': 'About {minutes} min easy, walk as needed.',
+  'planSession.buildPatience.blurb': 'Build patience — aim near {minutes} min total.',
+  'planSession.buildToward5k.blurb': 'Build toward 5 km — about {km} km this week.',
+  'planSession.kmEasy.blurb': '~{km} km easy.',
+  'planSession.longAerobic.blurb': 'Long aerobic — about {km} km.',
+  'planSession.minutesEasyWalk.blurb': '{minutes} minutes easy. Walk breaks allowed.',
+
+  'planSession.gentlePickups.title': 'Gentle pickups',
+  'planSession.finishQuicker.blurb':
+    'Finish with a few minutes a touch quicker — still controlled.',
+  'planSession.stayEasy.blurb': 'Stay easy. Consistency beats heroics.',
+  'planKind.easy': 'Easy',
+  'planKind.long': 'Long',
+  'planKind.intervals': 'Intervals',
+  'planKind.tempo': 'Tempo',
+  'planKind.rest': 'Rest',
+  'history.upcoming': 'upcoming',
+  'history.done': 'done',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */

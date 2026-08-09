@@ -1,3 +1,4 @@
+import type { MessageKey, Vars } from '../i18n';
 /**
  * Lightweight training plans — schedules of easy / long / quality days.
  *
@@ -17,9 +18,11 @@ export interface PlanSession {
   week: number;
   /** 0 = Monday … 6 = Sunday. */
   dayOfWeek: number;
-  title: string;
+  title: MessageKey;
   kind: PlanSessionKind;
-  blurb: string;
+  blurb: MessageKey;
+  /** Substitutions for blurbs that quote a target distance or duration. */
+  blurbVars?: Vars;
   /** Suggested distance in metres, when relevant. */
   targetDistanceM?: number;
   /** Suggested moving time in ms. */
@@ -30,8 +33,8 @@ export interface PlanSession {
 
 export interface PlanTemplate {
   id: string;
-  name: string;
-  blurb: string;
+  name: MessageKey;
+  blurb: MessageKey;
   weeks: number;
   level: 'beginner' | 'improver' | 'base';
   sessions: PlanSession[];
@@ -61,8 +64,8 @@ const km = (n: number) => n * 1000;
 export const PLAN_TEMPLATES: PlanTemplate[] = [
   {
     id: 'start-to-run',
-    name: 'Start to run',
-    blurb: '8 weeks from walk-breaks to a steady 30-minute jog. Three days a week.',
+    name: 'plan.start-to-run.name',
+    blurb: 'plan.start-to-run.blurb',
     weeks: 8,
     level: 'beginner',
     sessions: flattenWeeks(8, (week) => {
@@ -71,24 +74,26 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
       return [
         {
           dayOfWeek: 1,
-          title: 'Easy with walk breaks',
+          title: 'planSession.easyWithWalkBreaks.title',
           kind: 'easy' as const,
-          blurb: `About ${Math.round(runMin)} min easy, walk as needed.`,
+          blurb: 'planSession.aboutMinEasy.blurb',
+          blurbVars: { minutes: Math.round(runMin) },
           targetDurationMs: min(runMin + walkMin),
           workoutId: week < 3 ? 'beginner-walk-run' : week < 6 ? 'walk-run-2-1' : 'easy-30',
         },
         {
           dayOfWeek: 3,
-          title: 'Easy',
+          title: 'planSession.easy.title',
           kind: 'easy' as const,
-          blurb: 'Keep it conversational. Shorter is fine.',
+          blurb: 'planSession.keepItConversationalShorterI.blurb',
           targetDurationMs: min(Math.max(15, runMin - 5)),
         },
         {
           dayOfWeek: 5,
-          title: 'Longer easy',
+          title: 'planSession.longerEasy.title',
           kind: 'long' as const,
-          blurb: `Build patience — aim near ${Math.round(runMin + 5)} min total.`,
+          blurb: 'planSession.buildPatience.blurb',
+          blurbVars: { minutes: Math.round(runMin + 5) },
           targetDurationMs: min(runMin + 5),
         },
       ];
@@ -96,8 +101,8 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: 'first-5k',
-    name: 'First 5K',
-    blurb: '6 weeks aimed at covering 5 km without stress. Mix of easy days and one longer effort.',
+    name: 'plan.first-5k.name',
+    blurb: 'plan.first-5k.blurb',
     weeks: 6,
     level: 'beginner',
     sessions: flattenWeeks(6, (week) => {
@@ -105,27 +110,28 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
       return [
         {
           dayOfWeek: 1,
-          title: 'Easy',
+          title: 'planSession.easy.title',
           kind: 'easy' as const,
-          blurb: 'Relaxed pace, about 20–30 minutes.',
+          blurb: 'planSession.relaxedPaceAbout2030Minutes.blurb',
           targetDurationMs: min(25),
         },
         {
           dayOfWeek: 3,
-          title: week >= 4 ? 'Gentle pickups' : 'Easy',
+          title: week >= 4 ? 'planSession.gentlePickups.title' : 'planSession.easy.title',
           kind: week >= 4 ? ('tempo' as const) : ('easy' as const),
           blurb:
             week >= 4
-              ? 'Finish with a few minutes a touch quicker — still controlled.'
-              : 'Stay easy. Consistency beats heroics.',
+              ? 'planSession.finishQuicker.blurb'
+              : 'planSession.stayEasy.blurb',
           targetDurationMs: min(30),
           workoutId: week >= 4 ? 'fartlek-20' : undefined,
         },
         {
           dayOfWeek: 6,
-          title: 'Long run',
+          title: 'planSession.longRun.title',
           kind: 'long' as const,
-          blurb: `Build toward 5 km — about ${longKm.toFixed(1)} km this week.`,
+          blurb: 'planSession.buildToward5k.blurb',
+          blurbVars: { km: longKm.toFixed(1) },
           targetDistanceM: km(longKm),
         },
       ];
@@ -133,8 +139,8 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: 'base-builder',
-    name: 'Base builder',
-    blurb: '4 weeks of steady volume for runners who already run. Mostly easy, one longer day.',
+    name: 'plan.base-builder.name',
+    blurb: 'plan.base-builder.blurb',
     weeks: 4,
     level: 'base',
     sessions: flattenWeeks(4, (week) => {
@@ -143,31 +149,33 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
       return [
         {
           dayOfWeek: 0,
-          title: 'Easy',
+          title: 'planSession.easy.title',
           kind: 'easy' as const,
-          blurb: `~${easyKm} km easy.`,
+          blurb: 'planSession.kmEasy.blurb',
+          blurbVars: { km: easyKm },
           targetDistanceM: km(easyKm),
         },
         {
           dayOfWeek: 2,
-          title: 'Easy or strides',
+          title: 'planSession.easyOrStrides.title',
           kind: 'easy' as const,
-          blurb: 'Keep it light. Optional short strides at the end.',
+          blurb: 'planSession.keepItLightOptionalShortStri.blurb',
           targetDistanceM: km(easyKm),
         },
         {
           dayOfWeek: 4,
-          title: 'Quality',
+          title: 'planSession.quality.title',
           kind: 'intervals' as const,
-          blurb: 'One focused session — tempo or short repeats if you feel good.',
+          blurb: 'planSession.oneFocusedSessionTempoOrShor.blurb',
           targetDurationMs: min(40),
           workoutId: week % 2 === 0 ? 'tempo-20' : 'vo2-3min',
         },
         {
           dayOfWeek: 6,
-          title: 'Long run',
+          title: 'planSession.longRun.title',
           kind: 'long' as const,
-          blurb: `Long aerobic — about ${longKm.toFixed(0)} km.`,
+          blurb: 'planSession.longAerobic.blurb',
+          blurbVars: { km: longKm.toFixed(0) },
           targetDistanceM: km(longKm),
         },
       ];
@@ -175,8 +183,8 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
   },
   {
     id: 'return-to-run',
-    name: 'Return to run',
-    blurb: '3 gentle weeks after time off. Short, easy, frequent enough to rebuild habit.',
+    name: 'plan.return-to-run.name',
+    blurb: 'plan.return-to-run.blurb',
     weeks: 3,
     level: 'beginner',
     sessions: flattenWeeks(3, (week) => {
@@ -184,24 +192,25 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
       return [
         {
           dayOfWeek: 1,
-          title: 'Easy',
+          title: 'planSession.easy.title',
           kind: 'easy' as const,
-          blurb: `${mins} minutes easy. Walk breaks allowed.`,
+          blurb: 'planSession.minutesEasyWalk.blurb',
+          blurbVars: { minutes: mins },
           targetDurationMs: min(mins),
           workoutId: 'beginner-walk-run',
         },
         {
           dayOfWeek: 3,
-          title: 'Easy',
+          title: 'planSession.easy.title',
           kind: 'easy' as const,
-          blurb: 'Same idea, keep it short.',
+          blurb: 'planSession.sameIdeaKeepItShort.blurb',
           targetDurationMs: min(mins),
         },
         {
           dayOfWeek: 5,
-          title: 'Easy',
+          title: 'planSession.easy.title',
           kind: 'easy' as const,
-          blurb: 'Finish the week without chasing pace.',
+          blurb: 'planSession.finishTheWeekWithoutChasingP.blurb',
           targetDurationMs: min(mins + 5),
         },
       ];
@@ -314,24 +323,35 @@ export function planOverallProgress(state: ActivePlanState, plan: PlanTemplate):
   return done / runnable.length;
 }
 
-const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-export function dayName(dayOfWeek: number): string {
-  return DAY_NAMES[dayOfWeek] ?? `D${dayOfWeek}`;
+/**
+ * Short weekday name, from Intl rather than a catalogue.
+ *
+ * Weekday names are not app copy — every locale already ships them, correctly
+ * abbreviated and correctly capitalised for that language. Putting seven
+ * strings per locale in the catalogue would be work that Intl does better,
+ * and would go wrong the moment a locale abbreviates differently.
+ *
+ * 2024-01-01 was a Monday, which is what makes dayOfWeek 0 = Monday line up.
+ */
+export function dayName(dayOfWeek: number, tag = 'en-GB'): string {
+  const index = Math.trunc(dayOfWeek);
+  if (!Number.isFinite(index) || index < 0 || index > 6) return `D${dayOfWeek}`;
+  const monday = Date.UTC(2024, 0, 1 + index);
+  return new Intl.DateTimeFormat(tag, { weekday: 'short', timeZone: 'UTC' }).format(monday);
 }
 
-export function kindLabel(kind: PlanSessionKind): string {
+export function kindLabel(kind: PlanSessionKind): MessageKey {
   switch (kind) {
     case 'easy':
-      return 'Easy';
+      return 'planKind.easy';
     case 'long':
-      return 'Long';
+      return 'planKind.long';
     case 'intervals':
-      return 'Intervals';
+      return 'planKind.intervals';
     case 'tempo':
-      return 'Tempo';
+      return 'planKind.tempo';
     case 'rest':
-      return 'Rest';
+      return 'planKind.rest';
   }
 }
 

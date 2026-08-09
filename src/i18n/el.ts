@@ -416,4 +416,47 @@ export const el: Messages = {
   'toast.workout': 'Προπόνηση: {name}',
   'workout.savedFallback': 'Αποθηκευμένη δική σου προπόνηση',
   'workout.customFallback': 'Φτιάξε τις δικές σου επαναλήψεις προσπάθειας / ξεκούρασης.',
+
+  // --- Training plans -------------------------------------------------------
+  'plan.start-to-run.name': 'Ξεκίνα να τρέχεις',
+  'plan.start-to-run.blurb': '8 εβδομάδες από διαλείμματα περπατήματος σε σταθερό τζόγκινγκ 30 λεπτών. Τρεις μέρες την εβδομάδα.',
+  'plan.first-5k.name': 'Πρώτα 5Κ',
+  'plan.first-5k.blurb': '6 εβδομάδες με στόχο να καλύψεις 5 χλμ χωρίς άγχος. Μείγμα χαλαρών ημερών και μιας πιο μεγάλης προσπάθειας.',
+  'plan.base-builder.name': 'Χτίσιμο βάσης',
+  'plan.base-builder.blurb': '4 εβδομάδες σταθερού όγκου για όσους ήδη τρέχουν. Κυρίως χαλαρά, μία πιο μεγάλη μέρα.',
+  'plan.return-to-run.name': 'Επιστροφή στο τρέξιμο',
+  'plan.return-to-run.blurb': '3 ήπιες εβδομάδες μετά από διάλειμμα. Σύντομα, χαλαρά, αρκετά συχνά για να ξαναχτιστεί η συνήθεια.',
+
+  'planSession.easyWithWalkBreaks.title': 'Χαλαρό με διαλείμματα περπατήματος',
+  'planSession.easy.title': 'Χαλαρό',
+  'planSession.longerEasy.title': 'Πιο μεγάλο χαλαρό',
+  'planSession.longRun.title': 'Μεγάλο τρέξιμο',
+  'planSession.easyOrStrides.title': 'Χαλαρό ή strides',
+  'planSession.quality.title': 'Ποιοτική',
+
+  'planSession.keepItConversationalShorterI.blurb': 'Κράτα το σε ρυθμό κουβέντας. Πιο σύντομο είναι μια χαρά.',
+  'planSession.relaxedPaceAbout2030Minutes.blurb': 'Χαλαρός ρυθμός, γύρω στα 20–30 λεπτά.',
+  'planSession.keepItLightOptionalShortStri.blurb': 'Κράτα το ελαφρύ. Προαιρετικά σύντομα strides στο τέλος.',
+  'planSession.oneFocusedSessionTempoOrShor.blurb': 'Μία στοχευμένη προπόνηση — tempo ή σύντομες επαναλήψεις αν νιώθεις καλά.',
+  'planSession.sameIdeaKeepItShort.blurb': 'Ίδια ιδέα, κράτα το σύντομο.',
+  'planSession.finishTheWeekWithoutChasingP.blurb': 'Κλείσε την εβδομάδα χωρίς να κυνηγάς ρυθμό.',
+
+  'planSession.aboutMinEasy.blurb': 'Περίπου {minutes} λεπτά χαλαρά, περπάτα όποτε χρειάζεται.',
+  'planSession.buildPatience.blurb': 'Χτίσε υπομονή — στόχευσε γύρω στα {minutes} λεπτά συνολικά.',
+  'planSession.buildToward5k.blurb': 'Χτίσε προς τα 5 χλμ — περίπου {km} χλμ αυτή την εβδομάδα.',
+  'planSession.kmEasy.blurb': '~{km} χλμ χαλαρά.',
+  'planSession.longAerobic.blurb': 'Μεγάλο αερόβιο — περίπου {km} χλμ.',
+  'planSession.minutesEasyWalk.blurb': '{minutes} λεπτά χαλαρά. Επιτρέπονται διαλείμματα περπατήματος.',
+
+  'planSession.gentlePickups.title': 'Ήπιες επιταχύνσεις',
+  'planSession.finishQuicker.blurb':
+    'Κλείσε με λίγα λεπτά ελαφρώς πιο γρήγορα — πάντα ελεγχόμενα.',
+  'planSession.stayEasy.blurb': 'Μείνε χαλαρά. Η συνέπεια νικάει τους ηρωισμούς.',
+  'planKind.easy': 'Χαλαρό',
+  'planKind.long': 'Μεγάλο',
+  'planKind.intervals': 'Ιντερβάλ',
+  'planKind.tempo': 'Tempo',
+  'planKind.rest': 'Ξεκούραση',
+  'history.upcoming': 'επερχόμενη',
+  'history.done': 'ολοκληρώθηκε',
 };
