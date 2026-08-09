@@ -550,6 +550,85 @@ export const en = {
   'weight.noEntries': 'No entries yet.',
   'weight.goalCleared': 'Weight goal cleared.',
   'weight.entryRemoved': 'Entry removed.',
+
+  // --- Run detail -----------------------------------------------------------
+  'common.back': 'Back',
+  'detail.decisionBanner':
+    'Finish by choosing {save} or {delete} — navigation is locked so this run is not left by accident.',
+  'detail.moving': 'Moving',
+  'detail.avgBpm': 'Avg bpm',
+  'detail.maxBpm': 'Max bpm',
+  'detail.minBpm': 'Min bpm',
+  'detail.hrReport': 'Heart rate report',
+  'detail.zoneTime': 'Time in each zone',
+  'detail.zoneSaved': 'saved with the run (max HR {max})',
+  'detail.zoneSamples': 'from samples (max HR {max})',
+  'detail.zoneMeasured': '{time} measured',
+  'detail.chartHr': 'Heart rate, pace & speed',
+  'detail.chartPace': 'Pace & speed',
+  'detail.chartHrHint': 'By distance. Tap series to hide; drag the chart to read values.',
+  'detail.chartPaceHint':
+    'From GPS — no heart-rate strap on this run. Pace is on by default; turn on Speed if you want both.',
+  'detail.coachNotes': 'Notes from the coach',
+  'detail.yourNote': 'Your note',
+  'detail.notePlaceholder': 'How did it feel?',
+  'detail.exportGpx': 'Export GPX',
+  'detail.exportTcx': 'Export TCX',
+  'detail.gpxDone': 'GPX downloaded (HR included when available).',
+  'detail.tcxDone': 'TCX downloaded — good for Strava / Garmin.',
+  'detail.noRoute': 'No route to save.',
+  'detail.routeExists': 'This route is already saved.',
+  'detail.routeSaved': 'Saved route “{name}”.',
+  'detail.deleteForGood': 'Delete for good',
+
+  // --- Coach screen ---------------------------------------------------------
+  'coach.planStartFailed': 'Could not start that plan.',
+  'coach.planStarted': 'Started: {name}',
+  'coach.planFallback': 'plan',
+  'coach.planCleared': 'Plan cleared.',
+  'coach.ringLoad': 'Load',
+  'coach.sevenDay': '7-day load',
+  'coach.baseLoad': 'Base load',
+  'coach.acuteChronic': 'Acute:chronic',
+  'coach.loadNote':
+    'Load is a simple score from time and effort (HR when available). It is a guide, not a medical reading.',
+  'coach.planTitle': 'Training plan',
+  'coach.endPlan': 'End plan',
+  'coach.nextSession': 'Next session',
+  'coach.tapSession': 'Tap a session to mark it complete.',
+  'coach.notes': 'Coach notes',
+
+  // --- Coach guide ----------------------------------------------------------
+  'coach.guide.title': 'Understanding Coach',
+  'coach.guide.subtitle':
+    'Short plain-language guide to the recovery numbers — not medical advice.',
+  'coach.guide.whyTitle': 'Why recovery matters',
+  'coach.guide.whyBody':
+    'Hard training only works if the body adapts between sessions. Too much hard work stacked too close together raises injury risk and makes the next run feel flat. Easy days and sleep are part of the plan, not a break from it.',
+  'coach.guide.freshNote': 'room for a quality session if you feel good.',
+  'coach.guide.balancedNote': 'keep most running easy; hard days are planned.',
+  'coach.guide.loadedHigh': 'Loaded / High',
+  'coach.guide.loadedNote': 'ease volume and intensity until you bounce back.',
+  'coach.guide.sevenDayBody':
+    'How much training stress you have piled up in the last week. It scores each run from time and effort (heart rate when available, otherwise pace). Higher means more recent work — not “good” or “bad” by itself.',
+  'coach.guide.baseBody':
+    'Your recent average weekly load (about the last four weeks). Think of it as your fitness “normal.” New runners with little history will see a small base — that is expected.',
+  'coach.guide.acuteTitle': 'Acute : chronic',
+  'coach.guide.acuteIntro': 'The ratio of this week’s load ÷ your base. Roughly:',
+  'coach.guide.under08': 'Under ~0.8',
+  'coach.guide.under08Note': 'lighter than usual (fresh / taper).',
+  'coach.guide.steadyNote': 'steady build.',
+  'coach.guide.above15': 'Above ~1.5',
+  'coach.guide.above15Note': 'a sharp jump; classic risk window if volume is high.',
+  'coach.guide.ratioCaveat':
+    'With only a few easy runs, a high ratio can look scary while absolute load is still low. RunLog only flags “high load” when the base is solid enough — still use how you feel.',
+  'coach.guide.weeklyTitle': 'Weekly distance & records',
+  'coach.guide.weeklyBody':
+    'Simple totals and personal bests from runs saved on this device. The weekly goal bar (if you set one in Profile) is a distance target, separate from load.',
+  'coach.guide.plansTitle': 'Training plans',
+  'coach.guide.plansBody':
+    'Multi-week templates you tick by hand. They guide structure; they do not auto-read your GPS and invent sessions.',
+  'coach.guide.gotIt': 'Got it',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */

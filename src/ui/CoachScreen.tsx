@@ -181,12 +181,13 @@ export function CoachScreen({
   const start = (planId: string) => {
     const state = startPlan(planId, now);
     if (!state) {
-      onToast('Could not start that plan.');
+      onToast(t('coach.planStartFailed'));
       return;
     }
     setActive(state);
     setBrowse(false);
-    onToast(`Started: ${planById(planId)?.name ?? 'plan'}`);
+    const started = planById(planId);
+    onToast(t('coach.planStarted', { name: started ? t(started.name) : t('coach.planFallback') }));
     const { newly } = refreshAchievements(activities, profile);
     if (newly.length === 1) onToast(t('toast.achievement.one', { name: t(newly[0].title) }));
   };
@@ -194,7 +195,7 @@ export function CoachScreen({
   const stop = () => {
     clearPlan();
     setActive(null);
-    onToast('Plan cleared.');
+    onToast(t('coach.planCleared'));
   };
 
   const toggle = (session: PlanSession) => {
@@ -206,92 +207,72 @@ export function CoachScreen({
     return (
       <div className="screen coach-guide">
         <button type="button" className="back" onClick={() => setGuideOpen(false)}>
-          ‹ Back
+          ‹ {t('common.back')}
         </button>
-        <h1>Understanding Coach</h1>
-        <p className="subtitle">
-          Short plain-language guide to the recovery numbers — not medical advice.
-        </p>
+        <h1>{t('coach.guide.title')}</h1>
+        <p className="subtitle">{t('coach.guide.subtitle')}</p>
 
         <div className="card">
-          <h2>Why recovery matters</h2>
+          <h2>{t('coach.guide.whyTitle')}</h2>
           <p className="hint" style={{ marginTop: 0 }}>
-            Hard training only works if the body adapts between sessions. Too much hard work
-            stacked too close together raises injury risk and makes the next run feel flat.
-            Easy days and sleep are part of the plan, not a break from it.
+            {t('coach.guide.whyBody')}
           </p>
           <ul className="coach-guide-list">
             <li>
-              <strong>Fresh</strong> — room for a quality session if you feel good.
+              <strong>{t('recovery.fresh.label')}</strong> — {t('coach.guide.freshNote')}
             </li>
             <li>
-              <strong>Balanced</strong> — keep most running easy; hard days are planned.
+              <strong>{t('recovery.balanced.label')}</strong> — {t('coach.guide.balancedNote')}
             </li>
             <li>
-              <strong>Loaded / High</strong> — ease volume and intensity until you bounce back.
+              <strong>{t('coach.guide.loadedHigh')}</strong> — {t('coach.guide.loadedNote')}
             </li>
           </ul>
         </div>
 
         <div className="card">
-          <h2>7-day load</h2>
+          <h2>{t('coach.sevenDay')}</h2>
           <p className="hint" style={{ marginTop: 0 }}>
-            How much training stress you have piled up in the <strong>last week</strong>. It
-            scores each run from time and effort (heart rate when available, otherwise pace).
-            Higher means more recent work — not “good” or “bad” by itself.
+            {t('coach.guide.sevenDayBody')}
           </p>
         </div>
 
         <div className="card">
-          <h2>Base load</h2>
-          <p className="hint" style={{ marginTop: 0 }}>
-            Your recent <strong>average weekly load</strong> (about the last four weeks). Think of
-            it as your fitness “normal.” New runners with little history will see a small base —
-            that is expected.
-          </p>
+          <h2>{t('coach.baseLoad')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>{t('coach.guide.baseBody')}</p>
         </div>
 
         <div className="card">
-          <h2>Acute : chronic</h2>
-          <p className="hint" style={{ marginTop: 0 }}>
-            The ratio of <strong>this week’s load ÷ your base</strong>. Roughly:
-          </p>
+          <h2>{t('coach.guide.acuteTitle')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>{t('coach.guide.acuteIntro')}</p>
           <ul className="coach-guide-list">
             <li>
-              <strong>Under ~0.8</strong> — lighter than usual (fresh / taper).
+              <strong>{t('coach.guide.under08')}</strong> — {t('coach.guide.under08Note')}
             </li>
             <li>
-              <strong>~0.8–1.3</strong> — steady build.
+              <strong>~0.8–1.3</strong> — {t('coach.guide.steadyNote')}
             </li>
             <li>
-              <strong>Above ~1.5</strong> — a sharp jump; classic risk window if volume is high.
+              <strong>{t('coach.guide.above15')}</strong> — {t('coach.guide.above15Note')}
             </li>
           </ul>
           <p className="hint">
-            With only a few easy runs, a high ratio can look scary while absolute load is still
-            low. RunLog only flags “high load” when the base is solid enough — still use how you
-            feel.
+            {t('coach.guide.ratioCaveat')}
           </p>
         </div>
 
         <div className="card">
-          <h2>Weekly distance &amp; records</h2>
-          <p className="hint" style={{ marginTop: 0 }}>
-            Simple totals and personal bests from runs saved on this device. The weekly goal bar
-            (if you set one in Profile) is a distance target, separate from load.
-          </p>
+          <h2>{t('coach.guide.weeklyTitle')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>{t('coach.guide.weeklyBody')}</p>
         </div>
 
         <div className="card">
-          <h2>Training plans</h2>
-          <p className="hint" style={{ marginTop: 0 }}>
-            Multi-week templates you tick by hand. They guide structure; they do not auto-read
-            your GPS and invent sessions.
-          </p>
+          <h2>{t('coach.guide.plansTitle')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>{t('coach.guide.plansBody')}</p>
         </div>
 
         <button type="button" className="btn primary wide" onClick={() => setGuideOpen(false)}>
-          Got it
+          {t('coach.guide.gotIt')}
         </button>
       </div>
     );
@@ -319,12 +300,12 @@ export function CoachScreen({
           >
             <span className="recovery-ring-inner">
               <b>{recoveryRingLabel(load.status)}</b>
-              <span>Load</span>
+              <span>{t('coach.ringLoad')}</span>
             </span>
           </div>
           <div className="recovery-copy">
             <span className={`pill ${statusClass(load.status)}`}>{t(recoveryLabel(load.status))}</span>
-            <h2 className="recovery-title">Recovery</h2>
+            <h2 className="recovery-title">{t('achievement.category.recovery')}</h2>
             {recoveryTips.slice(0, 1).map((tip, i) => (
               <p className="hint" key={i} style={{ marginTop: 6, marginBottom: 0 }}>
                 {tipText(tip).body}
@@ -341,22 +322,21 @@ export function CoachScreen({
         <div className="metric-grid recovery-metrics" style={{ marginTop: 14 }}>
           <div className="metric">
             <div className="value">{Math.round(load.acute)}</div>
-            <div className="label">7-day load</div>
+            <div className="label">{t('coach.sevenDay')}</div>
           </div>
           <div className="metric">
             <div className="value">{Math.round(load.chronic)}</div>
-            <div className="label">Base load</div>
+            <div className="label">{t('coach.baseLoad')}</div>
           </div>
           <div className="metric">
             <div className="value">
               {load.ratio !== null ? load.ratio.toFixed(2) : '—'}
             </div>
-            <div className="label">Acute:chronic</div>
+            <div className="label">{t('coach.acuteChronic')}</div>
           </div>
         </div>
         <p className="hint">
-          Load is a simple score from time and effort (HR when available). It is a guide, not a
-          medical reading.
+          {t('coach.loadNote')}
         </p>
         <button
           type="button"
@@ -371,10 +351,10 @@ export function CoachScreen({
       {/* Active plan */}
       <div className="card">
         <div className="row">
-          <h2 style={{ margin: 0 }}>Training plan</h2>
+          <h2 style={{ margin: 0 }}>{t('coach.planTitle')}</h2>
           {active && plan && (
             <button type="button" className="btn" onClick={stop}>
-              End plan
+              {t('coach.endPlan')}
             </button>
           )}
         </div>
@@ -437,7 +417,7 @@ export function CoachScreen({
 
             {upcoming && (
               <div className="next-session next-session-hero">
-                <div className="next-session-label">Next session</div>
+                <div className="next-session-label">{t('coach.nextSession')}</div>
                 <div className="row">
                   <span className="pill">{t(kindLabel(upcoming.kind))}</span>
                   <span className="hint" style={{ margin: 0 }}>
@@ -458,7 +438,7 @@ export function CoachScreen({
               </div>
             )}
 
-            <h3 className="coach-subhead">This week</h3>
+            <h3 className="coach-subhead">{t('stats.thisWeek')}</h3>
             <ul className="plan-session-list">
               {weekSessions.map((s) => {
                 const done = isSessionComplete(active, s);
@@ -485,7 +465,7 @@ export function CoachScreen({
                 );
               })}
             </ul>
-            <p className="hint">Tap a session to mark it complete.</p>
+            <p className="hint">{t('coach.tapSession')}</p>
           </>
         )}
       </div>
@@ -493,7 +473,7 @@ export function CoachScreen({
       {/* Coach notes */}
       {weekTips.length > 0 && (
         <div className="card">
-          <h2>Coach notes</h2>
+          <h2>{t('coach.notes')}</h2>
           {weekTips.map((tip, i) => (
             <div className={`tip ${tip.tone}`} key={i}>
               <div className="title">{tipText(tip).title}</div>
@@ -505,7 +485,7 @@ export function CoachScreen({
 
       {/* Volume (former dashboard) */}
       <div className="card">
-        <h2>This week</h2>
+        <h2>{t('stats.thisWeek')}</h2>
         <div className="metric-grid">
           <div className="metric">
             <div className="value">{formatDistance(thisWeek.distanceM, profile.units, 1)}</div>
@@ -513,7 +493,7 @@ export function CoachScreen({
           </div>
           <div className="metric">
             <div className="value">{formatDuration(thisWeek.durationMs)}</div>
-            <div className="label">Time</div>
+            <div className="label">{t('stats.time')}</div>
           </div>
           <div className="metric">
             <div className="value">{formatPace(thisWeek.paceSecondsPerUnit)}</div>

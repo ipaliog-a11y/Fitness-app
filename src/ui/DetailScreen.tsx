@@ -44,7 +44,7 @@ import {
 import { resolveMapBasemap } from '../core/mercator';
 import { HeartChart, SplitsTable, ZoneBars } from './charts';
 import { RouteMap } from './RouteMap';
-import { useTipText } from '../i18n/react';
+import { useT, useTipText } from '../i18n/react';
 
 interface Props {
   activity: Activity;
@@ -73,6 +73,7 @@ export function DetailScreen({
   onNoteChange,
   onToast,
 }: Props) {
+  const t = useT();
   const tipText = useTipText();
   const [note, setNote] = useState(activity.note);
   const [confirming, setConfirming] = useState(false);
@@ -121,12 +122,11 @@ export function DetailScreen({
     <div className={`screen${decisionRequired ? ' detail-decision' : ''}`}>
       {!decisionRequired ? (
         <button type="button" className="back" onClick={onBack}>
-          ‹ Back
+          ‹ {t('common.back')}
         </button>
       ) : (
         <p className="hint detail-decision-banner">
-          Finish by choosing <strong>Save</strong> or <strong>Delete</strong> — navigation is
-          locked so this run is not left by accident.
+          {t('detail.decisionBanner', { save: t('common.save'), delete: t('common.delete') })}
         </p>
       )}
 
@@ -157,10 +157,10 @@ export function DetailScreen({
               const gpx = activityToGpx(activity);
               const day = new Date(activity.startedAt).toISOString().slice(0, 10);
               downloadText(`runlog-${day}.gpx`, gpx, 'application/gpx+xml');
-              onToast?.('GPX downloaded (HR included when available).');
+              onToast?.(t('detail.gpxDone'));
             }}
           >
-            Export GPX
+            {t('detail.exportGpx')}
           </button>
           <button
             type="button"
@@ -168,16 +168,16 @@ export function DetailScreen({
             onClick={() => {
               const route = routeFromActivity(activity);
               if (!route) {
-                onToast?.('No route to save.');
+                onToast?.(t('detail.noRoute'));
                 return;
               }
               const existing = loadRoutes();
               if (existing.some((r) => r.sourceActivityId === activity.id)) {
-                onToast?.('This route is already saved.');
+                onToast?.(t('detail.routeExists'));
                 return;
               }
               saveRoutes([route, ...existing]);
-              onToast?.(`Saved route “${route.name}”.`);
+              onToast?.(t('detail.routeSaved', { name: route.name }));
             }}
           >
             Save route
@@ -197,7 +197,7 @@ export function DetailScreen({
       <div className="metric-grid" style={{ marginBottom: 12 }}>
         <div className="metric">
           <div className="value">{formatDuration(activity.durationMs)}</div>
-          <div className="label">Moving</div>
+          <div className="label">{t('detail.moving')}</div>
         </div>
         <div className="metric">
           <div className="value">{formatPace(averagePace(activity, profile.units))}</div>
@@ -236,7 +236,7 @@ export function DetailScreen({
 
       {activity.manualLaps && activity.manualLaps.length > 0 && (
         <div className="card" style={{ marginBottom: 12 }}>
-          <h2>Laps</h2>
+          <h2>{t('run.laps.title')}</h2>
           <ul className="lap-list">
             {activity.manualLaps.map((lap) => (
               <li key={lap.index}>
@@ -257,13 +257,13 @@ export function DetailScreen({
           {heart && (
             <div className="metric">
               <div className="value">{heart.averageBpm}</div>
-              <div className="label">Avg bpm</div>
+              <div className="label">{t('detail.avgBpm')}</div>
             </div>
           )}
           {heart && (
             <div className="metric">
               <div className="value">{heart.maxBpm}</div>
-              <div className="label">Max bpm</div>
+              <div className="label">{t('detail.maxBpm')}</div>
             </div>
           )}
           {ascent > 1 && (
@@ -275,7 +275,7 @@ export function DetailScreen({
           {activity.steps !== null && (
             <div className="metric">
               <div className="value">{activity.steps.toLocaleString()}</div>
-              <div className="label">Steps</div>
+              <div className="label">{t('run.pod.steps')}</div>
             </div>
           )}
         </div>
@@ -283,28 +283,28 @@ export function DetailScreen({
 
       {heart && (
         <div className="card">
-          <h2>Heart rate report</h2>
+          <h2>{t('detail.hrReport')}</h2>
           <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-            Time in each zone
+            {t('detail.zoneTime')}
             {activity.heartReport
-              ? ` · saved with the run (max HR ${reportMaxHr})`
-              : ` · from samples (max HR ${reportMaxHr})`}
+              ? ` · ${t('detail.zoneSaved', { max: reportMaxHr })}`
+              : ` · ${t('detail.zoneSamples', { max: reportMaxHr })}`}
             {heart.measuredMs > 0
-              ? ` · ${formatDuration(heart.measuredMs)} measured`
+              ? ` · ${t('detail.zoneMeasured', { time: formatDuration(heart.measuredMs) })}`
               : ''}
           </p>
           <div className="metric-grid" style={{ marginBottom: 14 }}>
             <div className="metric">
               <div className="value">{heart.averageBpm}</div>
-              <div className="label">Avg bpm</div>
+              <div className="label">{t('detail.avgBpm')}</div>
             </div>
             <div className="metric">
               <div className="value">{heart.maxBpm}</div>
-              <div className="label">Max bpm</div>
+              <div className="label">{t('detail.maxBpm')}</div>
             </div>
             <div className="metric">
               <div className="value">{heart.minBpm}</div>
-              <div className="label">Min bpm</div>
+              <div className="label">{t('detail.minBpm')}</div>
             </div>
           </div>
           <ZoneBars summary={heart} maxHeartRate={reportMaxHr} showPercent />
@@ -314,14 +314,10 @@ export function DetailScreen({
       {(activity.heart.length > 1 || activity.segments.some((s) => s.length > 1)) && (
         <div className="card">
           <h2>
-            {activity.heart.length > 1
-              ? 'Heart rate, pace & speed'
-              : 'Pace & speed'}
+            {activity.heart.length > 1 ? t('detail.chartHr') : t('detail.chartPace')}
           </h2>
           <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-            {activity.heart.length > 1
-              ? 'By distance. Tap series to hide; drag the chart to read values.'
-              : 'From GPS — no heart-rate strap on this run. Pace is on by default; turn on Speed if you want both.'}
+            {activity.heart.length > 1 ? t('detail.chartHrHint') : t('detail.chartPaceHint')}
           </p>
           <HeartChart
             samples={activity.heart}
@@ -336,14 +332,14 @@ export function DetailScreen({
 
       {runSplits.length > 0 && (
         <div className="card">
-          <h2>Splits</h2>
+          <h2>{t('run.panel.splits')}</h2>
           <SplitsTable splits={runSplits} units={profile.units} />
         </div>
       )}
 
       {tips.length > 0 && (
         <div className="card">
-          <h2>Notes from the coach</h2>
+          <h2>{t('detail.coachNotes')}</h2>
           {tips.map((tip, i) => (
             <div className={`tip ${tip.tone}`} key={i}>
               <div className="title">{tipText(tip).title}</div>
@@ -354,11 +350,11 @@ export function DetailScreen({
       )}
 
       <div className="card">
-        <h2>Your note</h2>
+        <h2>{t('detail.yourNote')}</h2>
         <textarea
           rows={3}
           value={note}
-          placeholder="How did it feel?"
+          placeholder={t('detail.notePlaceholder')}
           onChange={(e) => setNote(e.target.value)}
           // Saved on blur rather than per keystroke: every change is a write to
           // IndexedDB, and one per letter is a lot of writes for no benefit.
@@ -374,20 +370,20 @@ export function DetailScreen({
             const tcx = activityToTcx(activity);
             const day = new Date(activity.startedAt).toISOString().slice(0, 10);
             downloadText(`runlog-${day}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
-            onToast?.('TCX downloaded — good for Strava / Garmin.');
+            onToast?.(t('detail.tcxDone'));
           }}
         >
-          Export TCX
+          {t('detail.exportTcx')}
         </button>
       </div>
 
       {confirming ? (
         <div className="btn-row detail-actions">
           <button type="button" className="btn" onClick={() => setConfirming(false)}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn danger" onClick={() => onDelete(activity.id)}>
-            Delete for good
+            {t('detail.deleteForGood')}
           </button>
         </div>
       ) : (
