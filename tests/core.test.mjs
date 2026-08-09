@@ -23,6 +23,7 @@ import {
 } from '../src/core/units.ts';
 import { splits, bestEffort } from '../src/core/activity.ts';
 import { applyConsoleEntry } from '../src/core/consoleEntry.ts';
+import { pickEnglishVoice } from '../src/platform/speech.ts';
 import { RunSession } from '../src/core/session.ts';
 import {
   summariseHeart,
@@ -2454,6 +2455,63 @@ check('every coach tip resolves in every locale, vars and all', () => {
       }
     }
   }
+});
+
+// --- cue voice ------------------------------------------------------------
+
+/*
+ * Not core, but pure, and the one part of the speech path where a wrong answer
+ * is invisible in review and obvious in your ear at kilometre three.
+ */
+
+const VOICES = {
+  greek: { lang: 'el-GR', localService: true },
+  greekNet: { lang: 'el-GR', localService: false },
+  usLocal: { lang: 'en-US', localService: true },
+  usNet: { lang: 'en-US', localService: false },
+  gbLocal: { lang: 'en-GB', localService: true },
+  auLocal: { lang: 'en-AU', localService: true },
+  underscore: { lang: 'en_US', localService: true },
+  bare: { lang: 'en', localService: true },
+};
+
+check('no English voice at all leaves the choice open', () => {
+  equal(pickEnglishVoice([VOICES.greek, VOICES.greekNet]), null);
+  equal(pickEnglishVoice([]), null);
+});
+
+check('a Greek voice is never chosen to read English', () => {
+  // The bug this change exists for: el sits first in the list, and it is what
+  // an utterance with no language of its own used to land on.
+  equal(pickEnglishVoice([VOICES.greek, VOICES.auLocal]), VOICES.auLocal);
+});
+
+check('offline beats accent', () => {
+  // en-AU on the device outranks en-US over the network: a cue that needs data
+  // is a cue that goes missing on exactly the run where you are out of range.
+  equal(pickEnglishVoice([VOICES.usNet, VOICES.auLocal]), VOICES.auLocal);
+});
+
+check('among offline voices the variant is the tiebreak', () => {
+  equal(pickEnglishVoice([VOICES.auLocal, VOICES.gbLocal, VOICES.usLocal]), VOICES.usLocal);
+  equal(pickEnglishVoice([VOICES.auLocal, VOICES.gbLocal]), VOICES.gbLocal);
+});
+
+check('the first of equals wins, so the pick is stable across calls', () => {
+  const a = { lang: 'en-US', localService: true };
+  const b = { lang: 'en-US', localService: true };
+  equal(pickEnglishVoice([a, b]), a);
+});
+
+check('Android underscore tags are read as English', () => {
+  // Some engines report en_US rather than en-US. Dropping those would fall
+  // back to no voice on the phones most likely to need one chosen for them.
+  equal(pickEnglishVoice([VOICES.greek, VOICES.underscore]), VOICES.underscore);
+});
+
+check('a bare en tag counts, and a tag merely starting with en does not', () => {
+  equal(pickEnglishVoice([VOICES.bare]), VOICES.bare);
+  equal(pickEnglishVoice([{ lang: 'eng-GB', localService: true }]), null);
 });
 
 // --- report ---------------------------------------------------------------
