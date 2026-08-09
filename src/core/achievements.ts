@@ -171,7 +171,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'half-marathon',
-    title: 'Half way there',
+    title: 'Half marathon',
     description: 'Run 21.1 km in one session (half marathon distance).',
     category: 'distance',
     icon: 'trophy',
@@ -179,7 +179,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'k30',
-    title: 'Thirty strong',
+    title: '30 km single',
     description: 'Cover 30 km in a single run.',
     category: 'distance',
     icon: 'mountain',
@@ -221,7 +221,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'lifetime-250',
-    title: 'Quarter thousand',
+    title: '250 km lifetime',
     description: '250 km lifetime mileage.',
     category: 'lifetime',
     icon: 'layers',
@@ -229,7 +229,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'lifetime-500',
-    title: 'Half thousand',
+    title: '500 km lifetime',
     description: '500 km total — a serious base.',
     category: 'lifetime',
     icon: 'trophy',
@@ -237,7 +237,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'lifetime-1000',
-    title: 'Kilometer king',
+    title: '1 000 km lifetime',
     description: '1 000 km lifetime distance logged in RunLog.',
     category: 'lifetime',
     icon: 'crown',
@@ -245,7 +245,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'ten-runs',
-    title: 'Double digits',
+    title: '10 runs logged',
     description: 'Log 10 finished runs.',
     category: 'lifetime',
     icon: 'calendar',

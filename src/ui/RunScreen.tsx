@@ -2008,7 +2008,9 @@ export function RunScreen({
       </div>
 
       <div className="metric-hero">
-        <div className="value">{formatDuration(elapsed, { tenths: !isHud })}</div>
+        <div className="value value-timer">
+          {formatDuration(elapsed, { tenths: true, forceHours: true })}
+        </div>
         <div className="label">{heroLabel}</div>
       </div>
 

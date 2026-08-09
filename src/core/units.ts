@@ -47,15 +47,24 @@ const pad = (n: number): string => String(n).padStart(2, '0');
  *
  * Pass `tenths: true` for the live run clock (`12:05.3`). History and stats
  * keep whole seconds so finished activities do not jitter.
+ *
+ * Pass `forceHours: true` for the live hero so long runs always show H:MM:SS
+ * (including `0:45:12` under an hour) — easier to read mid-run than switching
+ * layout when the first hour rolls over.
  */
-export function formatDuration(ms: number, options?: { tenths?: boolean }): string {
+export function formatDuration(
+  ms: number,
+  options?: { tenths?: boolean; forceHours?: boolean },
+): string {
   const clamped = Math.max(0, ms);
   const total = Math.floor(clamped / 1000);
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
-  const base =
-    hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+  const showHours = hours > 0 || Boolean(options?.forceHours);
+  const base = showHours
+    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+    : `${minutes}:${pad(seconds)}`;
   if (!options?.tenths) return base;
   const tenths = Math.floor((clamped % 1000) / 100);
   return `${base}.${tenths}`;

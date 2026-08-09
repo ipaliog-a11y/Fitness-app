@@ -77,6 +77,22 @@ function statusClass(status: RecoveryStatus): string {
   }
 }
 
+/** Short ring label — slice(0,3) made "High load" → "HIG" and looked broken on HUD. */
+function recoveryRingLabel(status: RecoveryStatus): string {
+  switch (status) {
+    case 'fresh':
+      return 'FRESH';
+    case 'balanced':
+      return 'OK';
+    case 'loaded':
+      return 'LOAD';
+    case 'high':
+      return 'HIGH';
+    default:
+      return 'N/A';
+  }
+}
+
 function sessionTarget(s: PlanSession, units: Profile['units']): string {
   if (s.targetDistanceM) {
     return `${formatDistance(s.targetDistanceM, units)} ${distanceLabel(units)}`;
@@ -293,7 +309,7 @@ export function CoachScreen({
             aria-hidden
           >
             <span className="recovery-ring-inner">
-              <b>{recoveryLabel(load.status).slice(0, 3).toUpperCase()}</b>
+              <b>{recoveryRingLabel(load.status)}</b>
               <span>Load</span>
             </span>
           </div>

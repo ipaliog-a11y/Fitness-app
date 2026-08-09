@@ -166,7 +166,7 @@ export function parseMapStyle(value: unknown): MapStyleId {
 /** Pick a concrete basemap from style + UI theme. */
 export function resolveMapBasemap(
   style: MapStyleId,
-  theme: 'soft' | 'hud' | 'day',
+  theme: 'soft' | 'hud' | 'day' | 'crimson' | 'sky',
 ): MapBasemapId {
   if (style === 'auto') return theme === 'day' ? 'standard' : 'dark';
   return style;

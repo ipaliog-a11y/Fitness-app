@@ -5,8 +5,9 @@
  * Dark by default: this is looked at outdoors at dawn and in a dim gym, and a
  * white screen at either is unpleasant.
  *
- * Themes: Soft Emerald (default), Athletic HUD, and Daylight. Chosen in
- * Settings → Theme; tokens live on <html data-theme="soft|hud|day">.
+ * Themes: Soft Emerald (default), Athletic HUD, Daylight, Crimson Ember, and
+ * Skyline. Chosen in Settings → Theme; tokens live on
+ * <html data-theme="soft|hud|day|crimson|sky">.
  *
  * Heart-rate zone colours are tokens too (--zone-1..5), because a light ground
  * needs a much darker ladder than a dark one — amber #d8a13a on white is a
@@ -133,6 +134,104 @@
   --zone-3: #f0b53f;
   --zone-4: #ff8140;
   --zone-5: #ff4d4d;
+}
+
+[data-theme='crimson'] {
+  /* Crimson Ember — warm charcoal, hot red accent, soft rounded chrome */
+  --bg: #12080a;
+  --bg-elev: #1a0c10;
+  --surface: #221016;
+  --surface-2: #2c161c;
+  --surface-3: #3a1c24;
+  --line: #4a2830;
+  --line-soft: rgba(251, 113, 133, 0.1);
+  --text: #fff1f2;
+  --muted: #c4a0a6;
+  --muted-2: #9a727a;
+  --accent: #f43f5e;
+  --accent-bright: #fb7185;
+  --accent-dim: rgba(244, 63, 94, 0.2);
+  --accent-solid: #9f1239;
+  --accent-ink: #fff1f2;
+  --warn: #fbbf24;
+  --danger: #fda4af;
+  --info: #7dd3fc;
+
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-lg: 22px;
+  --tab-bg: rgba(26, 12, 16, 0.94);
+  --tab-inset: 10px;
+  --tab-radius: 20px;
+  --tab-border: rgba(255, 255, 255, 0.06);
+  --btn-radius: 12px;
+  --chip-radius: 999px;
+  --metric-font: inherit;
+  --letter-label: 0.07em;
+
+  --map-casing: rgba(0, 0, 0, 0.5);
+  --map-tile-dim: 0.7;
+  --press-scale: 0.972;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 12px 28px -14px rgba(80, 10, 24, 0.75);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.5), 0 18px 40px -16px rgba(80, 10, 24, 0.85);
+  --line-card: var(--line);
+
+  --zone-1: #8a7a8e;
+  --zone-2: #4ac47e;
+  --zone-3: #f0b53f;
+  --zone-4: #ff8140;
+  --zone-5: #ff4d6a;
+
+  color-scheme: dark;
+}
+
+[data-theme='sky'] {
+  /* Skyline — cool navy, sky blue accent, soft chrome */
+  --bg: #070d16;
+  --bg-elev: #0b1420;
+  --surface: #111c2c;
+  --surface-2: #172538;
+  --surface-3: #1e2f48;
+  --line: #2a3d58;
+  --line-soft: rgba(56, 189, 248, 0.1);
+  --text: #eef6ff;
+  --muted: #94aec8;
+  --muted-2: #6f8aa8;
+  --accent: #38bdf8;
+  --accent-bright: #7dd3fc;
+  --accent-dim: rgba(56, 189, 248, 0.18);
+  --accent-solid: #0369a1;
+  --accent-ink: #041018;
+  --warn: #fbbf24;
+  --danger: #fb7185;
+  --info: #67e8f9;
+
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-lg: 22px;
+  --tab-bg: rgba(11, 20, 32, 0.94);
+  --tab-inset: 10px;
+  --tab-radius: 20px;
+  --tab-border: rgba(255, 255, 255, 0.06);
+  --btn-radius: 12px;
+  --chip-radius: 999px;
+  --metric-font: inherit;
+  --letter-label: 0.07em;
+
+  --map-casing: rgba(0, 0, 0, 0.45);
+  --map-tile-dim: 0.72;
+  --press-scale: 0.972;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -14px rgba(8, 40, 70, 0.75);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.45), 0 18px 40px -16px rgba(8, 40, 70, 0.85);
+  --line-card: var(--line);
+
+  --zone-1: #7d90ad;
+  --zone-2: #3fa66a;
+  --zone-3: #d8a13a;
+  --zone-4: #e2703a;
+  --zone-5: #d2453f;
+
+  color-scheme: dark;
 }
 
 [data-theme='day'] {
@@ -2750,6 +2849,50 @@ button.cal-event {
   border-radius: 1px;
 }
 
+.theme-option-day .theme-swatch {
+  background: linear-gradient(145deg, #ffffff, #eef2f6 55%, #0b6b3a);
+  border-radius: 12px;
+  border-color: #b3bfcc;
+}
+
+.theme-option-day .theme-swatch-dot {
+  background: #0b6b3a;
+}
+
+.theme-option-day .theme-swatch-bar {
+  background: rgba(11, 107, 58, 0.45);
+}
+
+.theme-option-crimson .theme-swatch {
+  background: linear-gradient(145deg, #12080a, #221016 55%, #9f1239);
+  border-radius: 14px;
+}
+
+.theme-option-crimson .theme-swatch-dot {
+  background: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.55);
+}
+
+.theme-option-crimson .theme-swatch-bar {
+  background: rgba(244, 63, 94, 0.5);
+  border-radius: 999px;
+}
+
+.theme-option-sky .theme-swatch {
+  background: linear-gradient(145deg, #070d16, #111c2c 55%, #0369a1);
+  border-radius: 14px;
+}
+
+.theme-option-sky .theme-swatch-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.55);
+}
+
+.theme-option-sky .theme-swatch-bar {
+  background: rgba(56, 189, 248, 0.5);
+  border-radius: 999px;
+}
+
 .theme-option-body {
   flex: 1;
   min-width: 0;
@@ -3265,6 +3408,15 @@ button.cal-event {
 
 .run-live .metric-hero .value {
   font-size: clamp(52px, 18vw, 88px);
+}
+
+/* Live clock is H:MM:SS.t — slightly smaller so hours do not clip on phones. */
+.run-live .metric-hero .value-timer {
+  font-size: clamp(40px, 14vw, 72px);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .run-live .live-goal {
@@ -3882,11 +4034,12 @@ button.cal-event {
 }
 
 .recovery-ring-inner b {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
   font-family: var(--metric-font, inherit);
   color: var(--accent);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
 }
 
 .recovery-ring-inner span {

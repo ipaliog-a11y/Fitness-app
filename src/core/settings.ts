@@ -22,7 +22,7 @@ export type { BiologicalSex };
  * Visual shell. Tokens + a few layout variants live in styles.css under
  * `[data-theme="…"]`. Soft Emerald is the default (closest to the original app).
  */
-export type ThemeId = 'soft' | 'hud' | 'day';
+export type ThemeId = 'soft' | 'hud' | 'day' | 'crimson' | 'sky';
 
 export const THEME_OPTIONS: Array<{
   id: ThemeId;
@@ -44,6 +44,16 @@ export const THEME_OPTIONS: Array<{
     label: 'Daylight',
     blurb: 'Paper white, deep green, solid chrome — built for direct sun.',
   },
+  {
+    id: 'crimson',
+    label: 'Crimson Ember',
+    blurb: 'Dark charcoal with hot red accent — night runs, bold contrast.',
+  },
+  {
+    id: 'sky',
+    label: 'Skyline',
+    blurb: 'Cool navy with sky blue accent — calm, clear metrics.',
+  },
 ];
 
 export interface Profile {
@@ -52,7 +62,7 @@ export interface Profile {
    * Not a login identity — stays on device only.
    */
   displayName: string;
-  /** UI look: Soft Emerald or Athletic HUD. */
+  /** UI look: Soft Emerald, HUD, Daylight, Crimson, or Skyline. */
   theme: ThemeId;
   units: UnitSystem;
   /**
@@ -170,7 +180,16 @@ export function applyTheme(theme: ThemeId): void {
   // Status bar / PWA chrome roughly matches the page background.
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    const bg = theme === 'hud' ? '#050505' : theme === 'day' ? '#ffffff' : '#0a0d12';
+    const bg =
+      theme === 'hud'
+        ? '#050505'
+        : theme === 'day'
+          ? '#ffffff'
+          : theme === 'crimson'
+            ? '#12080a'
+            : theme === 'sky'
+              ? '#070d16'
+              : '#0a0d12';
     meta.setAttribute('content', bg);
   }
 }
@@ -179,6 +198,8 @@ export function parseTheme(value: unknown): ThemeId {
   if (value === 'hud' || value === 'athletic' || value === 'athletic-hud') return 'hud';
   if (value === 'day' || value === 'light' || value === 'daylight') return 'day';
   if (value === 'soft' || value === 'emerald' || value === 'soft-emerald') return 'soft';
+  if (value === 'crimson' || value === 'red' || value === 'ember') return 'crimson';
+  if (value === 'sky' || value === 'skyline' || value === 'blue') return 'sky';
   return DEFAULTS.theme;
 }
 
