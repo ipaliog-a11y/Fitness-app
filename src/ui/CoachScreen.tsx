@@ -49,6 +49,7 @@ import {
   paceLabel,
 } from '../core/units';
 import { WeeklyBars } from './charts';
+import { useT } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -110,6 +111,7 @@ export function CoachScreen({
   guideOpen: guideOpenProp,
   onGuideOpenChange,
 }: Props) {
+  const t = useT();
   const now = Date.now();
   const [active, setActive] = useState<ActivePlanState | null>(() => loadActivePlan());
   const [browse, setBrowse] = useState(false);
@@ -179,7 +181,7 @@ export function CoachScreen({
     setBrowse(false);
     onToast(`Started: ${planById(planId)?.name ?? 'plan'}`);
     const { newly } = refreshAchievements(activities, profile);
-    if (newly.length === 1) onToast(`Achievement: ${newly[0].title}`);
+    if (newly.length === 1) onToast(t('toast.achievement.one', { name: t(newly[0].title) }));
   };
 
   const stop = () => {

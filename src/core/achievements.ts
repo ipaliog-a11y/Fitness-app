@@ -5,6 +5,7 @@
  * in the UI as small SVGs.
  */
 
+import type { MessageKey } from '../i18n';
 import type { Activity } from './activity';
 import { goalMet } from './goal';
 import { loadSnapshot } from './load';
@@ -61,8 +62,13 @@ export type AchievementIconId =
 
 export interface AchievementDef {
   id: string;
-  title: string;
-  description: string;
+  /**
+   * Message keys, not text. The names are jokes ("Belt beast", "Century
+   * club") and jokes do not survive literal translation, so each locale gets
+   * to re-invent them rather than mirror the English word order.
+   */
+  title: MessageKey;
+  description: MessageKey;
   category: AchievementCategory;
   icon: AchievementIconId;
   /** True when this achievement should unlock for the given snapshot. */
@@ -147,48 +153,48 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // —— Single-run distance ————————————————————————————————
   {
     id: 'first-finish',
-    title: 'First finish',
-    description: 'Save your first run. Every streak starts with one.',
+    title: 'achievement.first-finish.title',
+    description: 'achievement.first-finish.desc',
     category: 'distance',
     icon: 'flag',
     test: (c) => c.lifetime.runs >= 1,
   },
   {
     id: 'k5',
-    title: '5K club',
-    description: 'Complete a single run of at least 5 km.',
+    title: 'achievement.k5.title',
+    description: 'achievement.k5.desc',
     category: 'distance',
     icon: 'medal',
     test: (c) => c.activities.some((a) => a.distanceM >= 5000),
   },
   {
     id: 'k10',
-    title: '10K club',
-    description: 'Complete a single run of at least 10 km.',
+    title: 'achievement.k10.title',
+    description: 'achievement.k10.desc',
     category: 'distance',
     icon: 'ribbon',
     test: (c) => c.activities.some((a) => a.distanceM >= 10_000),
   },
   {
     id: 'half-marathon',
-    title: 'Half marathon',
-    description: 'Run 21.1 km in one session (half marathon distance).',
+    title: 'achievement.half-marathon.title',
+    description: 'achievement.half-marathon.desc',
     category: 'distance',
     icon: 'trophy',
     test: (c) => c.activities.some((a) => a.distanceM >= 21_097.5),
   },
   {
     id: 'k30',
-    title: '30 km single',
-    description: 'Cover 30 km in a single run.',
+    title: 'achievement.k30.title',
+    description: 'achievement.k30.desc',
     category: 'distance',
     icon: 'mountain',
     test: (c) => c.activities.some((a) => a.distanceM >= 30_000),
   },
   {
     id: 'marathon',
-    title: 'Marathoner',
-    description: 'Run 42.2 km in one go. Respect.',
+    title: 'achievement.marathon.title',
+    description: 'achievement.marathon.desc',
     category: 'distance',
     icon: 'crown',
     test: (c) => c.activities.some((a) => a.distanceM >= 42_195),
@@ -197,64 +203,64 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // —— Lifetime mileage ————————————————————————————————
   {
     id: 'lifetime-25',
-    title: '25 km lifetime',
-    description: 'Accumulate 25 km across all saved runs.',
+    title: 'achievement.lifetime-25.title',
+    description: 'achievement.lifetime-25.desc',
     category: 'lifetime',
     icon: 'path',
     test: (c) => c.lifetime.distanceM >= 25_000,
   },
   {
     id: 'lifetime-50',
-    title: '50 km lifetime',
-    description: 'Accumulate 50 km of total running.',
+    title: 'achievement.lifetime-50.title',
+    description: 'achievement.lifetime-50.desc',
     category: 'lifetime',
     icon: 'compass',
     test: (c) => c.lifetime.distanceM >= 50_000,
   },
   {
     id: 'lifetime-100',
-    title: 'Century club',
-    description: '100 km total distance on this device.',
+    title: 'achievement.lifetime-100.title',
+    description: 'achievement.lifetime-100.desc',
     category: 'lifetime',
     icon: 'star',
     test: (c) => c.lifetime.distanceM >= 100_000,
   },
   {
     id: 'lifetime-250',
-    title: '250 km lifetime',
-    description: '250 km lifetime mileage.',
+    title: 'achievement.lifetime-250.title',
+    description: 'achievement.lifetime-250.desc',
     category: 'lifetime',
     icon: 'layers',
     test: (c) => c.lifetime.distanceM >= 250_000,
   },
   {
     id: 'lifetime-500',
-    title: '500 km lifetime',
-    description: '500 km total — a serious base.',
+    title: 'achievement.lifetime-500.title',
+    description: 'achievement.lifetime-500.desc',
     category: 'lifetime',
     icon: 'trophy',
     test: (c) => c.lifetime.distanceM >= 500_000,
   },
   {
     id: 'lifetime-1000',
-    title: '1 000 km lifetime',
-    description: '1 000 km lifetime distance logged in RunLog.',
+    title: 'achievement.lifetime-1000.title',
+    description: 'achievement.lifetime-1000.desc',
     category: 'lifetime',
     icon: 'crown',
     test: (c) => c.lifetime.distanceM >= 1_000_000,
   },
   {
     id: 'ten-runs',
-    title: '10 runs logged',
-    description: 'Log 10 finished runs.',
+    title: 'achievement.ten-runs.title',
+    description: 'achievement.ten-runs.desc',
     category: 'lifetime',
     icon: 'calendar',
     test: (c) => c.lifetime.runs >= 10,
   },
   {
     id: 'fifty-runs',
-    title: 'Habit former',
-    description: 'Log 50 finished runs.',
+    title: 'achievement.fifty-runs.title',
+    description: 'achievement.fifty-runs.desc',
     category: 'lifetime',
     icon: 'flame',
     test: (c) => c.lifetime.runs >= 50,
@@ -263,16 +269,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // —— Recovery ————————————————————————————————————————
   {
     id: 'easy-day',
-    title: 'Easy does it',
-    description: 'Finish a run with an easy or walk/run structured workout.',
+    title: 'achievement.easy-day.title',
+    description: 'achievement.easy-day.desc',
     category: 'recovery',
     icon: 'leaf',
     test: (c) => c.activities.some((a) => isEasyWorkout(a)),
   },
   {
     id: 'fresh-legs',
-    title: 'Fresh legs',
-    description: 'Open Coach while recovery status is Fresh (with some training history).',
+    title: 'achievement.fresh-legs.title',
+    description: 'achievement.fresh-legs.desc',
     category: 'recovery',
     icon: 'heart',
     test: (c) => {
@@ -283,8 +289,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'balanced-load',
-    title: 'In balance',
-    description: 'Recovery status Balanced — steady load vs base.',
+    title: 'achievement.balanced-load.title',
+    description: 'achievement.balanced-load.desc',
     category: 'recovery',
     icon: 'heart',
     test: (c) => {
@@ -295,8 +301,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'recovery-strides',
-    title: 'Stride light',
-    description: 'Complete the Recovery + strides workout.',
+    title: 'achievement.recovery-strides.title',
+    description: 'achievement.recovery-strides.desc',
     category: 'recovery',
     icon: 'spark',
     test: (c) => c.activities.some((a) => a.workoutId === 'recovery-strides'),
@@ -305,8 +311,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // —— Performance —————————————————————————————————————
   {
     id: 'tempo-tester',
-    title: 'Tempo tester',
-    description: 'Finish a tempo or cruise threshold workout.',
+    title: 'achievement.tempo-tester.title',
+    description: 'achievement.tempo-tester.desc',
     category: 'performance',
     icon: 'timer',
     test: (c) =>
@@ -319,8 +325,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'interval-hero',
-    title: 'Interval hero',
-    description: 'Complete a VO₂ or track-style speed session (400s, 800s, 3′/4′).',
+    title: 'achievement.interval-hero.title',
+    description: 'achievement.interval-hero.desc',
     category: 'performance',
     icon: 'bolt',
     test: (c) =>
@@ -334,48 +340,48 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'structured-run',
-    title: 'On the plan',
-    description: 'Finish any structured workout (not free run).',
+    title: 'achievement.structured-run.title',
+    description: 'achievement.structured-run.desc',
     category: 'performance',
     icon: 'target',
     test: (c) => c.activities.some((a) => usedWorkout(a)),
   },
   {
     id: 'goal-crusher',
-    title: 'Goal crusher',
-    description: 'Hit a distance, time, or calorie goal on a run.',
+    title: 'achievement.goal-crusher.title',
+    description: 'achievement.goal-crusher.desc',
     category: 'performance',
     icon: 'target',
     test: (c) => c.activities.some((a) => hasGoalMet(a)),
   },
   {
     id: 'streak-3',
-    title: 'Three in a row',
-    description: 'Run on 3 consecutive days.',
+    title: 'achievement.streak-3.title',
+    description: 'achievement.streak-3.desc',
     category: 'performance',
     icon: 'flame',
     test: (c) => currentStreak(c.activities, c.now) >= 3,
   },
   {
     id: 'streak-7',
-    title: 'Week warrior',
-    description: 'Run on 7 consecutive days.',
+    title: 'achievement.streak-7.title',
+    description: 'achievement.streak-7.desc',
     category: 'performance',
     icon: 'flame',
     test: (c) => currentStreak(c.activities, c.now) >= 7,
   },
   {
     id: 'early-bird',
-    title: 'Early bird',
-    description: 'Start a run before 7:00 local time.',
+    title: 'achievement.early-bird.title',
+    description: 'achievement.early-bird.desc',
     category: 'performance',
     icon: 'sun',
     test: (c) => c.activities.some((a) => dayHour(a.startedAt) < 7),
   },
   {
     id: 'night-owl',
-    title: 'Night owl',
-    description: 'Start a run at 20:00 or later.',
+    title: 'achievement.night-owl.title',
+    description: 'achievement.night-owl.desc',
     category: 'performance',
     icon: 'moon',
     test: (c) => c.activities.some((a) => dayHour(a.startedAt) >= 20),
@@ -384,16 +390,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // —— App usage ———————————————————————————————————————
   {
     id: 'named-runner',
-    title: 'Named runner',
-    description: 'Set a display name in Profile.',
+    title: 'achievement.named-runner.title',
+    description: 'achievement.named-runner.desc',
     category: 'app',
     icon: 'user',
     test: (c) => (c.profile.displayName ?? '').trim().length > 0,
   },
   {
     id: 'full-identity',
-    title: 'Known quantity',
-    description: 'Save name, date of birth, and height in Profile.',
+    title: 'achievement.full-identity.title',
+    description: 'achievement.full-identity.desc',
     category: 'app',
     icon: 'user',
     test: (c) =>
@@ -403,40 +409,40 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
   {
     id: 'coach-enrolled',
-    title: 'Coach call',
-    description: 'Start a training plan on the Coach tab.',
+    title: 'achievement.coach-enrolled.title',
+    description: 'achievement.coach-enrolled.desc',
     category: 'app',
     icon: 'coach',
     test: () => loadActivePlan() !== null,
   },
   {
     id: 'workout-factory',
-    title: 'Workout factory',
-    description: 'Save 5 custom workouts under My Workouts.',
+    title: 'achievement.workout-factory.title',
+    description: 'achievement.workout-factory.desc',
     category: 'app',
     icon: 'layers',
     test: () => loadSavedWorkouts().length >= 5,
   },
   {
     id: 'first-custom',
-    title: 'Recipe writer',
-    description: 'Save your first custom workout.',
+    title: 'achievement.first-custom.title',
+    description: 'achievement.first-custom.desc',
     category: 'app',
     icon: 'note',
     test: () => loadSavedWorkouts().length >= 1,
   },
   {
     id: 'note-taker',
-    title: 'Note taker',
-    description: 'Add a personal note to a finished run.',
+    title: 'achievement.note-taker.title',
+    description: 'achievement.note-taker.desc',
     category: 'app',
     icon: 'note',
     test: (c) => c.activities.some((a) => hasNote(a)),
   },
   {
     id: 'route-saver',
-    title: 'Ghost cartographer',
-    description: 'Save a route from a finished outdoor run.',
+    title: 'achievement.route-saver.title',
+    description: 'achievement.route-saver.desc',
     category: 'app',
     icon: 'route',
     test: () => loadRoutes().length >= 1,
@@ -445,77 +451,77 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // —— Fun / gear ——————————————————————————————————————
   {
     id: 'first-shoes',
-    title: 'Laced up',
-    description: 'Add your first pair of shoes.',
+    title: 'achievement.first-shoes.title',
+    description: 'achievement.first-shoes.desc',
     category: 'fun',
     icon: 'shoe',
     test: () => loadShoes().length >= 1,
   },
   {
     id: 'second-pair',
-    title: 'Rotation begins',
-    description: 'Add a second pair of shoes. Your soles will thank you.',
+    title: 'achievement.second-pair.title',
+    description: 'achievement.second-pair.desc',
     category: 'fun',
     icon: 'shoes',
     test: () => loadShoes().length >= 2,
   },
   {
     id: 'shoe-fleet',
-    title: 'Shoe fleet',
-    description: 'Own three or more pairs in the shoe locker.',
+    title: 'achievement.shoe-fleet.title',
+    description: 'achievement.shoe-fleet.desc',
     category: 'fun',
     icon: 'shoes',
     test: () => loadShoes().length >= 3,
   },
   {
     id: 'outdoor-soul',
-    title: 'Outdoor soul',
-    description: 'Finish an outdoor GPS run.',
+    title: 'achievement.outdoor-soul.title',
+    description: 'achievement.outdoor-soul.desc',
     category: 'fun',
     icon: 'map',
     test: (c) => c.lifetime.outdoorRuns >= 1,
   },
   {
     id: 'belt-beast',
-    title: 'Belt beast',
-    description: 'Finish a treadmill run.',
+    title: 'achievement.belt-beast.title',
+    description: 'achievement.belt-beast.desc',
     category: 'fun',
     icon: 'gym',
     test: (c) => c.lifetime.treadmillRuns >= 1,
   },
   {
     id: 'both-worlds',
-    title: 'Both worlds',
-    description: 'Log at least one outdoor and one treadmill run.',
+    title: 'achievement.both-worlds.title',
+    description: 'achievement.both-worlds.desc',
     category: 'fun',
     icon: 'compass',
     test: (c) => c.lifetime.outdoorRuns >= 1 && c.lifetime.treadmillRuns >= 1,
   },
   {
     id: 'hill-lover',
-    title: 'Hill lover',
-    description: 'Complete the Hills 8 × 45 s workout.',
+    title: 'achievement.hill-lover.title',
+    description: 'achievement.hill-lover.desc',
     category: 'fun',
     icon: 'mountain',
     test: (c) => c.activities.some((a) => a.workoutId === 'hill-8x45'),
   },
   {
     id: 'hard-session',
-    title: 'Went hard',
-    description: 'Finish any hard structured session (tempo, speed, hills, fartlek…).',
+    title: 'achievement.hard-session.title',
+    description: 'achievement.hard-session.desc',
     category: 'performance',
     icon: 'bolt',
     test: (c) => c.activities.some((a) => isHardWorkout(a)),
   },
 ];
 
-export const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {
-  distance: 'Distance milestones',
-  lifetime: 'Lifetime mileage',
-  recovery: 'Recovery',
-  performance: 'Performance',
-  app: 'Using RunLog',
-  fun: 'Fun & gear',
+export const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, MessageKey> = {
+  distance: 'achievement.category.distance',
+  lifetime: 'achievement.category.lifetime',
+  recovery: 'achievement.category.recovery',
+  performance: 'achievement.category.performance',
+  app: 'achievement.category.app',
+  fun: 'achievement.category.fun',
 };
 
 export function buildAchievementContext(

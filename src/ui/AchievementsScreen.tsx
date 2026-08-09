@@ -13,6 +13,8 @@ import {
   type AchievementDef,
 } from '../core/achievements';
 import type { Profile } from '../core/settings';
+import { useT } from '../i18n/react';
+import { useLocale } from '../i18n/react';
 import { AchievementIcon } from './AchievementIcon';
 
 interface Props {
@@ -32,11 +34,16 @@ const CATEGORY_ORDER: AchievementCategory[] = [
 ];
 
 export function AchievementsScreen({ profile, activities, onBack, onToast }: Props) {
+  const t = useT();
+  const { tag } = useLocale();
   // Re-evaluate once on open so new progress is reflected immediately.
   const [unlocks] = useState(() => {
     const { newly } = refreshAchievements(activities, profile);
-    if (newly.length === 1) onToast?.(`Achievement: ${newly[0].title}`);
-    else if (newly.length > 1) onToast?.(`${newly.length} new achievements unlocked`);
+    if (newly.length === 1) {
+      onToast?.(t('toast.achievement.one', { name: t(newly[0].title) }));
+    } else if (newly.length > 1) {
+      onToast?.(t('toast.achievement.many', { count: newly.length }));
+    }
     return loadUnlocks();
   });
   const unlockedN = Object.keys(unlocks.unlocked).length;
@@ -54,11 +61,11 @@ export function AchievementsScreen({ profile, activities, onBack, onToast }: Pro
   return (
     <div className="screen achievements-screen">
       <button type="button" className="back" onClick={onBack}>
-        ‹ Profile
+        ‹ {t('app.tab.profile')}
       </button>
-      <h1>Achievements</h1>
+      <h1>{t('achievements.title')}</h1>
       <p className="subtitle">
-        {unlockedN} of {total} unlocked · earned on this device
+        {t('achievements.subtitle', { unlocked: unlockedN, total })}
       </p>
 
       <div className="achievement-progress-bar" aria-hidden>
@@ -72,7 +79,7 @@ export function AchievementsScreen({ profile, activities, onBack, onToast }: Pro
         return (
           <div className="card achievement-category" key={cat}>
             <div className="row" style={{ marginBottom: 10 }}>
-              <h2 style={{ margin: 0 }}>{ACHIEVEMENT_CATEGORY_LABEL[cat]}</h2>
+              <h2 style={{ margin: 0 }}>{t(ACHIEVEMENT_CATEGORY_LABEL[cat])}</h2>
               <span className="hint" style={{ margin: 0 }}>
                 {done}/{list.length}
               </span>
@@ -90,14 +97,16 @@ export function AchievementsScreen({ profile, activities, onBack, onToast }: Pro
                       <AchievementIcon id={a.icon} />
                     </span>
                     <span className="achievement-copy">
-                      <strong>{a.title}</strong>
-                      <span className="achievement-desc">{a.description}</span>
+                      <strong>{t(a.title)}</strong>
+                      <span className="achievement-desc">{t(a.description)}</span>
                       {unlocked && when ? (
                         <span className="achievement-date">
-                          Unlocked {new Date(when).toLocaleDateString()}
+                          {t('achievement.unlockedOn', {
+                            date: new Date(when).toLocaleDateString(tag),
+                          })}
                         </span>
                       ) : (
-                        <span className="achievement-date muted">Locked</span>
+                        <span className="achievement-date muted">{t('achievement.locked')}</span>
                       )}
                     </span>
                   </li>

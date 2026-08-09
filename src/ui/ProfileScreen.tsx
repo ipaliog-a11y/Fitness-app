@@ -42,6 +42,7 @@ import {
 } from '../core/weight';
 import { AchievementsScreen } from './AchievementsScreen';
 import { WeightScreen } from './WeightScreen';
+import { useT } from '../i18n/react';
 
 interface Props {
   profile: Profile;
@@ -105,6 +106,7 @@ function ProfileScreenInner({
   onToast,
   onWeightLogChange,
 }: Props) {
+  const t = useT();
   // Never trust a half-written profile from storage/HMR.
   const profile = sanitise(rawProfile);
 
@@ -133,8 +135,8 @@ function ProfileScreenInner({
     const { lifetime: nextLife, newly } = refreshAchievements(list, profile);
     setLifetime(nextLife);
     setUnlockTick((t) => t + 1);
-    if (newly.length === 1) onToast(`Achievement: ${newly[0].title}`);
-    else if (newly.length > 1) onToast(`${newly.length} new achievements unlocked`);
+    if (newly.length === 1) onToast(t('toast.achievement.one', { name: t(newly[0].title) }));
+    else if (newly.length > 1) onToast(t('toast.achievement.many', { count: newly.length }));
   };
 
   useEffect(() => {

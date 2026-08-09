@@ -106,6 +106,7 @@ import {
 } from '../platform/liveRunNative';
 import { resolveMapBasemap } from '../core/mercator';
 import { RouteMap } from './RouteMap';
+import { useT } from '../i18n/react';
 
 interface Props {
   profile: Profile;
@@ -224,6 +225,7 @@ export function RunScreen({
   visible = true,
   backHandlerRef,
 }: Props) {
+  const t = useT();
   const [mode, setMode] = useState<RunMode>('outdoor');
   const [tick, setTick] = useState(0);
   /** Sensors warming up; clock has not started. */
@@ -923,7 +925,7 @@ export function RunScreen({
           </p>
           <div className="workout-tile-grid">
             {myWorkouts.map((w) => {
-              const t = templateFromSaved(w);
+              const tpl = templateFromSaved(w);
               const selected = workoutId === w.id;
               return (
                 <div
@@ -934,7 +936,7 @@ export function RunScreen({
                     type="button"
                     className="workout-tile-hit"
                     onClick={() => {
-                      setCustomTemplate(t);
+                      setCustomTemplate(tpl);
                       setWorkoutId(w.id);
                       setWorkoutPickerOpen(false);
                       setWorkoutPickerView('main');
@@ -943,11 +945,11 @@ export function RunScreen({
                   >
                     <div className="workout-tile-top">
                       <span className="workout-tile-name">{w.name}</span>
-                      <EffortDots level={workoutEffortLevel(t)} />
+                      <EffortDots level={workoutEffortLevel(tpl)} />
                     </div>
                     <WorkoutIntervalStrip phases={w.phases} />
                     <p className="workout-tile-blurb">{w.blurb || 'Saved custom workout'}</p>
-                    <span className="workout-tile-meta">{workoutTileMeta(t)}</span>
+                    <span className="workout-tile-meta">{workoutTileMeta(tpl)}</span>
                   </button>
                   <button
                     type="button"
@@ -1220,10 +1222,10 @@ export function RunScreen({
                     type="button"
                     className="btn primary"
                     onClick={() => {
-                      const t = buildCustomFromForm();
-                      setCustomTemplate(t);
+                      const tpl = buildCustomFromForm();
+                      setCustomTemplate(tpl);
                       setWorkoutId('custom');
-                      onToast(`Custom workout: ${t.blurb}`);
+                      onToast(`Custom workout: ${tpl.blurb}`);
                       setWorkoutPickerOpen(false);
                       setWorkoutPickerView('main');
                     }}
@@ -1234,10 +1236,10 @@ export function RunScreen({
                     type="button"
                     className="btn"
                     onClick={() => {
-                      const t = buildCustomFromForm();
+                      const tpl = buildCustomFromForm();
                       const saved = addSavedWorkout(
-                        t,
-                        customName.trim() || t.name,
+                        tpl,
+                        customName.trim() || tpl.name,
                       );
                       setMyWorkouts(loadSavedWorkouts());
                       setCustomTemplate(templateFromSaved(saved));
@@ -1246,7 +1248,7 @@ export function RunScreen({
                       void allActivities().then((acts) => {
                         const { newly } = refreshAchievements(acts, profile);
                         if (newly.length === 1) {
-                          onToast(`Achievement: ${newly[0].title}`);
+                          onToast(t('toast.achievement.one', { name: t(newly[0].title) }));
                         }
                       });
                     }}

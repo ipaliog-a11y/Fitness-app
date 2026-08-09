@@ -352,9 +352,9 @@ export function App() {
       setActivities(nextList);
       syncLifetime(nextList);
       const { newly } = refreshAchievements(nextList, profile);
-      if (newly.length === 1) showToast(`Achievement: ${newly[0].title}`);
+      if (newly.length === 1) showToast(t('toast.achievement.one', { name: t(newly[0].title) }));
       else if (newly.length > 1)
-        showToast(`${newly.length} new achievements unlocked`);
+        showToast(t('toast.achievement.many', { count: newly.length }));
       setOpenId(activity.id);
       setTab("history");
       setResultDecisionLock(true);
@@ -384,7 +384,7 @@ export function App() {
         // Notes can unlock the note-taker achievement.
         queueMicrotask(() => {
           const { newly } = refreshAchievements(next, profile);
-          if (newly.length === 1) showToast(`Achievement: ${newly[0].title}`);
+          if (newly.length === 1) showToast(t('toast.achievement.one', { name: t(newly[0].title) }));
         });
         return next;
       });
