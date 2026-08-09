@@ -497,6 +497,19 @@ export const en = {
   'run.console.inclineLabel': 'Incline (%) — optional',
   'run.console.distanceHintPod': 'Console distance overrides the pod and calibrates it.',
   'run.console.distanceHintSteps': 'Overrides the step estimate and calibrates stride.',
+
+  // --- Treadmill panel ------------------------------------------------------
+  'run.panel.label': 'Treadmill view',
+  'run.panel.effort': 'Effort',
+  'run.panel.splits': 'Splits',
+  'run.effort.warmingUp': 'Building the trace — give it a few seconds.',
+  'run.effort.needSource':
+    'Connect a heart rate strap, or let the step counter start, and effort will plot here.',
+  'run.effort.bpm': 'bpm',
+  'run.effort.chartLabel': 'Effort over time',
+  'run.effort.range': 'Low {low} · high {high}',
+  'run.splits.empty': 'Tap Lap and each split lands here.',
+  'run.laps.title': 'Laps',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */

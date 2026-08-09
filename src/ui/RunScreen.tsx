@@ -20,7 +20,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
-import type { Activity, RunMode } from '../core/activity';
+import type { Activity, ManualLap, RunMode } from '../core/activity';
 import type { GeoPoint } from '../core/geo';
 import { autoPauseAction, nextStillMs } from '../core/autoPause';
 import { formatCalories } from '../core/calories';
@@ -106,6 +106,7 @@ import {
 } from '../platform/liveRunNative';
 import { resolveMapBasemap } from '../core/mercator';
 import { RouteMap } from './RouteMap';
+import type { Translate } from '../i18n';
 import { useT, useWorkoutText } from '../i18n/react';
 
 interface Props {
@@ -145,6 +146,133 @@ function geoLabel(status: GeoStatus, detail?: string): string {
 }
 
 /** Compact interval strip for workout tiles (warmup / work / rest / …). */
+
+/**
+ * The treadmill panel: what fills the space outdoor spends on a map.
+ *
+ * Two views behind a toggle, because the two useful things are useful at
+ * different moments. The effort trace answers "how hard am I working" from the
+ * first minute; splits answer "am I holding it together" but say nothing until
+ * you have tapped Lap at least once.
+ *
+ * Effort plots heart rate when a strap is connected and cadence when it is
+ * not. That fallback matters more than it looks: no strap is the ordinary
+ * treadmill setup, and without it there is no pace series to fall back on —
+ * distance accumulates but is never sampled — so a heart-rate-only trace would
+ * be blank for most runs.
+ */
+type EffortSample = { t: number; bpm: number | null; spm: number | null };
+type TreadView = 'effort' | 'splits';
+
+function EffortTrace({
+  samples,
+  maxHeartRate,
+  t,
+}: {
+  samples: EffortSample[];
+  maxHeartRate: number;
+  t: Translate;
+}) {
+  const hasHr = samples.some((s) => s.bpm !== null);
+  const points = samples
+    .map((s) => ({ t: s.t, v: hasHr ? s.bpm : s.spm }))
+    .filter((s): s is { t: number; v: number } => s.v !== null);
+
+  if (points.length < 2) {
+    return (
+      <p className="hint tread-panel-empty">
+        {hasHr ? t('run.effort.warmingUp') : t('run.effort.needSource')}
+      </p>
+    );
+  }
+
+  const W = 100;
+  const H = 40;
+  const t0 = points[0].t;
+  const span = Math.max(1, points[points.length - 1].t - t0);
+  // Padded so a flat line does not sit exactly on the frame.
+  const lo = Math.min(...points.map((p) => p.v));
+  const hi = Math.max(...points.map((p) => p.v));
+  const range = Math.max(1, hi - lo);
+  const x = (p: { t: number }) => ((p.t - t0) / span) * W;
+  const y = (p: { v: number }) => H - ((p.v - lo) / range) * (H - 6) - 3;
+  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p).toFixed(2)} ${y(p).toFixed(2)}`).join(' ');
+  const area = `${line} L${W} ${H} L0 ${H} Z`;
+  const last = points[points.length - 1];
+  const zone = hasHr ? zoneOf(last.v, maxHeartRate) : null;
+
+  return (
+    <>
+      <div className="tread-trace-head">
+        <span className="tread-trace-now">{Math.round(last.v)}</span>
+        <span className="tread-trace-unit">
+          {hasHr ? t('run.effort.bpm') : t('run.pod.spm')}
+        </span>
+        {zone && (
+          <span className="tread-trace-zone" style={{ background: zoneSwatch(zone) }}>
+            Z{zone.index} · {t(zone.name)}
+          </span>
+        )}
+      </div>
+      <svg
+        className="tread-trace"
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={t('run.effort.chartLabel')}
+      >
+        <path className="tread-trace-area" d={area} />
+        <path className="tread-trace-line" d={line} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <p className="hint tread-panel-foot">
+        {t('run.effort.range', { low: Math.round(lo), high: Math.round(hi) })}
+      </p>
+    </>
+  );
+}
+
+function SplitList({
+  laps,
+  units,
+  t,
+}: {
+  laps: ManualLap[];
+  units: Profile['units'];
+  t: Translate;
+}) {
+  if (laps.length === 0) {
+    return <p className="hint tread-panel-empty">{t('run.splits.empty')}</p>;
+  }
+  // Compare each split against the slowest, so the bars have a stable scale
+  // that does not jump every time a new lap lands.
+  const paces = laps.map((l) =>
+    l.splitDistanceM > 0 ? l.splitDurationMs / l.splitDistanceM : 0,
+  );
+  const slowest = Math.max(...paces, 1);
+  return (
+    <ol className="tread-splits">
+      {laps
+        .slice()
+        .reverse()
+        .map((lap) => {
+          const pace = lap.splitDistanceM > 0 ? lap.splitDurationMs / lap.splitDistanceM : 0;
+          return (
+            <li key={lap.index}>
+              <span className="tread-split-idx">{lap.index}</span>
+              <span className="tread-split-time">{formatDuration(lap.splitDurationMs)}</span>
+              <span className="tread-split-bar" aria-hidden>
+                <i style={{ width: `${Math.max(6, (pace / slowest) * 100)}%` }} />
+              </span>
+              <span className="tread-split-dist">
+                {formatDistance(lap.splitDistanceM, units)} {distanceLabel(units)}
+              </span>
+            </li>
+          );
+        })}
+    </ol>
+  );
+}
+
 function WorkoutIntervalStrip({ phases }: { phases: WorkoutPhase[] }) {
   const t = useT();
   if (phases.length === 0) {
@@ -292,6 +420,18 @@ export function RunScreen({
   const [manualDistance, setManualDistance] = useState('');
   const [incline, setIncline] = useState('');
   const [consoleOpen, setConsoleOpen] = useState(false);
+  const [treadView, setTreadView] = useState<TreadView>('effort');
+  /*
+   * Effort samples for the treadmill trace.
+   *
+   * A ref plus a counter rather than state holding the array: this ticks every
+   * ten seconds for an hour, and re-rendering the whole run screen on each
+   * push would be wasteful when only one panel cares.
+   */
+  const effortRef = useRef<EffortSample[]>([]);
+  const [effortTick, setEffortTick] = useState(0);
+
+
   /** The typed incline as a number, or null when blank or nonsense. */
   const inclineValue = (() => {
     if (incline.trim() === '') return null;
@@ -378,6 +518,26 @@ export function RunScreen({
 
   const session = sessionRef.current;
   const running = session?.state === 'running';
+
+  /*
+   * Sample effort every ten seconds while the clock is running.
+   *
+   * Ten seconds is deliberate: an hour of running is 360 points, which draws
+   * as a smooth line at this width and costs nothing to keep in memory, while
+   * a per-second sample would be 3600 points for no visible extra detail.
+   * Paused time is skipped, so the trace shows effort and not a flat shelf
+   * where the athlete stood still.
+   */
+  useEffect(() => {
+    if (!session || session.mode !== 'treadmill' || !running) return;
+    const push = () => {
+      effortRef.current.push({ t: Date.now(), bpm, spm: cadence });
+      setEffortTick((n) => n + 1);
+    };
+    push();
+    const id = setInterval(push, 10_000);
+    return () => clearInterval(id);
+  }, [session?.mode, running, bpm, cadence]);
   const active = running || session?.state === 'paused';
   const live = arming || active;
   const liveDistanceM = session?.distanceM ?? 0;
@@ -2342,6 +2502,37 @@ export function RunScreen({
         * typing happens in a sheet.
         */}
       {session.mode === 'treadmill' && (
+        <div className="card tread-panel">
+          <div className="view-toggle-compact" role="group" aria-label={t('run.panel.label')}>
+            <button
+              type="button"
+              aria-pressed={treadView === 'effort'}
+              onClick={() => setTreadView('effort')}
+            >
+              {t('run.panel.effort')}
+            </button>
+            <button
+              type="button"
+              aria-pressed={treadView === 'splits'}
+              onClick={() => setTreadView('splits')}
+            >
+              {t('run.panel.splits')}
+            </button>
+          </div>
+          {treadView === 'effort' ? (
+            <EffortTrace
+              samples={effortRef.current}
+              maxHeartRate={profile.maxHeartRate}
+              t={t}
+              key={effortTick}
+            />
+          ) : (
+            <SplitList laps={session.manualLaps} units={profile.units} t={t} />
+          )}
+        </div>
+      )}
+
+      {session.mode === 'treadmill' && (
         <button
           type="button"
           className="console-row"
@@ -2496,9 +2687,17 @@ export function RunScreen({
         )}
       </div>
 
-      {session.manualLaps.length > 0 && (
+      {/*
+        * Outdoor only: on a treadmill the panel's Splits view already lists
+        * these, and two identical lists on one screen is worse than either.
+        */}
+      {/*
+        * Outdoor only: on a treadmill the panel's Splits view already lists
+        * these, and two identical lists on one screen is worse than either.
+        */}
+      {session.mode === 'outdoor' && session.manualLaps.length > 0 && (
         <div className="card" style={{ marginBottom: 10, marginTop: 10 }}>
-          <h2>Laps</h2>
+          <h2>{t('run.laps.title')}</h2>
           <ul className="lap-list">
             {session.manualLaps.map((lap) => (
               <li key={lap.index}>

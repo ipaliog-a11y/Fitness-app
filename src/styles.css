@@ -5083,3 +5083,137 @@ button.cal-event {
 .console-row:active {
   transform: scale(var(--press-scale, 0.98));
 }
+
+/* --- Treadmill panel: effort trace / splits ------------------------------ */
+
+/*
+ * Occupies the slot outdoor gives the map, so it is sized to roughly match
+ * rather than collapsing and making the controls jump between modes.
+ */
+.tread-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 168px;
+}
+
+.tread-panel .view-toggle-compact {
+  align-self: flex-start;
+}
+
+.tread-panel-empty {
+  margin: auto 0;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.tread-trace-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.tread-trace-now {
+  font-family: var(--metric-font, inherit);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tread-trace-unit {
+  font-size: 11px;
+  letter-spacing: var(--letter-label, 0.08em);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tread-trace-zone {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  /* The swatch is a saturated zone colour, so the text on it is fixed dark
+     rather than themed — --text would vanish on the amber and lime zones. */
+  color: #0b0f14;
+}
+
+.tread-trace {
+  width: 100%;
+  height: 84px;
+  display: block;
+  overflow: visible;
+}
+
+.tread-trace-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tread-trace-area {
+  fill: var(--accent-dim);
+  stroke: none;
+}
+
+.tread-panel-foot {
+  margin: 0;
+}
+
+/* --- Splits --------------------------------------------------------------- */
+
+.tread-splits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Long runs keep scrolling inside the card rather than pushing the controls
+     off screen the way the console form used to. */
+  max-height: 148px;
+  overflow-y: auto;
+}
+
+.tread-splits li {
+  display: grid;
+  grid-template-columns: 22px 56px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.tread-split-idx {
+  color: var(--muted-2, var(--muted));
+  font-variant-numeric: tabular-nums;
+}
+
+.tread-split-time {
+  font-family: var(--metric-font, inherit);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tread-split-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-3, var(--surface-2));
+  overflow: hidden;
+}
+
+.tread-split-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.tread-split-dist {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

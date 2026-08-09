@@ -541,4 +541,17 @@ export const el: Messages = {
   'run.console.inclineLabel': 'Κλίση (%) — προαιρετικό',
   'run.console.distanceHintPod': 'Η απόσταση της κονσόλας υπερισχύει του αισθητήρα και τον βαθμονομεί.',
   'run.console.distanceHintSteps': 'Υπερισχύει της εκτίμησης από βήματα και βαθμονομεί τον διασκελισμό.',
+
+  // --- Treadmill panel ------------------------------------------------------
+  'run.panel.label': 'Προβολή διαδρόμου',
+  'run.panel.effort': 'Ένταση',
+  'run.panel.splits': 'Splits',
+  'run.effort.warmingUp': 'Χτίζεται η γραμμή — δώσε λίγα δευτερόλεπτα.',
+  'run.effort.needSource':
+    'Σύνδεσε ζώνη καρδιακών παλμών, ή άφησε τον μετρητή βημάτων να ξεκινήσει, και η ένταση θα σχεδιαστεί εδώ.',
+  'run.effort.bpm': 'παλμοί',
+  'run.effort.chartLabel': 'Ένταση στον χρόνο',
+  'run.effort.range': 'Ελάχ. {low} · μέγ. {high}',
+  'run.splits.empty': 'Πάτα Γύρος και κάθε split θα εμφανίζεται εδώ.',
+  'run.laps.title': 'Γύροι',
 };
