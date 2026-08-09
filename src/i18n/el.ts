@@ -675,4 +675,54 @@ export const el: Messages = {
   'coach.guide.plansBody':
     'Πολυεβδομαδιαία πρότυπα που τσεκάρεις με το χέρι. Καθοδηγούν τη δομή· δεν διαβάζουν αυτόματα το GPS σου για να εφεύρουν προπονήσεις.',
   'coach.guide.gotIt': 'Το κατάλαβα',
+
+  // --- Settings: the rest ---------------------------------------------------
+  'common.on': 'Ναι',
+  'common.off': 'Όχι',
+  'settings.units.title': 'Μονάδες',
+  'settings.units.km': 'Χιλιόμετρα',
+  'settings.units.miles': 'Μίλια',
+  'settings.map.title': 'Χάρτης',
+  'settings.map.hint': 'Χάρτης υποβάθρου για τις διαδρομές του ιστορικού.',
+  'settings.map.hintLive':
+    'Χάρτης υποβάθρου για τις διαδρομές του ιστορικού και τα ζωντανά τρεξίματα σε εξωτερικό χώρο.',
+  'settings.map.autoNote': 'Αυτόματα → {basemap} με αυτό το θέμα.',
+  'settings.map.styleLabel': 'Στυλ χάρτη',
+  'settings.map.liveTiles': 'Πλακίδια χάρτη σε ζωντανό τρέξιμο',
+  'settings.map.liveTilesHint':
+    'Απενεργοποιημένο εξ ορισμού — γλιτώνει δεδομένα και κρατά την οθόνη απλή. Όταν είναι ενεργό, ο χάρτης φορτώνει το υπόβαθρο κατά την προετοιμασία και το τρέξιμο (χρειάζεται δίκτυο).',
+  'settings.goal.title': 'Εβδομαδιαίος στόχος',
+  'settings.goal.label': 'Απόσταση ανά εβδομάδα ({unit})',
+  'settings.goal.hint':
+    'Βάλε 0 για να απενεργοποιήσεις τον στόχο. Το σώμα και τα παπούτσια βρίσκονται στο Προφίλ.',
+  'settings.strideLabel': 'Μήκος διασκελισμού (μ ανά βήμα)',
+  'settings.duringRun': 'Κατά τη διάρκεια του τρεξίματος',
+  'settings.keepAwake': 'Να μένει η οθόνη αναμμένη',
+  'settings.audioCues': 'Φωνητικές οδηγίες',
+  'settings.audioCuesHint':
+    'Ανακοινώνει χιλιόμετρα/μίλια, πρόοδο στόχου, γύρους και παύση/συνέχεια. Χρησιμοποιεί τη φωνή του τηλεφώνου (λειτουργεί χωρίς σύνδεση).',
+  'settings.haptics': 'Δόνηση',
+  'settings.hapticsHint':
+    'Σύντομη δόνηση όταν κάτι αλλάζει (καρτέλες, ρυθμίσεις). Όχι σε κάθε άγγιγμα.',
+  'settings.autoPause': 'Αυτόματη παύση',
+  'settings.autoPauseHint':
+    'Κάνει παύση όταν σταματάς (GPS σε εξωτερικό χώρο ή αισθητήρας ποδιού σε διάδρομο) και συνεχίζει μόλις ξεκινήσεις πάλι.',
+  'settings.footpod.title': 'Αισθητήρας ποδιού',
+  'settings.footpod.correction': 'Διόρθωση απόστασης',
+  'settings.routes.title': 'Αποθηκευμένες διαδρομές',
+  'settings.routes.empty': 'Καμία αποθηκευμένη διαδρομή ακόμη.',
+  'settings.routeDeleted': 'Η διαδρομή διαγράφηκε.',
+  'settings.data.title': 'Τα δεδομένα σου',
+  'settings.backup.done':
+    'Κατέβηκε πλήρες αντίγραφο ασφαλείας (τρεξίματα, προφίλ, παπούτσια, διαδρομές, πλάνο).',
+  'settings.backup.unreadable': 'Δεν ήταν δυνατή η ανάγνωση αυτού του αρχείου.',
+  'settings.gpxFailed': 'Η εισαγωγή GPX απέτυχε.',
+  'settings.wiped':
+    'Όλα τα τρεξίματα, τα παπούτσια, οι διαδρομές και το πλάνο διαγράφηκαν. Το προφίλ διατηρήθηκε.',
+  'settings.hc.androidOnly': 'Η εισαγωγή από το Health Connect λειτουργεί μόνο στην εφαρμογή Android.',
+  'settings.hc.noneFound': 'Δεν βρέθηκαν τρεξίματα σε αυτό το εύρος ημερομηνιών.',
+  'settings.hc.scanFailed': 'Η σάρωση του Health Connect απέτυχε.',
+  'settings.hc.selectOne': 'Διάλεξε τουλάχιστον ένα τρέξιμο για εισαγωγή.',
+  'settings.hc.nothingNew': 'Δεν εισήχθη κάτι νέο.',
+  'settings.hc.importFailed': 'Η εισαγωγή από το Health Connect απέτυχε.',
 };

@@ -85,7 +85,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
 
   const scanHealth = async () => {
     if (!healthConnectSupported()) {
-      onToast('Health Connect import works in the Android app only.');
+      onToast(t('settings.hc.androidOnly'));
       return;
     }
     setHealthImporting(true);
@@ -102,11 +102,11 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
         onToast(
           preview.skippedDuplicate > 0
             ? `No new runs · ${preview.skippedDuplicate} already in history.`
-            : 'No running workouts found in that date range.',
+            : t('settings.hc.noneFound'),
         );
       }
     } catch (error) {
-      onToast(error instanceof Error ? error.message : 'Health Connect scan failed.');
+      onToast(error instanceof Error ? error.message : t('settings.hc.scanFailed'));
     } finally {
       setHealthImporting(false);
     }
@@ -114,7 +114,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
 
   const importHealthSelected = async () => {
     if (!healthCandidates || healthSelected.size === 0) {
-      onToast('Select at least one run to import.');
+      onToast(t('settings.hc.selectOne'));
       return;
     }
     setHealthImporting(true);
@@ -127,10 +127,10 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       onToast(
         result.imported > 0
           ? `Imported ${result.imported} run${result.imported === 1 ? '' : 's'}.`
-          : 'Nothing new imported.',
+          : t('settings.hc.nothingNew'),
       );
     } catch (error) {
-      onToast(error instanceof Error ? error.message : 'Health Connect import failed.');
+      onToast(error instanceof Error ? error.message : t('settings.hc.importFailed'));
     } finally {
       setHealthImporting(false);
     }
@@ -175,7 +175,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
     link.download = `runlog-backup-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    onToast('Full backup downloaded (runs, profile, shoes, routes, plan).');
+    onToast(t('settings.backup.done'));
   };
 
   const upload = async (file: File) => {
@@ -203,7 +203,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
         );
       }
     } catch (error) {
-      onToast(error instanceof Error ? error.message : 'That file could not be read.');
+      onToast(error instanceof Error ? error.message : t('settings.backup.unreadable'));
     }
   };
 
@@ -216,7 +216,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       );
       onReload();
     } catch (error) {
-      onToast(error instanceof Error ? error.message : 'GPX import failed.');
+      onToast(error instanceof Error ? error.message : t('settings.gpxFailed'));
     }
   };
 
@@ -276,30 +276,34 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       </div>
 
       <div className="card">
-        <h2>Units</h2>
+        <h2>{t('settings.units.title')}</h2>
         <div className="segmented">
           <button aria-pressed={profile.units === 'metric'} onClick={() => set('units', 'metric')}>
-            Kilometres
+            {t('settings.units.km')}
           </button>
           <button
             aria-pressed={profile.units === 'imperial'}
             onClick={() => set('units', 'imperial')}
           >
-            Miles
+            {t('settings.units.miles')}
           </button>
         </div>
       </div>
 
       <div className="card">
-        <h2>Map</h2>
+        <h2>{t('settings.map.title')}</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          Basemap for history routes
-          {profile.liveMapTiles ? ' and live outdoor runs' : ''}.{' '}
+          {profile.liveMapTiles ? t('settings.map.hintLive') : t('settings.map.hint')}{' '}
           {profile.mapStyle === 'auto'
-            ? `Auto → ${resolveMapBasemap('auto', profile.theme) === 'dark' ? 'dark' : 'standard'} with this theme.`
+            ? t('settings.map.autoNote', {
+                basemap:
+                  resolveMapBasemap('auto', profile.theme) === 'dark'
+                    ? t('mapStyle.dark.label')
+                    : t('mapStyle.standard.label'),
+              })
             : null}
         </p>
-        <div className="theme-picker map-style-picker" role="radiogroup" aria-label="Map style">
+        <div className="theme-picker map-style-picker" role="radiogroup" aria-label={t('settings.map.styleLabel')}>
           {MAP_STYLE_OPTIONS.map((opt) => {
             const selected = profile.mapStyle === opt.id;
             return (
@@ -323,26 +327,25 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           })}
         </div>
         <div className="row" style={{ marginTop: 14 }}>
-          <span>Map tiles on live run</span>
+          <span>{t('settings.map.liveTiles')}</span>
           <button
             type="button"
             className="btn"
             aria-pressed={profile.liveMapTiles}
             onClick={() => set('liveMapTiles', !profile.liveMapTiles)}
           >
-            {profile.liveMapTiles ? 'On' : 'Off'}
+            {profile.liveMapTiles ? t('common.on') : t('common.off')}
           </button>
         </div>
         <p className="hint">
-          Off by default — saves data and keeps the live screen simple. When on, the outdoor map
-          loads the basemap while arming and running (needs network).
+          {t('settings.map.liveTilesHint')}
         </p>
       </div>
 
       <div className="card">
-        <h2>Weekly goal</h2>
+        <h2>{t('settings.goal.title')}</h2>
         <div className="field">
-          <label htmlFor="goal">Distance per week ({distanceLabel(profile.units)})</label>
+          <label htmlFor="goal">{t('settings.goal.label', { unit: distanceLabel(profile.units) })}</label>
           <input
             id="goal"
             type="number"
@@ -356,14 +359,14 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
               }
             }}
           />
-          <p className="hint">Set to 0 to turn the goal off. Body &amp; shoes live under Profile.</p>
+          <p className="hint">{t('settings.goal.hint')}</p>
         </div>
       </div>
 
       <div className="card">
-        <h2>Treadmill</h2>
+        <h2>{t('run.treadmill')}</h2>
         <div className="field">
-          <label htmlFor="settings-stride">Stride length (m per step)</label>
+          <label htmlFor="settings-stride">{t('settings.strideLabel')}</label>
           <input
             id="settings-stride"
             type="text"
@@ -401,68 +404,66 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       </div>
 
       <div className="card">
-        <h2>During a run</h2>
+        <h2>{t('settings.duringRun')}</h2>
         <div className="row">
-          <span>Keep the screen awake</span>
+          <span>{t('settings.keepAwake')}</span>
           <button
             type="button"
             className="btn"
             aria-pressed={profile.keepAwake}
             onClick={() => set('keepAwake', !profile.keepAwake)}
           >
-            {profile.keepAwake ? 'On' : 'Off'}
+            {profile.keepAwake ? t('common.on') : t('common.off')}
           </button>
         </div>
         <div className="row" style={{ marginTop: 12 }}>
-          <span>Audio cues</span>
+          <span>{t('settings.audioCues')}</span>
           <button
             type="button"
             className="btn"
             aria-pressed={profile.audioCues}
             onClick={() => set('audioCues', !profile.audioCues)}
           >
-            {profile.audioCues ? 'On' : 'Off'}
+            {profile.audioCues ? t('common.on') : t('common.off')}
           </button>
         </div>
         <p className="hint">
-          Speaks kilometres/miles, goal progress, laps, and pause/resume. Uses the phone&apos;s
-          voice (works offline).
+          {t('settings.audioCuesHint')}
         </p>
         <div className="row" style={{ marginTop: 12 }}>
-          <span>Haptic feedback</span>
+          <span>{t('settings.haptics')}</span>
           <button
             type="button"
             className="btn"
             aria-pressed={profile.haptics}
             onClick={() => set('haptics', !profile.haptics)}
           >
-            {profile.haptics ? 'On' : 'Off'}
+            {profile.haptics ? t('common.on') : t('common.off')}
           </button>
         </div>
         <p className="hint">
-          Short vibration when something changes (tabs, settings). Not on every finger tap.
+          {t('settings.hapticsHint')}
         </p>
         <div className="row" style={{ marginTop: 12 }}>
-          <span>Auto-pause</span>
+          <span>{t('settings.autoPause')}</span>
           <button
             type="button"
             className="btn"
             aria-pressed={profile.autoPause}
             onClick={() => set('autoPause', !profile.autoPause)}
           >
-            {profile.autoPause ? 'On' : 'Off'}
+            {profile.autoPause ? t('common.on') : t('common.off')}
           </button>
         </div>
         <p className="hint">
-          Pauses when you stop moving (outdoor GPS or treadmill foot pod) and resumes when you go
-          again.
+          {t('settings.autoPauseHint')}
         </p>
       </div>
 
       <div className="card">
-        <h2>Foot pod</h2>
+        <h2>{t('settings.footpod.title')}</h2>
         <div className="field">
-          <label htmlFor="podcal">Distance correction</label>
+          <label htmlFor="podcal">{t('settings.footpod.correction')}</label>
           <input
             id="podcal"
             type="number"
@@ -497,11 +498,11 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       </div>
 
       <div className="card">
-        <h2>Saved routes</h2>
+        <h2>{t('settings.routes.title')}</h2>
         <p className="hint" style={{ marginTop: 0 }}>
           Save a route from a finished outdoor run&apos;s detail screen.
         </p>
-        {routes.length === 0 && <p className="hint">No saved routes yet.</p>}
+        {routes.length === 0 && <p className="hint">{t('settings.routes.empty')}</p>}
         {routes.map((route) => (
           <div className="row" key={route.id} style={{ marginBottom: 8 }}>
             <span>
@@ -518,7 +519,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
               className="btn danger"
               onClick={() => {
                 saveRoutes(loadRoutes().filter((r) => r.id !== route.id));
-                onToast('Route deleted.');
+                onToast(t('settings.routeDeleted'));
                 setRoutesTick((t) => t + 1);
               }}
             >
@@ -674,7 +675,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       </div>
 
       <div className="card">
-        <h2>Your data</h2>
+        <h2>{t('settings.data.title')}</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
           Everything stays on this device. Use a <strong>full backup</strong> before clearing the
           browser or moving to another phone (or Android).
@@ -739,7 +740,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                 setConfirmingWipe(false);
                 onReload();
                 setRoutesTick((t) => t + 1);
-                onToast('All runs, shoes, routes and plan cleared. Profile kept.');
+                onToast(t('settings.wiped'));
               }}
             >
               Delete everything

@@ -629,6 +629,52 @@ export const en = {
   'coach.guide.plansBody':
     'Multi-week templates you tick by hand. They guide structure; they do not auto-read your GPS and invent sessions.',
   'coach.guide.gotIt': 'Got it',
+
+  // --- Settings: the rest ---------------------------------------------------
+  'common.on': 'On',
+  'common.off': 'Off',
+  'settings.units.title': 'Units',
+  'settings.units.km': 'Kilometres',
+  'settings.units.miles': 'Miles',
+  'settings.map.title': 'Map',
+  'settings.map.hint': 'Basemap for history routes.',
+  'settings.map.hintLive': 'Basemap for history routes and live outdoor runs.',
+  'settings.map.autoNote': 'Auto → {basemap} with this theme.',
+  'settings.map.styleLabel': 'Map style',
+  'settings.map.liveTiles': 'Map tiles on live run',
+  'settings.map.liveTilesHint':
+    'Off by default — saves data and keeps the live screen simple. When on, the outdoor map loads the basemap while arming and running (needs network).',
+  'settings.goal.title': 'Weekly goal',
+  'settings.goal.label': 'Distance per week ({unit})',
+  'settings.goal.hint': 'Set to 0 to turn the goal off. Body & shoes live under Profile.',
+  'settings.strideLabel': 'Stride length (m per step)',
+  'settings.duringRun': 'During a run',
+  'settings.keepAwake': 'Keep the screen awake',
+  'settings.audioCues': 'Audio cues',
+  'settings.audioCuesHint':
+    'Speaks kilometres/miles, goal progress, laps, and pause/resume. Uses the phone’s voice (works offline).',
+  'settings.haptics': 'Haptic feedback',
+  'settings.hapticsHint':
+    'Short vibration when something changes (tabs, settings). Not on every finger tap.',
+  'settings.autoPause': 'Auto-pause',
+  'settings.autoPauseHint':
+    'Pauses when you stop moving (outdoor GPS or treadmill foot pod) and resumes when you go again.',
+  'settings.footpod.title': 'Foot pod',
+  'settings.footpod.correction': 'Distance correction',
+  'settings.routes.title': 'Saved routes',
+  'settings.routes.empty': 'No saved routes yet.',
+  'settings.routeDeleted': 'Route deleted.',
+  'settings.data.title': 'Your data',
+  'settings.backup.done': 'Full backup downloaded (runs, profile, shoes, routes, plan).',
+  'settings.backup.unreadable': 'That file could not be read.',
+  'settings.gpxFailed': 'GPX import failed.',
+  'settings.wiped': 'All runs, shoes, routes and plan cleared. Profile kept.',
+  'settings.hc.androidOnly': 'Health Connect import works in the Android app only.',
+  'settings.hc.noneFound': 'No running workouts found in that date range.',
+  'settings.hc.scanFailed': 'Health Connect scan failed.',
+  'settings.hc.selectOne': 'Select at least one run to import.',
+  'settings.hc.nothingNew': 'Nothing new imported.',
+  'settings.hc.importFailed': 'Health Connect import failed.',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */
