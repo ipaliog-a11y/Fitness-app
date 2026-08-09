@@ -174,7 +174,7 @@ function ProfileScreenInner({
 
   const saveShoeModal = () => {
     if (!shoeName.trim()) {
-      onToast('Give the shoes a name.');
+      onToast(t('profile.shoes.needName'));
       return;
     }
     const limitDisplay = Number(shoeLimit);
@@ -194,7 +194,7 @@ function ProfileScreenInner({
           limitM,
         }),
       );
-      onToast('Shoes updated.');
+      onToast(t('profile.shoes.updated'));
     }
     closeShoeModal();
   };
@@ -202,7 +202,7 @@ function ProfileScreenInner({
   const displayName = typeof profile.displayName === 'string' ? profile.displayName : '';
   const savedName = displayName.trim();
   const hasName = savedName.length > 0;
-  const greeting = savedName || 'Runner';
+  const greeting = savedName || t('profile.defaultName');
   const hasBirth = Boolean(profile.birthDate);
   const identityComplete = hasName && hasBirth && profile.heightCm > 0;
   const [editingIdentity, setEditingIdentity] = useState(!identityComplete);
@@ -229,7 +229,7 @@ function ProfileScreenInner({
     const birth = birthDraft.trim();
     const ageFromDob = ageFromBirthDate(birth);
     if (birth && ageFromDob === null) {
-      onToast('Enter a valid date of birth.');
+      onToast(t('profile.invalidBirth'));
       return;
     }
     const heightRaw = heightDraft.trim();
@@ -237,7 +237,7 @@ function ProfileScreenInner({
     if (heightRaw !== '') {
       const n = Number(heightRaw);
       if (!Number.isFinite(n) || n < 80 || n > 250) {
-        onToast('Height must be between 80 and 250 cm.');
+        onToast(t('profile.invalidHeight'));
         return;
       }
       heightCm = n;
@@ -258,7 +258,7 @@ function ProfileScreenInner({
           : profile.strideM,
     });
     setEditingIdentity(false);
-    onToast(nextName ? `Profile saved · ${nextName}.` : 'Profile saved.');
+    onToast(nextName ? t('profile.savedNamed', { name: nextName }) : t('profile.saved'));
   };
 
   const weightLog = loadWeightStore();
@@ -310,36 +310,36 @@ function ProfileScreenInner({
   return (
     <div className="screen">
       <h1>{greeting}</h1>
-      <p className="subtitle">Your body, zones, and shoes — all on this device.</p>
+      <p className="subtitle">{t('profile.subtitle')}</p>
 
       <div className="card">
-        <h2>Lifetime mileage</h2>
+        <h2>{t('profile.lifetime')}</h2>
         <div className="metric-grid" style={{ marginTop: 8 }}>
           <div className="metric">
             <div className="value">
               {formatDistance(lifetime.distanceM, profile.units)}
             </div>
-            <div className="label">{distanceLabel(profile.units)} total</div>
+            <div className="label">{t('profile.totalUnit', { unit: distanceLabel(profile.units) })}</div>
           </div>
           <div className="metric">
             <div className="value">{lifetime.runs}</div>
-            <div className="label">Runs</div>
+            <div className="label">{t('profile.runs')}</div>
           </div>
           <div className="metric">
             <div className="value">
               {formatDistance(lifetime.longestRunM, profile.units)}
             </div>
-            <div className="label">Longest</div>
+            <div className="label">{t('profile.longest')}</div>
           </div>
         </div>
         <p className="hint" style={{ marginBottom: 0 }}>
-          Sum of every saved run on this device (updates when you finish or delete).
+          {t('profile.lifetimeHint')}
         </p>
       </div>
 
       <div className="card">
         <div className="row">
-          <h2 style={{ margin: 0 }}>Achievements</h2>
+          <h2 style={{ margin: 0 }}>{t('achievements.title')}</h2>
           <span className="hint" style={{ margin: 0 }}>
             {unlockN}/{ACHIEVEMENTS.length}
           </span>
@@ -357,23 +357,23 @@ function ProfileScreenInner({
       </div>
 
       <div className="card">
-        <h2>Profile</h2>
+        <h2>{t('app.tab.profile')}</h2>
         {editingIdentity ? (
           <>
             <div className="field name-field">
-              <label htmlFor="display-name">Name</label>
+              <label htmlFor="display-name">{t('profile.name')}</label>
               <input
                 id="display-name"
                 type="text"
                 autoComplete="nickname"
-                placeholder="e.g. Alex"
+                placeholder={t('profile.namePlaceholder')}
                 maxLength={40}
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}
               />
             </div>
             <div className="field">
-              <label htmlFor="birth-date">Date of birth</label>
+              <label htmlFor="birth-date">{t('profile.birthDate')}</label>
               <input
                 id="birth-date"
                 type="date"
@@ -382,43 +382,43 @@ function ProfileScreenInner({
                 onChange={(e) => setBirthDraft(e.target.value)}
               />
               <p className="hint">
-                Age is calculated automatically for max HR and calorie estimates.
+                {t('profile.birthHint')}
                 {birthDraft && ageFromBirthDate(birthDraft) !== null
-                  ? ` Currently ${ageFromBirthDate(birthDraft)} years.`
+                  ? ` ${t('profile.currentAge', { years: ageFromBirthDate(birthDraft) ?? 0 })}`
                   : ''}
               </p>
             </div>
             <div className="field">
-              <label htmlFor="height">Height (cm)</label>
+              <label htmlFor="height">{t('profile.heightLabel')}</label>
               <input
                 id="height"
                 type="text"
                 inputMode="numeric"
-                placeholder="e.g. 175"
+                placeholder={t('profile.heightPlaceholder')}
                 value={heightDraft}
                 onChange={(e) => setHeightDraft(e.target.value)}
               />
-              <p className="hint">You can clear the field while typing — nothing is saved until Save.</p>
+              <p className="hint">{t('profile.clearHint')}</p>
             </div>
             <div className="field">
-              <label>Sex (for calorie estimate)</label>
+              <label>{t('profile.sexLabel')}</label>
               <div className="segmented" style={{ marginTop: 6 }}>
                 <button
                   type="button"
                   aria-pressed={sexDraft === 'female'}
                   onClick={() => setSexDraft('female')}
                 >
-                  Female
+                  {t('profile.female')}
                 </button>
                 <button
                   type="button"
                   aria-pressed={sexDraft === 'male'}
                   onClick={() => setSexDraft('male')}
                 >
-                  Male
+                  {t('profile.male')}
                 </button>
               </div>
-              <p className="hint">Used by the HR-based calorie model (Keytel).</p>
+              <p className="hint">{t('profile.sexHint')}</p>
             </div>
             <div className="name-edit-row" style={{ marginTop: 8 }}>
               <button type="button" className="btn name-action primary-soft" onClick={saveIdentity}>
@@ -436,7 +436,7 @@ function ProfileScreenInner({
                     setEditingIdentity(false);
                   }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               )}
             </div>
@@ -460,17 +460,17 @@ function ProfileScreenInner({
               </span>
             </div>
             <div className="identity-row">
-              <span className="kv-k">Age</span>
+              <span className="kv-k">{t('profile.age')}</span>
               <span className="kv-v">{profile.age}</span>
             </div>
             <div className="identity-row">
-              <span className="kv-k">Height</span>
+              <span className="kv-k">{t('profile.height')}</span>
               <span className="kv-v">{profile.heightCm} cm</span>
             </div>
             <div className="identity-row">
-              <span className="kv-k">Sex</span>
+              <span className="kv-k">{t('profile.sex')}</span>
               <span className="kv-v">
-                {profile.sex === 'female' ? 'Female' : 'Male'}
+                {profile.sex === 'female' ? t('profile.female') : t('profile.male')}
               </span>
             </div>
             <button
@@ -485,18 +485,18 @@ function ProfileScreenInner({
                 setEditingIdentity(true);
               }}
             >
-              Edit
+              {t('profile.edit')}
             </button>
           </div>
         )}
       </div>
 
       <div className="card">
-        <h2>Weight</h2>
+        <h2>{t('weight.title')}</h2>
         <div className="metric-grid" style={{ marginBottom: 12 }}>
           <div className="metric">
             <div className="value">{weightDisplay.toFixed(1)}</div>
-            <div className="label">Current {unit}</div>
+            <div className="label">{t('profile.currentUnit', { unit })}</div>
           </div>
           <div className="metric">
             <div className="value">
@@ -504,7 +504,7 @@ function ProfileScreenInner({
                 ? toDisplayWeight(weightLog.goalKg, profile.units).toFixed(1)
                 : '—'}
             </div>
-            <div className="label">Goal {unit}</div>
+            <div className="label">{t('profile.goalUnit', { unit })}</div>
           </div>
           <div className="metric">
             <div className="value">
@@ -515,20 +515,20 @@ function ProfileScreenInner({
                     profile.units,
                   ).toFixed(1)}`}
             </div>
-            <div className="label">Since first</div>
+            <div className="label">{t('weight.sinceFirst')}</div>
           </div>
         </div>
         {toGoal !== null && weightLog.goalKg !== null && (
           <p className="hint" style={{ marginTop: 0 }}>
             {Math.abs(toGoal) < 0.05
-              ? 'At your goal weight.'
+              ? t('weight.atGoal')
               : toGoal > 0
                 ? `${toDisplayWeight(toGoal, profile.units).toFixed(1)} ${unit} above goal.`
                 : `${toDisplayWeight(-toGoal, profile.units).toFixed(1)} ${unit} below goal.`}
           </p>
         )}
         <p className="hint" style={{ marginTop: 0 }}>
-          Weigh-ins update calorie estimates and appear on the History calendar.
+          {t('profile.weightHint')}
           {weightLog.entries.length === 0
             ? ' No log yet — add your starting weight.'
             : ` ${weightLog.entries.length} logged reading${weightLog.entries.length === 1 ? '' : 's'}.`}
@@ -538,14 +538,14 @@ function ProfileScreenInner({
           className="btn primary wide"
           onClick={() => setWeightOpen(true)}
         >
-          {weightLog.entries.length === 0 ? 'Set up weight log' : 'Open weight log'}
+          {weightLog.entries.length === 0 ? t('profile.setUpWeight') : t('profile.openWeight')}
         </button>
       </div>
 
       <div className="card">
-        <h2>Heart rate zones</h2>
+        <h2>{t('profile.zones')}</h2>
         <div className="field">
-          <label htmlFor="maxhr">Maximum heart rate (bpm)</label>
+          <label htmlFor="maxhr">{t('profile.maxHr')}</label>
           <input
             id="maxhr"
             type="text"
@@ -585,12 +585,12 @@ function ProfileScreenInner({
       </div>
 
       <div className="card">
-        <h2>Shoes</h2>
+        <h2>{t('profile.shoes.title')}</h2>
         <p className="hint" style={{ marginTop: 0 }}>
           Pick a pair on the <strong>Get ready</strong> screen before you start; mileage is added
           when you finish.
         </p>
-        {shoes.length === 0 && <p className="hint">No shoes yet — tap Add a pair.</p>}
+        {shoes.length === 0 && <p className="hint">{t('profile.shoes.empty')}</p>}
         {shoes.map((shoe) => {
           const wear = Math.round(shoeWearFraction(shoe) * 100);
           return (
@@ -629,14 +629,14 @@ function ProfileScreenInner({
                     )
                   }
                 >
-                  {shoe.retired ? 'Restore' : 'Retire'}
+                  {shoe.retired ? t('profile.shoes.restore') : t('profile.shoes.retire')}
                 </button>
                 <button
                   type="button"
                   className="btn danger"
                   onClick={() => persistShoes(shoes.filter((s) => s.id !== shoe.id))}
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </div>
@@ -667,10 +667,10 @@ function ProfileScreenInner({
             aria-labelledby="shoe-modal-title"
           >
             <h2 id="shoe-modal-title">
-              {shoeModal === 'new' ? 'Add a pair' : 'Edit pair'}
+              {shoeModal === 'new' ? t('profile.shoes.add') : t('profile.shoes.edit')}
             </h2>
             <div className="field">
-              <label htmlFor="shoe-name">Name</label>
+              <label htmlFor="shoe-name">{t('profile.name')}</label>
               <input
                 id="shoe-name"
                 placeholder="e.g. Daily trainers"
@@ -681,7 +681,7 @@ function ProfileScreenInner({
               />
             </div>
             <div className="field">
-              <label htmlFor="shoe-brand">Brand (optional)</label>
+              <label htmlFor="shoe-brand">{t('profile.shoes.brand')}</label>
               <input
                 id="shoe-brand"
                 placeholder="Brand"
@@ -690,7 +690,7 @@ function ProfileScreenInner({
               />
             </div>
             <div className="field">
-              <label htmlFor="shoe-limit">Wear limit ({distanceLabel(profile.units)})</label>
+              <label htmlFor="shoe-limit">{t('profile.shoes.limit', { unit: distanceLabel(profile.units) })}</label>
               <input
                 id="shoe-limit"
                 type="number"
@@ -700,7 +700,7 @@ function ProfileScreenInner({
             </div>
             {shoeModal !== 'new' && (
               <p className="hint">
-                Mileage is not changed here — it only grows when you finish runs in these shoes.
+                {t('profile.shoes.mileageHint')}
               </p>
             )}
             <div className="btn-row" style={{ marginTop: 8 }}>
@@ -708,7 +708,7 @@ function ProfileScreenInner({
                 Cancel
               </button>
               <button type="button" className="btn primary" onClick={saveShoeModal}>
-                {shoeModal === 'new' ? 'Save pair' : 'Save changes'}
+                {shoeModal === 'new' ? t('profile.shoes.savePair') : t('profile.shoes.saveChanges')}
               </button>
             </div>
           </div>
