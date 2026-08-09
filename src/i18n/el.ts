@@ -874,6 +874,15 @@ export const el: Messages = {
   'settings.autoPause': 'Αυτόματη παύση',
   'settings.autoPauseHint':
     'Κάνει παύση όταν σταματάς (GPS σε εξωτερικό χώρο ή αισθητήρας ποδιού σε διάδρομο) και συνεχίζει μόλις ξεκινήσεις πάλι.',
+  'settings.autoLap': 'Αυτόματος γύρος',
+  'settings.autoLap.off': 'Ανενεργό',
+  'settings.autoLap.m400': '400 μ.',
+  'settings.autoLap.unit': 'Κάθε {unit}',
+  'settings.autoLap.phase': 'Βήμα προπόνησης',
+  'settings.autoLapHint':
+    'Κλείνει γύρο μόνο του, χωρίς να χρειάζεται να πιάσεις το κινητό. Το κουμπί γύρου δουλεύει κανονικά όποτε θέλεις δικό σου.',
+  'settings.autoLapDriftHint':
+    'Με GPS ο γύρος των 400 μ. είναι κατά προσέγγιση — η δορυφορική απόσταση βγαίνει λίγο μεγαλύτερη και το σφάλμα μαζεύεται μέσα στην προπόνηση. Ακριβής σε διάδρομο με αισθητήρα ποδιού.',
   'settings.footpod.title': 'Αισθητήρας ποδιού',
   'settings.footpod.correction': 'Διόρθωση απόστασης',
   'settings.routes.title': 'Αποθηκευμένες διαδρομές',
@@ -1153,6 +1162,7 @@ export const el: Messages = {
   'run.profileShoes': 'Προφίλ → Παπούτσια',
   'run.gpsUnavailable': 'Το GPS δεν είναι διαθέσιμο',
   'run.waitingGps': 'Αναμονή για GPS…',
+  'run.gpsLock': 'Κλείδωμα GPS',
   'run.recordingRoute': 'Καταγραφή διαδρομής…',
   'run.podInfo':
     'Οποιοσδήποτε αισθητήρας με το τυπικό προφίλ ταχύτητας και καντέντζας — Zwift RunPod, Stryd, Garmin ή Polar. Στον διάδρομο μετράει την ταχύτητα στο παπούτσι. Κούνησέ τον πρώτα· οι περισσότεροι εκπέμπουν μόνο όταν κινούνται. Πάτα ξανά το κουμπί για αποσύνδεση.',

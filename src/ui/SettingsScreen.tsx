@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { modeName, type Activity } from '../core/activity';
+import { AUTO_LAP_IDS, autoLapLabel } from '../core/autoLap';
 import { exportFullBackup, importBackup, wipeAllLocalData } from '../core/backup';
 import { saveActivity } from '../core/db';
 import { activityFromGpx } from '../core/gpx';
@@ -466,6 +467,27 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
         </div>
         <p className="hint">
           {t('settings.autoPauseHint')}
+        </p>
+
+        <div className="row" style={{ marginTop: 12 }}>
+          <span>{t('settings.autoLap')}</span>
+        </div>
+        <div className="chip-row" style={{ marginTop: 6 }}>
+          {AUTO_LAP_IDS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              className={`chip${profile.autoLap === id ? ' active' : ''}`}
+              aria-pressed={profile.autoLap === id}
+              onClick={() => set('autoLap', id)}
+            >
+              {t(autoLapLabel(id), { unit: distanceLabel(profile.units) })}
+            </button>
+          ))}
+        </div>
+        <p className="hint">
+          {t('settings.autoLapHint')}
+          {profile.autoLap === 'm400' ? ` ${t('settings.autoLapDriftHint')}` : ''}
         </p>
       </div>
 

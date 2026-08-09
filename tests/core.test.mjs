@@ -23,6 +23,11 @@ import {
 } from '../src/core/units.ts';
 import { splits, bestEffort, exportBaseName } from '../src/core/activity.ts';
 import { applyConsoleEntry } from '../src/core/consoleEntry.ts';
+import {
+  autoLapMetres,
+  autoLapsDue,
+  silencesDistanceCue,
+} from '../src/core/autoLap.ts';
 import { pickEnglishVoice } from '../src/platform/speech.ts';
 import { RunSession } from '../src/core/session.ts';
 import {
@@ -1874,6 +1879,40 @@ check('laps are announced once each, in order, however many arrive at once', () 
   equal(pendingCues(three, three, options).filter((e) => e.type === 'lap').length, 0);
 });
 
+check('a snapshot copies the lap list rather than borrowing it', () => {
+  /*
+   * The caller hands over the session's own array, which the session goes on
+   * mutating. Hold the reference and "before" and "after" are the same object,
+   * so a new lap is already in both by the time they are compared, the diff
+   * sees nothing, and no lap is ever announced.
+   *
+   * Every lap cue was silent because of this, and the checks above missed it
+   * by building a fresh array each time — which no real caller does. Found by
+   * driving an actual run in a browser and hearing nothing.
+   */
+  const laps = [];
+  const base = {
+    distanceM: 0,
+    durationMs: 0,
+    caloriesKcal: 0,
+    state: 'running',
+    goal: null,
+    laps,
+    autoPaused: false,
+    units: 'metric',
+  };
+  const before = makeSnapshot(base);
+  laps.push({ index: 1, splitDistanceM: 400, splitDurationMs: 120_000 });
+  const after = makeSnapshot(base);
+
+  const events = pendingCues(before, after, {
+    units: 'metric',
+    distanceCues: true,
+    goalCues: true,
+  });
+  equal(events.filter((e) => e.type === 'lap').length, 1, 'the new lap has to be noticed');
+});
+
 check('manual laps record split distance and time', () => {
   const t0 = 1_700_000_000_000;
   const session = new RunSession({ mode: 'treadmill', strideM: 1 }, t0);
@@ -2615,6 +2654,116 @@ check('every coach tip resolves in every locale, vars and all', () => {
       }
     }
   }
+});
+
+// --- auto lap -------------------------------------------------------------
+
+check('an auto-lap option resolves to a distance, or to none', () => {
+  equal(autoLapMetres('m400', 'metric'), 400);
+  equal(autoLapMetres('m400', 'imperial'), 400, '400 m is 400 m in any units');
+  equal(autoLapMetres('unit', 'metric'), 1000);
+  near(autoLapMetres('unit', 'imperial'), 1609.344, 0.01);
+  // Neither of these is a distance, and pretending otherwise would set the
+  // odometer closing laps for a workout that measures itself in minutes.
+  equal(autoLapMetres('off', 'metric'), null);
+  equal(autoLapMetres('phase', 'metric'), null);
+});
+
+check('laps come due once per boundary passed', () => {
+  equal(autoLapsDue(0, 399, 400), 0);
+  equal(autoLapsDue(0, 400, 400), 1, 'exactly on the line counts');
+  equal(autoLapsDue(0, 799, 400), 1);
+  equal(autoLapsDue(400, 801, 400), 1, 'measured from the last lap, not from zero');
+  equal(autoLapsDue(0, 1200, 400), 3, 'a long jump owes every boundary it crossed');
+  equal(autoLapsDue(0, 5000, null), 0, 'off owes nothing');
+  equal(autoLapsDue(0, 5000, 0), 0);
+  equal(autoLapsDue(0, Number.NaN, 400), 0, 'nonsense in, nothing out');
+});
+
+check('auto-lap silences the distance cue so a boundary is announced once', () => {
+  equal(silencesDistanceCue('off'), false);
+  equal(silencesDistanceCue('unit'), true);
+  equal(silencesDistanceCue('m400'), true);
+  equal(silencesDistanceCue('phase'), true);
+});
+
+check('an auto-lap lands on the boundary, not where the odometer was', () => {
+  /*
+   * The reason this is worth doing properly. Fixes arrive sparsely, so the
+   * distance advances in steps of five to twenty metres — read at face value,
+   * every lap marker sits past its mark by a different amount, which comes out
+   * as alternating fast and slow splits for a rhythm nobody ran.
+   *
+   * Steps of 15 m at 3 m/s here, so no boundary can ever land on a reading.
+   */
+  const t0 = 1_700_000_000_000;
+  const track = straightTrack({ points: 81, stepM: 15, secondsPerPoint: 5, t0 });
+  const session = new RunSession({ mode: 'outdoor' }, t0);
+  session.start(t0);
+
+  const laps = [];
+  for (const point of track) {
+    session.addPoint(point);
+    let lap = session.autoLap(400, point.t);
+    while (lap !== null) {
+      laps.push(lap);
+      lap = session.autoLap(400, point.t);
+    }
+  }
+
+  assert(laps.length >= 2, `expected laps, got ${laps.length}`);
+  laps.forEach((lap, i) => {
+    near(lap.atDistanceM, 400 * (i + 1), 0.001, `lap ${i + 1} sits on its boundary`);
+    near(lap.splitDistanceM, 400, 0.001, `lap ${i + 1} split`);
+    equal(lap.trigger, 'distance');
+  });
+
+  // 400 m at 3 m/s is 133.3 s. Taking the reading at face value would put each
+  // of these up to five seconds late, by a different amount each time.
+  laps.forEach((lap, i) => {
+    near(lap.atDurationMs, 133_333 * (i + 1), 1500, `lap ${i + 1} crossing time`);
+    near(lap.splitDurationMs, 133_333, 1500, `lap ${i + 1} split time`);
+  });
+});
+
+check('a lap records what closed it', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill', strideM: 1 }, t0);
+  session.start(t0);
+  session.addSteps(500, t0 + 60_000);
+  equal(session.lap(t0 + 60_000)?.trigger, 'manual');
+  session.addSteps(500, t0 + 120_000);
+  equal(session.lap(t0 + 120_000, 'phase')?.trigger, 'phase');
+});
+
+check('auto-lap reaches the treadmill, where splits() cannot', () => {
+  // splits() walks activity.segments, always empty indoors — so a treadmill
+  // run has no split table at all unless the laps are recorded as they happen.
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill', strideM: 1 }, t0);
+  session.start(t0);
+
+  const laps = [];
+  for (let s = 1; s <= 12; s++) {
+    session.addSteps(100, t0 + s * 30_000);
+    const lap = session.autoLap(400, t0 + s * 30_000);
+    if (lap) laps.push(lap);
+  }
+
+  equal(laps.length, 3, '1200 steps of 1 m is three 400 m laps');
+  equal(laps[0].atDistanceM, 400);
+  equal(laps[2].atDistanceM, 1200);
+  session.finish(t0 + 12 * 30_000);
+  equal(splits(session.toActivity(), 'metric').length, 0, 'and splits() still finds nothing');
+});
+
+check('auto-lap holds its peace while paused', () => {
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'treadmill', strideM: 1 }, t0);
+  session.start(t0);
+  session.addSteps(500, t0 + 60_000);
+  session.pause(t0 + 60_000);
+  equal(session.autoLap(400, t0 + 90_000), null, 'no laps close on a paused clock');
 });
 
 // --- export filenames -----------------------------------------------------

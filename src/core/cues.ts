@@ -81,7 +81,17 @@ export function makeSnapshot(input: {
     goal: input.goal,
     goalProgress: progress,
     goalMet: input.goal ? goalMet(input.goal, snap) : false,
-    laps: input.laps,
+    /*
+     * Copied, not referenced.
+     *
+     * The caller hands over the session's own lap array, which the session
+     * goes on mutating. Holding the reference means the previous snapshot and
+     * the current one are the same array — so a new lap is already present in
+     * "before" by the time it is compared against "after", the diff sees no
+     * change, and no lap is ever announced. Every other field here is a number
+     * and copies itself; this one has to be told.
+     */
+    laps: [...input.laps],
     autoPaused: input.autoPaused,
   };
 }

@@ -31,17 +31,25 @@ export interface HeartSample {
 }
 
 /** A manual lap pressed during the run (not GPS auto-splits). */
+/** What closed a lap. Absent on runs recorded before auto-lap existed. */
+export type LapTrigger = 'manual' | 'distance' | 'phase';
+
 export interface ManualLap {
   /** 1-based lap index. */
   index: number;
-  /** Total distance when the lap was pressed. */
+  /** Total distance when the lap closed. */
   atDistanceM: number;
-  /** Moving time when the lap was pressed. */
+  /** Moving time when the lap closed. */
   atDurationMs: number;
   /** Distance covered in this lap alone. */
   splitDistanceM: number;
   /** Moving time of this lap alone. */
   splitDurationMs: number;
+  /**
+   * How the lap came about. Optional so older records stay valid — read a
+   * missing value as `manual`, which is all that could have produced one.
+   */
+  trigger?: LapTrigger;
 }
 
 export interface Activity {

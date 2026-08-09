@@ -12,6 +12,7 @@ import {
   type Activity,
   type DistanceSource,
   type HeartSample,
+  type LapTrigger,
   type ManualLap,
   type RunMode,
 } from './activity';
@@ -113,6 +114,12 @@ export class RunSession {
   private lastAccepted: GeoPoint | null = null;
   private lastLapDistanceM = 0;
   private lastLapElapsedMs = 0;
+  /**
+   * The two most recent distance readings, each with the moving time it was
+   * true at. A boundary crossed between them can be placed inside them.
+   */
+  private previousMark = { distanceM: 0, elapsedMs: 0 };
+  private latestMark = { distanceM: 0, elapsedMs: 0 };
 
   constructor(options: Partial<SessionOptions> & { mode: RunMode }, startedAt = Date.now()) {
     this.mode = options.mode;
@@ -160,13 +167,64 @@ export class RunSession {
   }
 
   /**
-   * Mark a manual lap at the current distance and moving time.
-   * Returns the lap, or null if the session is not active.
+   * Mark a lap at the current distance and moving time.
+   *
+   * This is the button, and the workout-phase boundary. Both genuinely happen
+   * "now"; a distance boundary does not, and goes through {@link autoLap}.
    */
-  lap(t = Date.now()): ManualLap | null {
+  lap(t = Date.now(), trigger: LapTrigger = 'manual'): ManualLap | null {
     if (this.state !== 'running' && this.state !== 'paused') return null;
-    const atDistanceM = this.distanceM;
-    const atDurationMs = this.elapsedMs(t);
+    return this.pushLap(this.distanceM, this.elapsedMs(t), trigger);
+  }
+
+  /**
+   * Close a lap if the athlete has passed the next distance boundary.
+   *
+   * The boundary is recorded where it actually is, not where the odometer
+   * happened to be when this was called. That matters more than it sounds:
+   * outdoors the distance only moves when a fix is accepted, and accepted
+   * fixes land five to twenty metres apart — so taking the reading at face
+   * value would put every lap marker somewhere past its mark, by a different
+   * amount each time. On a 400 m lap that is up to 5%, and because the error
+   * varies it lands as alternating fast and slow splits for a rhythm nobody
+   * ran. `splits()` already interpolates for exactly this reason; a live lap
+   * has no excuse to be worse than the table it will sit next to.
+   */
+  autoLap(everyM: number, t = Date.now()): ManualLap | null {
+    if (this.state !== 'running' || !(everyM > 0)) return null;
+    const boundary = this.lastLapDistanceM + everyM;
+    if (this.distanceM < boundary) return null;
+
+    /*
+     * Interpolate between the two readings that bracket the boundary, not
+     * between the last reading and the moment this happened to be called. The
+     * athlete crossed the line somewhere inside that increment, and the clock
+     * has kept running since — charging them for the wait would make every lap
+     * read slow by however late the news arrived.
+     */
+    const spanM = this.latestMark.distanceM - this.previousMark.distanceM;
+    const spanMs = this.latestMark.elapsedMs - this.previousMark.elapsedMs;
+    const fraction = spanM > 0 ? (boundary - this.previousMark.distanceM) / spanM : 1;
+    const clamped = Math.min(1, Math.max(0, fraction));
+    const atMs =
+      spanMs > 0
+        ? this.previousMark.elapsedMs + spanMs * clamped
+        : this.latestMark.elapsedMs;
+
+    /*
+     * Otherwise the answer does not depend on when this is called, which is
+     * the point. `t` only supplies a ceiling: a fix can carry a timestamp
+     * ahead of the phone's own clock, and a lap closed in the future would
+     * hand the next one a negative split.
+     */
+    return this.pushLap(boundary, Math.min(this.elapsedMs(t), Math.max(0, atMs)), 'distance');
+  }
+
+  private pushLap(
+    atDistanceM: number,
+    atDurationMs: number,
+    trigger: LapTrigger,
+  ): ManualLap | null {
     const splitDistanceM = Math.max(0, atDistanceM - this.lastLapDistanceM);
     const splitDurationMs = Math.max(0, atDurationMs - this.lastLapElapsedMs);
     // Ignore accidental double-taps with no progress.
@@ -179,11 +237,24 @@ export class RunSession {
       atDurationMs,
       splitDistanceM,
       splitDurationMs,
+      trigger,
     };
     this.manualLaps.push(entry);
     this.lastLapDistanceM = atDistanceM;
     this.lastLapElapsedMs = atDurationMs;
     return entry;
+  }
+
+  /**
+   * Record that the odometer now reads this, as of this moment.
+   *
+   * Called *after* each change, with the timestamp the reading belongs to —
+   * the fix's own time, not the time we got round to looking. Keeping the
+   * previous pair is what lets a boundary be placed inside the increment.
+   */
+  private markDistance(t: number): void {
+    this.previousMark = this.latestMark;
+    this.latestMark = { distanceM: this.distanceM, elapsedMs: this.elapsedMs(t) };
   }
 
   pause(t = Date.now()): void {
@@ -242,6 +313,7 @@ export class RunSession {
     const segment = this.segments[this.segments.length - 1];
     if (this.lastAccepted && segment.length > 0) {
       this.distanceM += distanceBetween(this.lastAccepted, point);
+      this.markDistance(point.t);
     }
     segment.push(point);
     this.lastAccepted = point;
@@ -256,13 +328,14 @@ export class RunSession {
   }
 
   /** Register footfalls on the treadmill, converting them to distance. */
-  addSteps(count: number): void {
+  addSteps(count: number, t = Date.now()): void {
     if (this.state !== 'running' || this.mode !== 'treadmill') return;
     this.steps += count;
     // Steps still count for cadence, but a pod on the shoe is the better
     // instrument and keeps ownership of the distance.
     if (!this.usingFootpod) {
       this.distanceM = distanceFromSteps(this.steps, this.strideM);
+      this.markDistance(t);
     }
   }
 
@@ -278,6 +351,7 @@ export class RunSession {
     if (this.mode !== 'treadmill') return;
     this.usingFootpod = true;
     this.distanceM = this.footpod.distanceM;
+    this.markDistance(t);
   }
 
   /** Steps per minute, from the pod if there is one. */

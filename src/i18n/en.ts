@@ -822,6 +822,15 @@ export const en = {
   'settings.autoPause': 'Auto-pause',
   'settings.autoPauseHint':
     'Pauses when you stop moving (outdoor GPS or treadmill foot pod) and resumes when you go again.',
+  'settings.autoLap': 'Auto lap',
+  'settings.autoLap.off': 'Off',
+  'settings.autoLap.m400': '400 m',
+  'settings.autoLap.unit': 'Every {unit}',
+  'settings.autoLap.phase': 'Workout step',
+  'settings.autoLapHint':
+    'Closes a lap on its own, so you never have to reach for the phone. The lap button still works whenever you want one of your own.',
+  'settings.autoLapDriftHint':
+    'On GPS a 400 m lap is approximate — satellite distance runs a few percent long, and the error adds up over a session. Exact on a treadmill with a foot pod.',
   'settings.footpod.title': 'Foot pod',
   'settings.footpod.correction': 'Distance correction',
   'settings.routes.title': 'Saved routes',
@@ -1091,6 +1100,7 @@ export const en = {
   'run.profileShoes': 'Profile → Shoes',
   'run.gpsUnavailable': 'GPS unavailable',
   'run.waitingGps': 'Waiting for GPS…',
+  'run.gpsLock': 'GPS lock',
   'run.recordingRoute': 'Recording route…',
   'run.podInfo':
     'Any pod using the standard running speed and cadence profile — Zwift RunPod, Stryd, Garmin or Polar. On a treadmill it measures speed at the shoe. Give it a shake first; most pods only advertise once they are moving. Tap the button again to disconnect.',

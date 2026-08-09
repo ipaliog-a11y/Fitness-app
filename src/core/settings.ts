@@ -8,6 +8,7 @@
 
 import type { LocaleId, MessageKey } from '../i18n';
 import { parseLocale } from '../i18n';
+import { isAutoLapId, type AutoLapId } from './autoLap';
 import type { BiologicalSex } from './calories';
 import { estimateMaxHeartRate } from './heart';
 import { parseMapStyle, type MapStyleId } from './mercator';
@@ -128,6 +129,11 @@ export interface Profile {
    */
   autoPause: boolean;
   /**
+   * What closes a lap on its own: a distance, a workout phase, or nothing.
+   * The manual lap button stays available whatever this says.
+   */
+  autoLap: AutoLapId;
+  /**
    * Map basemap for history/detail (and live when liveMapTiles is on).
    * `auto` follows the app theme (day → standard, soft/hud → dark).
    */
@@ -157,6 +163,9 @@ export const DEFAULTS: Profile = {
   audioCues: true,
   haptics: true,
   autoPause: true,
+  // A kilometre is the boundary the app already announces and most runners
+  // already think in; 400 m is opt-in because it drifts on GPS.
+  autoLap: 'unit',
   mapStyle: 'auto',
   liveMapTiles: false,
 };
@@ -296,6 +305,7 @@ export function sanitise(raw: unknown): Profile {
     audioCues: typeof input.audioCues === 'boolean' ? input.audioCues : DEFAULTS.audioCues,
     haptics: typeof input.haptics === 'boolean' ? input.haptics : DEFAULTS.haptics,
     autoPause: typeof input.autoPause === 'boolean' ? input.autoPause : DEFAULTS.autoPause,
+    autoLap: isAutoLapId(input.autoLap) ? input.autoLap : DEFAULTS.autoLap,
     mapStyle: parseMapStyle(input.mapStyle),
     liveMapTiles:
       typeof input.liveMapTiles === 'boolean' ? input.liveMapTiles : DEFAULTS.liveMapTiles,

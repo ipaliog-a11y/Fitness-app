@@ -22,6 +22,7 @@ import {
 } from 'react';
 import type { Activity, ManualLap, RunMode } from '../core/activity';
 import type { GeoPoint } from '../core/geo';
+import { autoLapMetres, silencesDistanceCue } from '../core/autoLap';
 import { autoPauseAction, nextStillMs } from '../core/autoPause';
 import { formatCalories } from '../core/calories';
 import { cueSpeech, makeSnapshot, pendingCues, type CueSnapshot } from '../core/cues';
@@ -662,6 +663,21 @@ export function RunScreen({
       setAutoPaused(false);
     }
 
+    /*
+     * Close any lap the athlete has run past.
+     *
+     * Before the snapshot, so the lap is in `manualLaps` when the cue diff
+     * reads it and gets announced on this same tick rather than the next one.
+     */
+    const everyM = autoLapMetres(profile.autoLap, profile.units);
+    if (everyM !== null) {
+      // A loop, not an if: a single reading cannot cross two boundaries at
+      // running speed, but nothing here depends on that staying true.
+      while (current.autoLap(everyM, now) !== null) {
+        pulse(30);
+      }
+    }
+
     // Cues (after auto-pause may have changed state)
     if (!cuesReadyRef.current) return;
 
@@ -680,7 +696,13 @@ export function RunScreen({
 
     const events = pendingCues(cuePrevRef.current, snap, {
       units: profile.units,
-      distanceCues: profile.audioCues,
+      /*
+       * With auto-lap on, the lap cue *is* the distance announcement. Leaving
+       * both alive means a kilometre boundary says the distance twice — "one
+       * kilometre, five twelve" and then the lap summary saying the same
+       * thing in more words.
+       */
+      distanceCues: profile.audioCues && !silencesDistanceCue(profile.autoLap),
       goalCues: true,
     });
     cuePrevRef.current = snap;
@@ -708,8 +730,15 @@ export function RunScreen({
         );
       }
 
-      // Soft pace-band nudge on each whole km/mi when audio cues are on.
-      if (event.type === 'distance_unit' && profile.audioCues && paceTargetSec) {
+      /*
+       * Soft pace-band nudge at each boundary, whichever kind of boundary the
+       * athlete is running to. It used to hang off the distance cue alone,
+       * which auto-lap silences — so with auto-lap on the nudge would have
+       * gone quiet along with it.
+       */
+      const boundary =
+        event.type === 'distance_unit' || (event.type === 'lap' && everyM !== null);
+      if (boundary && profile.audioCues && paceTargetSec) {
         const unitM = profile.units === 'metric' ? 1000 : 1609.344;
         const recent = current.recentSpeed(20_000, now);
         const paceNow = recent && recent > 0 ? unitM / recent : null;
@@ -725,6 +754,14 @@ export function RunScreen({
       const advanced = runner.tick(current.distanceM, elapsed);
       if (advanced > 0) {
         pulse([40, 30, 60]);
+        /*
+         * A finished phase is a lap. Without this, the one run where the
+         * boundaries are already known — an interval session — is the one run
+         * with nothing in the splits table to look at afterwards.
+         */
+        if (profile.autoLap === 'phase') {
+          for (let i = 0; i < advanced; i++) current.lap(now, 'phase');
+        }
         if (runner.done) {
           onToast(t('run.workoutComplete'));
           if (profile.audioCues) speak('Workout complete.'); // voice stays English by decision
@@ -744,6 +781,7 @@ export function RunScreen({
     autoPaused,
     profile.autoPause,
     profile.audioCues,
+    profile.autoLap,
     profile.units,
     paceTargetInput,
     podStatus,
@@ -2062,9 +2100,11 @@ export function RunScreen({
               live
               emptyLabel={
                 gpsBad
-                  ? geoDetail || t('run.gpsUnavailable')
+                  ? // geoDetail is a MessageKey, and a MessageKey is a string —
+                    // so leaving off t() compiles and prints "geo.noPosition".
+                    t(geoDetail ?? 'run.gpsUnavailable')
                   : lastGeo
-                    ? 'GPS lock'
+                    ? t('run.gpsLock')
                     : t('run.waitingGps')
               }
             />
@@ -2111,7 +2151,7 @@ export function RunScreen({
         ? t('run.outdoor')
         : geoStatus === 'denied'
           ? t('run.noGps')
-          : geoDetail ?? t('run.findingGps')
+          : t(geoDetail ?? 'run.findingGps')
       : podStatus === 'connected'
         ? t('settings.footpod.title')
         : motionStatus === 'counting'
