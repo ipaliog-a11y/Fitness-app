@@ -554,4 +554,45 @@ export const el: Messages = {
   'run.effort.range': 'Ελάχ. {low} · μέγ. {high}',
   'run.splits.empty': 'Πάτα Γύρος και κάθε split θα εμφανίζεται εδώ.',
   'run.laps.title': 'Γύροι',
+
+  // --- Charts ---------------------------------------------------------------
+  'common.close': 'Κλείσιμο',
+  'chart.seriesLabel': 'Εμφάνιση σειρών',
+  'chart.fullscreen': 'Πλήρης οθόνη',
+  'chart.fullscreenChart': 'Γράφημα σε πλήρη οθόνη',
+  'chart.exitFullscreen': 'Έξοδος από πλήρη οθόνη',
+  'chart.fullscreenLabel': 'Γράφημα μετρήσεων τρεξίματος σε πλήρη οθόνη',
+  'chart.plotLabel':
+    'Καρδιακοί παλμοί, ρυθμός και ταχύτητα ανά απόσταση. Σύρε ή πάτα για να δεις τιμές.',
+  'chart.readValues': 'Σύρε ή πάτα στο γράφημα για να δεις τιμές',
+  'chart.axisHint': 'Πάτα ή σύρε στο γράφημα · ο άξονας x είναι η απόσταση',
+  'chart.peakWeek': 'Κορυφαία εβδομάδα',
+  'chart.km': 'Χλμ',
+  'chart.mile': 'Μίλι',
+
+  // --- Weight ---------------------------------------------------------------
+  'weight.title': 'Βάρος',
+  'weight.subtitle':
+    'Κατέγραψε ζυγίσματα, βάλε στόχο και δες την τάση. Οι μετρήσεις εμφανίζονται και στο ημερολόγιο του Ιστορικού.',
+  'weight.backToProfile': 'Πίσω στο προφίλ',
+  'weight.startingTitle': 'Αρχικό βάρος',
+  'weight.startingHint':
+    'Γράψε ελεύθερα — τίποτα δεν αποθηκεύεται μέχρι να πατήσεις Αποθήκευση. Αυτό γίνεται η πρώτη σου καταγραφή και χρησιμοποιείται για την εκτίμηση θερμίδων στα τρεξίματα.',
+  'weight.sinceFirst': 'Από την αρχή',
+  'weight.atGoal': 'Είσαι στο βάρος-στόχο σου.',
+  'weight.aboveGoal': '{amount} {unit} πάνω από τον στόχο.',
+  'weight.belowGoal': '{amount} {unit} κάτω από τον στόχο.',
+  'weight.logTitle': 'Κατέγραψε ζύγισμα',
+  'weight.weightLabel': 'Βάρος ({unit})',
+  'weight.noteLabel': 'Σημείωση (προαιρετικό)',
+  'weight.notePlaceholder': 'Πρωί, μετά το τρέξιμο…',
+  'weight.addToLog': 'Προσθήκη στο ημερολόγιο',
+  'weight.goalTitle': 'Βάρος-στόχος',
+  'weight.targetLabel': 'Στόχος ({unit})',
+  'weight.optional': 'Προαιρετικό',
+  'weight.clearHint': 'Καθάρισε το πεδίο και αποθήκευσε για να αφαιρέσεις τον στόχο.',
+  'weight.trend': 'Τάση',
+  'weight.noEntries': 'Καμία καταγραφή ακόμη.',
+  'weight.goalCleared': 'Ο στόχος βάρους καθαρίστηκε.',
+  'weight.entryRemoved': 'Η καταγραφή αφαιρέθηκε.',
 };

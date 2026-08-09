@@ -4,6 +4,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Profile } from '../core/settings';
+import { useT } from '../i18n/react';
 import {
   addWeightEntry,
   deleteWeightEntry,
@@ -45,6 +46,7 @@ function WeightChart({
   store: WeightStore;
   units: Profile['units'];
 }) {
+  const t = useT();
   const points = weightEntriesChronological(store);
   if (points.length < 2) {
     return (
@@ -85,7 +87,7 @@ function WeightChart({
         preserveAspectRatio="none"
         className="weight-chart-svg"
         role="img"
-        aria-label="Weight trend"
+        aria-label={t('weight.trend')}
       >
         {goalY !== null && (
           <line
@@ -131,6 +133,7 @@ export function WeightScreen({
   onLogChange,
   onBack,
 }: Props) {
+  const t = useT();
   const [store, setStore] = useState<WeightStore>(() => loadWeightStore());
   const unit = weightUnitLabel(profile.units);
   const latest = latestWeightKg(store);
@@ -186,7 +189,7 @@ export function WeightScreen({
     const raw = goalDraft.trim();
     if (!raw) {
       persist(setWeightGoal(store, null), false);
-      onToast('Weight goal cleared.');
+      onToast(t('weight.goalCleared'));
       return;
     }
     const kg = parseDraft(goalDraft);
@@ -211,22 +214,16 @@ export function WeightScreen({
     <div className="screen">
       {onBack && (
         <button type="button" className="back" onClick={onBack}>
-          ‹ Back to profile
+          ‹ {t('weight.backToProfile')}
         </button>
       )}
-      <h1>Weight</h1>
-      <p className="subtitle">
-        Log weigh-ins, set a goal, and watch the trend. Readings also show on the History
-        calendar.
-      </p>
+      <h1>{t('weight.title')}</h1>
+      <p className="subtitle">{t('weight.subtitle')}</p>
 
       {!hasLog ? (
         <div className="card">
-          <h2>Starting weight</h2>
-          <p className="hint" style={{ marginTop: 0 }}>
-            Type freely — nothing is saved until you press Save. This becomes your first log
-            entry and is used for calorie estimates on runs.
-          </p>
+          <h2>{t('weight.startingTitle')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>{t('weight.startingHint')}</p>
           <div className="field">
             <label htmlFor="weight-start">Weight ({unit})</label>
             <input
@@ -274,24 +271,30 @@ export function WeightScreen({
                       profile.units,
                     ).toFixed(1)}`}
               </div>
-              <div className="label">Since first</div>
+              <div className="label">{t('weight.sinceFirst')}</div>
             </div>
           </div>
 
           {toGoal !== null && store.goalKg !== null && (
             <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
               {Math.abs(toGoal) < 0.05
-                ? 'At your goal weight.'
+                ? t('weight.atGoal')
                 : toGoal > 0
-                  ? `${toDisplayWeight(toGoal, profile.units).toFixed(1)} ${unit} above goal.`
-                  : `${toDisplayWeight(-toGoal, profile.units).toFixed(1)} ${unit} below goal.`}
+                  ? t('weight.aboveGoal', {
+                      amount: toDisplayWeight(toGoal, profile.units).toFixed(1),
+                      unit,
+                    })
+                  : t('weight.belowGoal', {
+                      amount: toDisplayWeight(-toGoal, profile.units).toFixed(1),
+                      unit,
+                    })}
             </p>
           )}
 
           <div className="card">
-            <h2>Log a weigh-in</h2>
+            <h2>{t('weight.logTitle')}</h2>
             <div className="field">
-              <label htmlFor="weight-entry">Weight ({unit})</label>
+              <label htmlFor="weight-entry">{t('weight.weightLabel', { unit })}</label>
               <input
                 id="weight-entry"
                 type="text"
@@ -307,52 +310,52 @@ export function WeightScreen({
               />
             </div>
             <div className="field">
-              <label htmlFor="weight-note">Note (optional)</label>
+              <label htmlFor="weight-note">{t('weight.noteLabel')}</label>
               <input
                 id="weight-note"
                 type="text"
                 maxLength={120}
-                placeholder="Morning, after run…"
+                placeholder={t('weight.notePlaceholder')}
                 value={noteDraft}
                 onChange={(e) => setNoteDraft(e.target.value)}
               />
             </div>
             <button type="button" className="btn primary wide" onClick={logWeight}>
-              Add to log
+              {t('weight.addToLog')}
             </button>
           </div>
 
           <div className="card">
-            <h2>Goal weight</h2>
+            <h2>{t('weight.goalTitle')}</h2>
             <div className="field">
-              <label htmlFor="weight-goal">Target ({unit})</label>
+              <label htmlFor="weight-goal">{t('weight.targetLabel', { unit })}</label>
               <div className="name-edit-row">
                 <input
                   id="weight-goal"
                   type="text"
                   inputMode="decimal"
-                  placeholder="Optional"
+                  placeholder={t('weight.optional')}
                   value={goalDraft}
                   onChange={(e) => setGoalDraft(e.target.value)}
                 />
                 <button type="button" className="btn name-action primary-soft" onClick={saveGoal}>
-                  Save
+                  {t('common.save')}
                 </button>
               </div>
-              <p className="hint">Clear the field and save to remove the goal.</p>
+              <p className="hint">{t('weight.clearHint')}</p>
             </div>
           </div>
 
           <div className="card">
-            <h2>Trend</h2>
+            <h2>{t('weight.trend')}</h2>
             <WeightChart store={store} units={profile.units} />
           </div>
 
           <div className="card">
-            <h2>History</h2>
+            <h2>{t('app.tab.history')}</h2>
             {sortedNewest.length === 0 ? (
               <p className="hint" style={{ margin: 0 }}>
-                No entries yet.
+                {t('weight.noEntries')}
               </p>
             ) : (
               <ul className="weight-log-list">
@@ -379,10 +382,10 @@ export function WeightScreen({
                         } else {
                           setEntryDraft('');
                         }
-                        onToast('Entry removed.');
+                        onToast(t('weight.entryRemoved'));
                       }}
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </li>
                 ))}

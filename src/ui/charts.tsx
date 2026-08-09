@@ -19,6 +19,7 @@ import { zoneBounds, type HeartSummary, zoneSwatch } from '../core/heart';
 import type { HeartSample } from '../core/activity';
 import type { Split } from '../core/activity';
 import type { WeekBucket } from '../core/stats';
+import { useT } from '../i18n/react';
 import {
   distanceLabel,
   formatDistance,
@@ -307,6 +308,7 @@ export function HeartChart({
   durationMs?: number;
   units?: UnitSystem;
 }) {
+  const t = useT();
   const series = useMemo(
     () => buildSeries(samples, segments, distanceM, durationMs, units),
     [samples, segments, distanceM, durationMs, units],
@@ -430,7 +432,7 @@ export function HeartChart({
   const chartBody = (
     <div className={`run-chart${fullscreen ? ' run-chart-fullscreen-inner' : ''}`}>
       <div className="run-chart-toolbar">
-        <div className="run-chart-toggles" role="group" aria-label="Series visibility">
+        <div className="run-chart-toggles" role="group" aria-label={t('chart.seriesLabel')}>
           {hasHr && (
             <button
               type="button"
@@ -469,9 +471,9 @@ export function HeartChart({
           type="button"
           className="run-chart-fs-btn"
           onClick={() => setFullscreen((v) => !v)}
-          aria-label={fullscreen ? 'Exit full screen' : 'Full screen chart'}
+          aria-label={fullscreen ? t('chart.exitFullscreen') : t('chart.fullscreenChart')}
         >
-          {fullscreen ? 'Close' : 'Full screen'}
+          {fullscreen ? t('common.close') : t('chart.fullscreen')}
         </button>
       </div>
 
@@ -483,7 +485,7 @@ export function HeartChart({
           className="run-chart-svg"
           style={{ height: chartHeight }}
           role="img"
-          aria-label="Heart rate, pace and speed by distance. Drag or tap to read values."
+          aria-label={t('chart.plotLabel')}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -620,11 +622,11 @@ export function HeartChart({
             <span>{Math.round(highHr)} bpm</span>
           </>
         ) : (
-          <span>Drag or tap the chart to read values</span>
+          <span>{t('chart.readValues')}</span>
         )}
       </div>
       {!cursorPoint ? (
-        <p className="hint run-chart-hint">Tap or drag on the chart · x-axis is distance</p>
+        <p className="hint run-chart-hint">{t('chart.axisHint')}</p>
       ) : null}
     </div>
   );
@@ -643,7 +645,7 @@ export function HeartChart({
           className="run-chart-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label="Full screen run metrics chart"
+          aria-label={t('chart.fullscreenLabel')}
           onClick={(e) => {
             if (e.target === e.currentTarget) setFullscreen(false);
           }}
@@ -658,6 +660,7 @@ export function HeartChart({
 }
 
 export function WeeklyBars({ weeks, units }: { weeks: WeekBucket[]; units: UnitSystem }) {
+  const t = useT();
   const peak = Math.max(...weeks.map((w) => w.distanceM), 1);
 
   return (
@@ -689,7 +692,7 @@ export function WeeklyBars({ weeks, units }: { weeks: WeekBucket[]; units: UnitS
         ))}
       </div>
       <div className="row" style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
-        <span>Peak week</span>
+        <span>{t('chart.peakWeek')}</span>
         <span>
           {formatDistance(peak, units)} {distanceLabel(units)}
         </span>
@@ -699,6 +702,7 @@ export function WeeklyBars({ weeks, units }: { weeks: WeekBucket[]; units: UnitS
 }
 
 export function SplitsTable({ splits, units }: { splits: Split[]; units: UnitSystem }) {
+  const t = useT();
   if (splits.length === 0) return null;
 
   const paces = splits.filter((s) => !s.partial).map((s) => s.secondsPerUnit);
@@ -709,8 +713,8 @@ export function SplitsTable({ splits, units }: { splits: Split[]; units: UnitSys
     <table className="splits">
       <thead>
         <tr>
-          <th>{units === 'metric' ? 'Km' : 'Mile'}</th>
-          <th>Pace</th>
+          <th>{units === 'metric' ? t('chart.km') : t('chart.mile')}</th>
+          <th>{t('run.pod.pace')}</th>
           <th className="barcell" />
         </tr>
       </thead>

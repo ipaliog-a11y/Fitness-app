@@ -510,6 +510,46 @@ export const en = {
   'run.effort.range': 'Low {low} · high {high}',
   'run.splits.empty': 'Tap Lap and each split lands here.',
   'run.laps.title': 'Laps',
+
+  // --- Charts ---------------------------------------------------------------
+  'common.close': 'Close',
+  'chart.seriesLabel': 'Series visibility',
+  'chart.fullscreen': 'Full screen',
+  'chart.fullscreenChart': 'Full screen chart',
+  'chart.exitFullscreen': 'Exit full screen',
+  'chart.fullscreenLabel': 'Full screen run metrics chart',
+  'chart.plotLabel': 'Heart rate, pace and speed by distance. Drag or tap to read values.',
+  'chart.readValues': 'Drag or tap the chart to read values',
+  'chart.axisHint': 'Tap or drag on the chart · x-axis is distance',
+  'chart.peakWeek': 'Peak week',
+  'chart.km': 'Km',
+  'chart.mile': 'Mile',
+
+  // --- Weight ---------------------------------------------------------------
+  'weight.title': 'Weight',
+  'weight.subtitle':
+    'Log weigh-ins, set a goal, and watch the trend. Readings also show on the History calendar.',
+  'weight.backToProfile': 'Back to profile',
+  'weight.startingTitle': 'Starting weight',
+  'weight.startingHint':
+    'Type freely — nothing is saved until you press Save. This becomes your first log entry and is used for calorie estimates on runs.',
+  'weight.sinceFirst': 'Since first',
+  'weight.atGoal': 'At your goal weight.',
+  'weight.aboveGoal': '{amount} {unit} above goal.',
+  'weight.belowGoal': '{amount} {unit} below goal.',
+  'weight.logTitle': 'Log a weigh-in',
+  'weight.weightLabel': 'Weight ({unit})',
+  'weight.noteLabel': 'Note (optional)',
+  'weight.notePlaceholder': 'Morning, after run…',
+  'weight.addToLog': 'Add to log',
+  'weight.goalTitle': 'Goal weight',
+  'weight.targetLabel': 'Target ({unit})',
+  'weight.optional': 'Optional',
+  'weight.clearHint': 'Clear the field and save to remove the goal.',
+  'weight.trend': 'Trend',
+  'weight.noEntries': 'No entries yet.',
+  'weight.goalCleared': 'Weight goal cleared.',
+  'weight.entryRemoved': 'Entry removed.',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */
