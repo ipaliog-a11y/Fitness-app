@@ -216,7 +216,7 @@ export function App() {
       // Post-run results: only Save / Delete may leave.
       if (resultDecisionLock && openId) {
         clearPendingBack();
-        showToast("Choose Save or Delete to continue");
+        showToast(t("app.decisionLocked"));
         return;
       }
       // 1) Nested overlays first
@@ -333,7 +333,7 @@ export function App() {
     async (activity: Activity) => {
       // A run with nothing in it is a mis-tap, not a workout worth keeping.
       if (activity.distanceM < 10 && activity.durationMs < 30_000) {
-        showToast("Run discarded — too short to keep.");
+        showToast(t("app.runDiscarded"));
         return;
       }
       await saveActivity(activity);
@@ -494,7 +494,7 @@ export function App() {
             decisionRequired={resultDecisionLock}
             onBack={() => {
               if (resultDecisionLock) {
-                showToast("Choose Save or Delete to continue");
+                showToast(t("app.decisionLocked"));
                 return;
               }
               setOpenId(null);
@@ -559,7 +559,7 @@ export function App() {
 
         <nav
           className={`tabs tabs-5${resultDecisionLock && open ? " tabs-locked" : ""}`}
-          aria-label="Main"
+          aria-label={t("a11y.mainNav")}
           aria-disabled={resultDecisionLock && open ? true : undefined}
         >
           {TABS.map((entry) => (
@@ -570,7 +570,7 @@ export function App() {
               aria-current={!open && tab === entry.id ? "page" : undefined}
               onClick={() => {
                 if (resultDecisionLock && open) {
-                  showToast("Choose Save or Delete to continue");
+                  showToast(t("app.decisionLocked"));
                   return;
                 }
                 // Tapping a tab always leaves the detail view, so the tab bar
@@ -584,7 +584,7 @@ export function App() {
               <span className="glyph" aria-hidden>
                 <TabIcon id={entry.id} />
                 {entry.id === "run" && runLive && (
-                  <span className="tab-live" title="Run in progress" />
+                  <span className="tab-live" title={t("a11y.runInProgress")} />
                 )}
               </span>
               <span className="tab-label">{t(entry.label)}</span>

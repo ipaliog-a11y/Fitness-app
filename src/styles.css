@@ -2708,14 +2708,24 @@ button.cal-event {
 }
 
 .zone-row .name {
-  /* Wide enough for "Z1 Recovery" on one line — the longest of the five. */
-  width: 92px;
-  flex-shrink: 0;
+  /*
+   * A fixed column, so the five bars line up under each other. It cannot be
+   * measured against an English word though: "Z1 Αποκατάσταση" is half again
+   * the width of "Z1 Recovery", and with nowrap and nothing to clip it the
+   * overflow printed straight across the bar rather than pushing it aside.
+   * The ellipsis is the floor, not the plan — the column is sized to fit.
+   */
+  flex: 0 1 132px;
+  min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .zone-row .track {
-  flex: 1;
+  flex: 1 1 auto;
+  /* A long name may not squeeze the bar down to a sliver. */
+  min-width: 48px;
   height: 8px;
   background: var(--surface-2);
   border-radius: 4px;

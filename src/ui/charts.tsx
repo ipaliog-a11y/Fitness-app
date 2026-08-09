@@ -45,6 +45,7 @@ export function ZoneBars({
   /** Append share of measured HR time next to the duration. */
   showPercent?: boolean;
 }) {
+  const t = useT();
   return (
     <div>
       {summary.zones.map(({ zone, ms, fraction }) => {
@@ -54,7 +55,7 @@ export function ZoneBars({
           <div className="zone-row" key={zone.index}>
             <span className="swatch" style={{ background: zoneSwatch(zone) }} />
             <span className="name">
-              Z{zone.index} {zone.name}
+              Z{zone.index} {t(zone.name)}
             </span>
             <span className="track">
               <span
@@ -128,8 +129,14 @@ function rollingSpeedMps(marks: TrackMark[], windowM = 200): Array<{ d: number; 
     const dt = marks[head].t - marks[tail].t;
     if (dd > 1 && dt > 0) {
       const mps = dd / (dt / 1000);
-      // Ignore standing still / GPS wander.
-      if (mps > 0.3 && mps < 12) out.push({ d: marks[head].d, mps });
+      /*
+       * Keep the slow samples. Dropping everything under 0.3 m/s was meant to
+       * suppress GPS wander, but a stop is not noise — it is the most
+       * interesting thing that happened — and discarding it punched a hole in
+       * the chart exactly where the athlete wants to see one. A stop now reads
+       * as a dip to the floor. The upper bound stays: 12 m/s is a car.
+       */
+      if (mps < 12) out.push({ d: marks[head].d, mps });
     }
   }
   return out;
@@ -151,7 +158,7 @@ function buildSeries(
   distanceM: number,
   durationMs: number,
   units: UnitSystem,
-  buckets = 120,
+  fixedBuckets?: number,
 ): SeriesPoint[] {
   if (samples.length < 2 && segments.every((s) => s.length < 2)) return [];
 
@@ -175,6 +182,17 @@ function buildSeries(
     distanceM > 0 && durationMs > 0
       ? toDisplayDistance(distanceM, units) / (durationMs / 3_600_000)
       : null;
+
+  /*
+   * Roughly one bucket per 25 m of ground.
+   *
+   * A flat 120 buckets is wrong at both ends of the range. On a 1 km test run
+   * each bucket spans eight metres — finer than the gap between accepted
+   * fixes, so most of them catch nothing and the trace comes out as a comb of
+   * one-bucket holes. The cap keeps a marathon from being sliced thinner than
+   * the pixels available to draw it.
+   */
+  const buckets = fixedBuckets ?? Math.max(24, Math.min(120, Math.round(totalD / 25)));
 
   const points: SeriesPoint[] = [];
   for (let i = 0; i < buckets; i++) {
@@ -616,8 +634,8 @@ export function HeartChart({
             <span>{Math.round(lowHr)} bpm</span>
             <span>
               {maxHeartRate > 0
-                ? `${Math.round((highHr / maxHeartRate) * 100)}% of max at peak`
-                : 'peak'}
+                ? t('chart.peakShare', { percent: Math.round((highHr / maxHeartRate) * 100) })
+                : t('chart.peakLabel')}
             </span>
             <span>{Math.round(highHr)} bpm</span>
           </>

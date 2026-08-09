@@ -75,8 +75,20 @@ import {
   formatCalories,
   keytelKjPerMin,
 } from '../src/core/calories.ts';
-import { autoPauseAction, nextStillMs, STILL_DURATION_MS } from '../src/core/autoPause.ts';
-import { makeSnapshot, pendingCues, cueSpeech } from '../src/core/cues.ts';
+import {
+  autoPauseAction,
+  nextStillMs,
+  STILL_DURATION_MS,
+  STILL_SPEED_MPS,
+} from '../src/core/autoPause.ts';
+import {
+  makeSnapshot,
+  pendingCues,
+  cueSpeech,
+  spokenDistance,
+  spokenDuration,
+  spokenPace,
+} from '../src/core/cues.ts';
 import {
   WORKOUT_PRESETS,
   WorkoutRunner,
@@ -1635,6 +1647,76 @@ check('session calories prefer HR once samples land', () => {
   assert(session.toActivity().caloriesKcal > 0);
 });
 
+check('standing still reads as zero, not as no reading at all', () => {
+  /*
+   * The bug this guards. Stop moving and the jitter filter rejects every fix,
+   * so the track stops growing — and recentSpeed used to answer null, which
+   * nextStillMs reads as a cold receiver and resets on. Auto-pause could not
+   * fire outdoors at any speed, for any length of stop.
+   */
+  const t0 = 1_700_000_000_000;
+  const track = straightTrack({ points: 21, stepM: 15, secondsPerPoint: 5, t0 });
+  const session = new RunSession({ mode: 'outdoor' }, t0);
+  session.start(t0);
+  for (const point of track) session.addPoint(point);
+
+  const stoppedAt = track[track.length - 1].t;
+  near(session.recentSpeed(8000, stoppedAt), 3, 0.35, 'running at 3 m/s');
+
+  /*
+   * Now stand there. The phone keeps reporting from the same spot, give or
+   * take a metre of wander — every one of those is below the filter's bar.
+   */
+  let rejected = 0;
+  for (let i = 1; i <= 30; i++) {
+    const accepted = session.addPoint({
+      lat: track[track.length - 1].lat + (i % 2 ? 1 : -1) / METRES_PER_DEGREE_LAT,
+      lon: 24.9,
+      t: stoppedAt + i * 1000,
+      accuracy: 5,
+      elevation: null,
+    });
+    if (!accepted) rejected++;
+  }
+  equal(rejected, 30, 'the filter rejects all of it, which is correct');
+
+  const speed = session.recentSpeed(8000, stoppedAt + 30_000);
+  assert(speed !== null, 'a stopped athlete is measured, not unknown');
+  assert(speed < STILL_SPEED_MPS, `expected still, got ${speed} m/s`);
+
+  // And that reading is enough to drive the accumulator to a pause.
+  let still = 0;
+  let action = 'none';
+  for (let ms = 1000; ms <= 30_000 && action === 'none'; ms += 1000) {
+    const s = session.recentSpeed(8000, stoppedAt + ms);
+    still = nextStillMs(still, s, true, 1000);
+    action = autoPauseAction({
+      speedMps: s,
+      running: true,
+      paused: false,
+      autoPaused: false,
+      stillMs: still,
+      enabled: true,
+      supported: true,
+    });
+    if (action === 'pause') {
+      // Long enough not to trip on a kerb, short enough to be worth having.
+      assert(ms >= 8000 && ms <= 20_000, `paused after ${ms} ms`);
+    }
+  }
+  equal(action, 'pause', 'never auto-paused during a 30 second stop');
+});
+
+check('a cold receiver still freezes nothing', () => {
+  // The guard the null case exists for: no fix has ever arrived, so there is
+  // genuinely nothing to go on and the clock must be left alone.
+  const t0 = 1_700_000_000_000;
+  const session = new RunSession({ mode: 'outdoor' }, t0);
+  session.start(t0);
+  equal(session.recentSpeed(8000, t0 + 30_000), null, 'no fixes, no answer');
+  equal(nextStillMs(0, null, true, 30_000), 0, 'and no march towards a pause');
+});
+
 check('auto-pause triggers after sustained stillness', () => {
   let still = 0;
   still = nextStillMs(still, 0.1, true, 2000);
@@ -1686,7 +1768,7 @@ check('cues fire for distance units and goal met', () => {
     caloriesKcal: 0,
     state: 'running',
     goal,
-    lapCount: 0,
+    laps: [],
     autoPaused: false,
     units,
   };
@@ -1708,10 +1790,88 @@ check('cues fire for distance units and goal met', () => {
     units,
     distanceM: 1000,
     durationMs: 300_000,
-    formatDistance: () => '1.00',
-    formatDuration: () => '5:00',
   });
   assert(speech.includes('kilometer'), speech);
+});
+
+// --- what the cues actually say -------------------------------------------
+
+check('durations are spelled out rather than punctuated', () => {
+  // "5:12" through a speech engine is a coin toss between "five twelve" and a
+  // time of day, so the cue layer never hands one over.
+  equal(spokenDuration(312_000), '5 minutes 12 seconds');
+  equal(spokenDuration(60_000), '1 minute');
+  equal(spokenDuration(3_600_000), '1 hour');
+  equal(spokenDuration(3_912_000), '1 hour 5 minutes 12 seconds');
+  // Zero has to say something; an empty string would swallow the sentence.
+  equal(spokenDuration(0), '0 seconds');
+  equal(spokenDuration(-5), '0 seconds');
+  assert(!/[:\d]{2}:/.test(spokenDuration(312_000)), 'no clock punctuation');
+});
+
+check('spoken distance keeps the unit singular only at exactly one', () => {
+  equal(spokenDistance(1000, 'metric'), '1.00 kilometer');
+  equal(spokenDistance(1020, 'metric'), '1.02 kilometers');
+  equal(spokenDistance(0, 'metric'), '0.00 kilometers');
+  equal(spokenDistance(1609.344, 'imperial'), '1.00 mile');
+});
+
+check('spoken pace divides the right way round', () => {
+  // 1 km in 5 minutes is a five-minute kilometre, not a twelve-second one.
+  equal(spokenPace(1000, 300_000, 'metric'), '5 minutes per kilometer');
+  equal(spokenPace(2000, 612_000, 'metric'), '5 minutes 6 seconds per kilometer');
+  equal(spokenPace(0, 300_000, 'metric'), null);
+  equal(spokenPace(1000, 0, 'metric'), null);
+  // A stopped athlete has no pace, and the cue would rather say nothing.
+  equal(spokenPace(1, 600_000, 'metric'), null);
+});
+
+check('a lap speaks its own split, not the running total', () => {
+  const line = cueSpeech(
+    { type: 'lap', index: 3, splitDistanceM: 1020, splitDurationMs: 312_000 },
+    { units: 'metric', distanceM: 9999, durationMs: 9_999_000 },
+  );
+  equal(line, 'Lap 3. 1.02 kilometers in 5 minutes 12 seconds, 5 minutes 6 seconds per kilometer.');
+  // The whole-run figures are in ctx and must not leak into a lap line.
+  assert(!line.includes('9'), line);
+});
+
+check('goal reached speaks the run total', () => {
+  const line = cueSpeech(
+    { type: 'goal_met' },
+    { units: 'metric', distanceM: 5000, durationMs: 1_500_000 },
+  );
+  equal(line, 'Goal reached. 5.00 kilometers in 25 minutes, 5 minutes per kilometer.');
+});
+
+check('laps are announced once each, in order, however many arrive at once', () => {
+  const units = 'metric';
+  const lap = (index) => ({
+    index,
+    splitDistanceM: 400,
+    splitDurationMs: 120_000,
+  });
+  const base = {
+    distanceM: 0,
+    durationMs: 0,
+    caloriesKcal: 0,
+    state: 'running',
+    goal: null,
+    laps: [],
+    autoPaused: false,
+    units,
+  };
+  const options = { units, distanceCues: true, goalCues: true };
+
+  const one = makeSnapshot({ ...base, laps: [lap(1)] });
+  const three = makeSnapshot({ ...base, laps: [lap(1), lap(2), lap(3)] });
+  const events = pendingCues(one, three, options).filter((e) => e.type === 'lap');
+  equal(events.length, 2, 'only the new laps');
+  equal(events[0].index, 2);
+  equal(events[1].index, 3);
+
+  // Nothing new: silence, not a repeat of the last lap.
+  equal(pendingCues(three, three, options).filter((e) => e.type === 'lap').length, 0);
 });
 
 check('manual laps record split distance and time', () => {

@@ -624,7 +624,13 @@ export function RunScreen({
     const dt = last === null ? 0 : Math.min(2000, Math.max(0, now - last));
     lastTickAtRef.current = now;
 
-    const speed = current.recentSpeed(15_000, now);
+    /*
+     * A shorter window than the pace readout uses. This one only has to answer
+     * "are they moving?", and the window length is most of the delay before an
+     * auto-pause lands: the average has to slide clear of the running that came
+     * before the stop.
+     */
+    const speed = current.recentSpeed(8_000, now);
     const supported =
       current.mode === 'outdoor' || (current.mode === 'treadmill' && podStatus === 'connected');
 
@@ -667,7 +673,7 @@ export function RunScreen({
       caloriesKcal: calories,
       state: current.state,
       goal: current.goal,
-      lapCount: current.manualLaps.length,
+      laps: current.manualLaps,
       autoPaused: autoFlag,
       units: profile.units,
     });
@@ -698,8 +704,6 @@ export function RunScreen({
             units: profile.units,
             distanceM: current.distanceM,
             durationMs: elapsed,
-            formatDistance: (m) => formatDistance(m, profile.units),
-            formatDuration,
           }),
         );
       }
@@ -1296,7 +1300,7 @@ export function RunScreen({
                     id="cw-name"
                     type="text"
                     maxLength={48}
-                    placeholder="e.g. Tuesday hills"
+                    placeholder={t('run.custom.namePlaceholder')}
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                   />

@@ -512,14 +512,14 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
               aria-expanded={moreFilters}
               onClick={() => setMoreFilters((v) => !v)}
             >
-              {moreFilters ? 'Less' : '+ Filters'}
+              {moreFilters ? t('history.filter.less') : t('history.filter.more')}
             </button>
           </div>
 
           {moreFilters && (
             <div className="card history-filters">
               <ChipRow<HistoryModeFilter>
-                label="Type"
+                label={t('history.filter.typeLabel')}
                 value={filters.mode}
                 onChange={(v) => set('mode', v)}
                 options={[
@@ -551,7 +551,7 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
                 ]}
               />
               <ChipRow<HistoryGroupBy>
-                label="Group"
+                label={t('history.group.byLabel')}
                 value={filters.groupBy}
                 onChange={(v) => set('groupBy', v)}
                 options={[

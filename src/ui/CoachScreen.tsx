@@ -508,7 +508,8 @@ export function CoachScreen({
         {profile.weeklyGoalM > 0 && (
           <>
             <div className="zone-row" style={{ marginTop: 16, marginBottom: 4 }}>
-              <span className="name" style={{ width: 'auto' }}>
+              {/* Lone row, no bars to line up with, so it sizes to its label. */}
+              <span className="name" style={{ flex: '0 0 auto' }}>
                 {t('stats.goal')}
               </span>
               <span className="track">

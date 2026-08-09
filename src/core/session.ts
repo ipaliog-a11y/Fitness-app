@@ -291,7 +291,26 @@ export class RunSession {
     this.shoeId = id && id.trim() ? id : null;
   }
 
-  /** Current speed in metres per second, or null when unknown. */
+  /**
+   * How long a track may go without a fix before the silence itself is read as
+   * standing still rather than as a gap in the data.
+   *
+   * Accepted fixes are sparser than the 1 Hz the sensor delivers, because the
+   * jitter filter drops anything that did not clearly move. A few seconds of
+   * quiet is therefore normal at running speed; twenty seconds is not.
+   */
+  private static readonly STALE_FIX_MS = 5_000;
+
+  /**
+   * Current speed in metres per second. Null means *unmeasured*, not zero.
+   *
+   * The distinction is the whole point. Stand still and the filter rejects
+   * every fix as jitter, so the track stops growing — and this used to answer
+   * null, which auto-pause reads as "no GPS yet, do not touch the clock". A
+   * standing athlete was indistinguishable from a cold receiver, and the clock
+   * ran on for as long as they stood there. Once there is a track, no movement
+   * is an answer: zero.
+   */
   recentSpeed(windowMs = 30_000, now = Date.now()): number | null {
     // Indoors the pod reports speed directly, which is both more responsive and
     // more honest than anything derived from a distance it also supplied.
@@ -302,8 +321,9 @@ export class RunSession {
     if (!segment || segment.length < 2) return null;
 
     const cutoff = now - windowMs;
+    const last = segment[segment.length - 1];
     let distance = 0;
-    let earliest = segment[segment.length - 1].t;
+    let earliest = last.t;
 
     for (let i = segment.length - 1; i > 0; i--) {
       if (segment[i - 1].t < cutoff) break;
@@ -311,8 +331,16 @@ export class RunSession {
       earliest = segment[i - 1].t;
     }
 
-    const seconds = (segment[segment.length - 1].t - earliest) / 1000;
-    if (seconds <= 0 || distance <= 0) return null;
+    /*
+     * The window ends at the last fix while fixes are arriving, and at `now`
+     * once they dry up. Measuring to `now` unconditionally would divide every
+     * reading by the age of the newest fix and quietly under-report pace by a
+     * few percent all run long; measuring to the last fix unconditionally is
+     * what let a stale track keep claiming the speed it had before it stalled.
+     */
+    const end = Math.max(last.t, now - RunSession.STALE_FIX_MS);
+    const seconds = (end - earliest) / 1000;
+    if (seconds <= 0) return null;
     return distance / seconds;
   }
 

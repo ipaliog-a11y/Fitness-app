@@ -63,7 +63,9 @@ const ALLOWED = new Set(
      * block. Rendering "χαλαρός ρυθμός κατωφλίου" instead reads like a
      * textbook, not like something anyone says at a track.
      */
-    'tempo', 'fartlek', 'strides', 'cruise', 'threshold',
+    'tempo', 'fartlek', 'strides', 'cruise', 'threshold', 'splits',
+    // The x-axis, named as a letter inside otherwise Greek copy.
+    'x',
     // Theme names keeping an English term the Greek copy also keeps.
     'HUD', 'Arcade',
     // Greek prose says "browser"; "περιηγητής" is correct and nobody uses it.
@@ -122,6 +124,16 @@ const JSX_TEXT = />([^<>{}]*?[A-Za-z]{3}[^<>{}]*?)</g;
  */
 const LOOKS_LIKE_CODE = /[=;()[\]'"`]|=>|\.\w|^\w+\.\w+$/;
 
+/*
+ * Copy also hides in attributes, and none of it sits between two tags.
+ *
+ * `label="Type"` and `placeholder="e.g. Tuesday hills"` both shipped
+ * untranslated past the check above, because it only ever reads what a `>` and
+ * a `<` enclose. These are the attributes a user can actually read — `id`,
+ * `className` and the rest are not prose and are not listed.
+ */
+const JSX_ATTR = /\b(?:label|title|placeholder|aria-label|alt)="([^"]*[A-Za-z]{3}[^"]*)"/g;
+
 const sourceHits = [];
 for (const file of await readdir(SRC, { recursive: true })) {
   if (!file.endsWith('.tsx')) continue;
@@ -134,6 +146,10 @@ for (const file of await readdir(SRC, { recursive: true })) {
     const line = text.slice(0, match.index).split('\n').length;
     sourceHits.push(`${file}:${line}  ${value.slice(0, 70)}`);
   }
+  for (const match of text.matchAll(JSX_ATTR)) {
+    const line = text.slice(0, match.index).split('\n').length;
+    sourceHits.push(`${file}:${line}  ${match[0].slice(0, 70)}`);
+  }
 }
 
 if (sourceHits.length > 0) {
@@ -141,6 +157,60 @@ if (sourceHits.length > 0) {
   for (const hit of sourceHits) console.error(`  ${hit}`);
   console.error('\nWrap each in t() with a key in src/i18n/en.ts and src/i18n/el.ts.\n');
   process.exit(1);
+}
+
+/*
+ * A saved run, so the crawl can reach the screens that need one.
+ *
+ * Without it History is empty and the run detail page is unreachable — the
+ * heart-rate report, the splits, the chart legend, none of them ever drawn, all
+ * of them reported clean. That is exactly how `Z1 zone.recovery.name` shipped:
+ * the zone rows put a message key straight into the DOM and nothing in this
+ * file had ever rendered one.
+ *
+ * The track is short and tidy on purpose. This check is about text, not about
+ * GPS fidelity; it only has to make the screens exist.
+ */
+function seedRun() {
+  const t0 = 1_755_000_000_000;
+  const segment = [];
+  const heart = [];
+  let lat = 37.9838;
+  for (let i = 0; i < 600; i++) {
+    lat += 3.2 / 111_320;
+    const t = t0 + i * 1000;
+    segment.push({ lat, lon: 23.7275, t, accuracy: 5, elevation: 60 + (i % 9) });
+    // Climbing across the whole range, so all five zone rows have a bar.
+    if (i % 2 === 0) heart.push({ t, bpm: 105 + Math.round((i / 600) * 80) });
+  }
+  return {
+    id: 'i18n-seed-run',
+    mode: 'outdoor',
+    startedAt: t0,
+    durationMs: 600_000,
+    distanceM: 1920,
+    distanceSource: 'gps',
+    segments: [segment],
+    heart,
+    heartReport: null,
+    steps: null,
+    inclinePercent: null,
+    caloriesKcal: 168,
+    goal: null,
+    manualLaps: [
+      {
+        index: 1,
+        atDistanceM: 1000,
+        atDurationMs: 312_000,
+        splitDistanceM: 1000,
+        splitDurationMs: 312_000,
+      },
+    ],
+    shoeId: null,
+    workoutId: null,
+    workoutName: null,
+    note: '',
+  };
 }
 
 // Part two: drive the app and read the screen.
@@ -153,6 +223,27 @@ const context = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 });
+
+// Into the database before the app boots and reads it.
+await context.addInitScript(
+  `(${String(function seed(record) {
+    if (typeof indexedDB === 'undefined') return;
+    const request = indexedDB.open('runlog', 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('activities')) {
+        const store = db.createObjectStore('activities', { keyPath: 'id' });
+        store.createIndex('startedAt', 'startedAt');
+      }
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('activities', 'readwrite');
+      tx.objectStore('activities').put(record);
+    };
+  })})(${JSON.stringify(seedRun())})`,
+);
+
 const page = await context.newPage();
 
 const pageErrors = [];
@@ -161,7 +252,7 @@ page.on('pageerror', (error) => pageErrors.push(String(error)));
 await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(2500);
 
-// Greek, and a saved treadmill run so the screens that need history have some.
+// Greek, and a name so the screens that greet the athlete have one.
 await page.evaluate(() => {
   localStorage.setItem(
     'runlog:settings:v1',
@@ -171,14 +262,34 @@ await page.evaluate(() => {
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(2500);
 
-/** Every Latin-script word visible right now, minus the allowlist. */
-async function latinWords() {
-  const text = await page.evaluate(() =>
+function visibleText() {
+  return page.evaluate(() =>
     [...document.querySelectorAll('.screen, .modal')]
       .filter((el) => el.offsetParent !== null)
       .map((el) => el.innerText)
       .join('\n'),
   );
+}
+
+/*
+ * Message keys that reached the screen instead of their translation.
+ *
+ * A different failure to an untranslated literal, and it needs its own eye. The
+ * catalogue types cannot help here: MessageKey *is* a string, so `{zone.name}`
+ * in JSX compiles happily and renders the key. What gives it away is the shape
+ * — `zone.recovery.name` is dotted, lowercase and unspaced, which no piece of
+ * copy in any language ever is.
+ */
+const KEY_SHAPED = /\b[a-z][a-z0-9]*(?:\.[a-z][a-zA-Z0-9]*)+\b/g;
+
+async function leakedKeys() {
+  const text = await visibleText();
+  return new Set(text.match(KEY_SHAPED) ?? []);
+}
+
+/** Every Latin-script word visible right now, minus the allowlist. */
+async function latinWords() {
+  const text = await visibleText();
   const out = new Set();
   for (const raw of text.split(/[\s·—–…,.:;!?()[\]{}%/+«»"'’]+/)) {
     const word = raw.replace(/^[-–]+|[-–]+$/g, '');
@@ -192,9 +303,13 @@ async function latinWords() {
 }
 
 const found = new Map();
+const keys = new Map();
 async function sweep(where) {
   for (const word of await latinWords()) {
     if (!found.has(word)) found.set(word, where);
+  }
+  for (const key of await leakedKeys()) {
+    if (!keys.has(key)) keys.set(key, where);
   }
 }
 
@@ -253,6 +368,42 @@ for (let i = 0; i < tabCount; i++) {
     await tabs.nth(i).click({ force: true, timeout: 3000 }).catch(() => {});
     await page.waitForTimeout(400);
   }
+
+  /*
+   * A history row is a door too, and not a `button` the opener sweep above
+   * would find its way through. Behind it is the longest single screen in the
+   * app — the heart report, the splits, the chart legend, the coach's notes.
+   */
+  const run = page.locator('.screen:visible .run-item').first();
+  if (await run.count()) {
+    try {
+      await run.click({ timeout: 3000 });
+      await page.waitForTimeout(1200);
+      await sweep(`${name} › run`);
+
+      // Every control on the detail page: the chart's own series toggles and
+      // fullscreen live here and nowhere else.
+      const inner = page.locator('.screen:visible button:not(.tabs button):visible');
+      for (let k = 0; k < Math.min(await inner.count(), 10); k++) {
+        const control = inner.nth(k);
+        let label = '';
+        try {
+          label = (await control.innerText()).trim().replace(/\s+/g, ' ').slice(0, 30);
+          await control.click({ timeout: 1500 });
+        } catch {
+          continue;
+        }
+        await page.waitForTimeout(400);
+        await sweep(`${name} › run › ${label}`);
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(200);
+      }
+    } catch {
+      /* Could not open it; the tab click below puts us back either way. */
+    }
+    await tabs.nth(i).click({ force: true, timeout: 3000 }).catch(() => {});
+    await page.waitForTimeout(400);
+  }
 }
 
 await browser.close();
@@ -261,6 +412,19 @@ server.close();
 if (pageErrors.length > 0) {
   console.error(`\nUncaught page errors:\n`);
   for (const error of pageErrors) console.error(`  ✗ ${error}`);
+  process.exit(1);
+}
+
+if (keys.size > 0) {
+  console.error(`\n${keys.size} message keys rendered instead of their translation:\n`);
+  for (const [key, where] of [...keys].sort((a, b) => a[0].localeCompare(b[0]))) {
+    console.error(`  ${key}\n    on ${where}`);
+  }
+  console.error(
+    '\nSomething put a MessageKey into JSX without calling t() on it. The types\n' +
+      'cannot catch this — MessageKey is a string, so `{zone.name}` compiles and\n' +
+      'renders the key. Wrap it: `{t(zone.name)}`.\n',
+  );
   process.exit(1);
 }
 

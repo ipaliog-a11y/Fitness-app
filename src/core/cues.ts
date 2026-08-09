@@ -10,6 +10,16 @@ import { paceUnitMetres } from './units';
 import type { RunGoal } from './goal';
 import { goalMet, goalProgress } from './goal';
 
+/**
+ * What a lap press recorded. Structurally a ManualLap, restated here so this
+ * module keeps depending on nothing.
+ */
+export interface CueLap {
+  index: number;
+  splitDistanceM: number;
+  splitDurationMs: number;
+}
+
 export interface CueSnapshot {
   distanceM: number;
   durationMs: number;
@@ -20,8 +30,8 @@ export interface CueSnapshot {
   goal: RunGoal | null;
   goalProgress: number;
   goalMet: boolean;
-  /** Manual lap count (after each lap press). */
-  lapCount: number;
+  /** Manual laps pressed so far, in order. */
+  laps: readonly CueLap[];
   /** True when the latest pause was triggered by auto-pause. */
   autoPaused: boolean;
 }
@@ -35,7 +45,7 @@ export type CueEvent =
   | { type: 'resumed' }
   | { type: 'auto_paused' }
   | { type: 'auto_resumed' }
-  | { type: 'lap'; index: number };
+  | { type: 'lap'; index: number; splitDistanceM: number; splitDurationMs: number };
 
 export interface CueOptions {
   units: UnitSystem;
@@ -51,7 +61,7 @@ export function makeSnapshot(input: {
   caloriesKcal: number;
   state: CueSnapshot['state'];
   goal: RunGoal | null;
-  lapCount: number;
+  laps: readonly CueLap[];
   autoPaused: boolean;
   units: UnitSystem;
 }): CueSnapshot {
@@ -71,7 +81,7 @@ export function makeSnapshot(input: {
     goal: input.goal,
     goalProgress: progress,
     goalMet: input.goal ? goalMet(input.goal, snap) : false,
-    lapCount: input.lapCount,
+    laps: input.laps,
     autoPaused: input.autoPaused,
   };
 }
@@ -119,13 +129,66 @@ export function pendingCues(
   }
 
   // Manual laps
-  if (current.lapCount > prev.lapCount) {
-    for (let i = prev.lapCount + 1; i <= current.lapCount; i++) {
-      out.push({ type: 'lap', index: i });
-    }
+  for (let i = prev.laps.length; i < current.laps.length; i++) {
+    const lap = current.laps[i];
+    out.push({
+      type: 'lap',
+      index: lap.index,
+      splitDistanceM: lap.splitDistanceM,
+      splitDurationMs: lap.splitDurationMs,
+    });
   }
 
   return out;
+}
+
+function unitWord(units: UnitSystem, plural: boolean): string {
+  const word = units === 'metric' ? 'kilometer' : 'mile';
+  return plural ? `${word}s` : word;
+}
+
+/**
+ * A duration for the ear rather than the eye.
+ *
+ * "5:12" is right on a screen and a gamble through a speech engine — read as
+ * "five twelve", "five colon twelve" or a time of day depending on the voice.
+ * Spelling out the units costs a syllable and removes the guess.
+ */
+export function spokenDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+  if (minutes > 0) parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+  // A run of exactly two minutes should not be silent about its seconds only
+  // to leave the sentence hanging on "two minutes" with no anchor.
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds} second${seconds === 1 ? '' : 's'}`);
+  return parts.join(' ');
+}
+
+/** "1.02 kilometers", spoken. */
+export function spokenDistance(metres: number, units: UnitSystem): string {
+  const value = metres / paceUnitMetres(units);
+  const text = value.toFixed(2);
+  return `${text} ${unitWord(units, text !== '1.00')}`;
+}
+
+/** "5 minutes 6 seconds per kilometer", or null when there is nothing to divide. */
+export function spokenPace(metres: number, ms: number, units: UnitSystem): string | null {
+  if (metres <= 0 || ms <= 0) return null;
+  const secondsPerUnit = ms / 1000 / (metres / paceUnitMetres(units));
+  // Past about an hour and a half per unit it is a walk to the car, not a pace.
+  if (!Number.isFinite(secondsPerUnit) || secondsPerUnit > 99 * 60) return null;
+  return `${spokenDuration(secondsPerUnit * 1000)} per ${unitWord(units, false)}`;
+}
+
+/** "1.02 kilometers in 5 minutes 12 seconds, 5 minutes 6 seconds per kilometer." */
+export function spokenSummary(metres: number, ms: number, units: UnitSystem): string {
+  const head = `${spokenDistance(metres, units)} in ${spokenDuration(ms)}`;
+  const pace = spokenPace(metres, ms, units);
+  return pace ? `${head}, ${pace}.` : `${head}.`;
 }
 
 /** Spoken line for a cue (English, short enough for outdoors). */
@@ -135,22 +198,21 @@ export function cueSpeech(
     units: UnitSystem;
     distanceM: number;
     durationMs: number;
-    formatDistance: (m: number) => string;
-    formatDuration: (ms: number) => string;
   },
 ): string {
-  const unitWord = ctx.units === 'metric' ? 'kilometer' : 'mile';
   switch (event.type) {
     case 'started':
       return 'Run started.';
     case 'distance_unit':
       return event.unit === 1
-        ? `One ${unitWord}. ${ctx.formatDuration(ctx.durationMs)}.`
-        : `${event.unit} ${unitWord}s. ${ctx.formatDuration(ctx.durationMs)}.`;
+        ? `One ${unitWord(ctx.units, false)}. ${spokenDuration(ctx.durationMs)}.`
+        : `${event.unit} ${unitWord(ctx.units, true)}. ${spokenDuration(ctx.durationMs)}.`;
     case 'goal_half':
       return 'Halfway to your goal.';
     case 'goal_met':
-      return 'Goal reached.';
+      // The milestone is the moment to hear where the run stands, not just
+      // that a threshold went by.
+      return `Goal reached. ${spokenSummary(ctx.distanceM, ctx.durationMs, ctx.units)}`;
     case 'paused':
       return 'Paused.';
     case 'resumed':
@@ -160,6 +222,8 @@ export function cueSpeech(
     case 'auto_resumed':
       return 'Resuming.';
     case 'lap':
-      return `Lap ${event.index}.`;
+      // The split, not the running total — a lap you cannot compare against
+      // the last one is a beep with a number on it.
+      return `Lap ${event.index}. ${spokenSummary(event.splitDistanceM, event.splitDurationMs, ctx.units)}`;
   }
 }
