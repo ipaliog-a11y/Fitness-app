@@ -243,6 +243,74 @@
   color-scheme: dark;
 }
 
+[data-theme='retro'] {
+  /*
+   * Arcade Neon — identity: a 1985 cabinet in a dark room.
+   *
+   * The only theme where light comes *out* of the interface. Every other theme
+   * paints ink on a surface; this one treats numbers as lit glass and the
+   * chrome around them as unlit plastic. That is the whole idea, and it is why
+   * the glow lives on values only — a glowing label is just blur.
+   *
+   * Mono like HUD, but the opposite temperament: HUD is a flat industrial
+   * readout, this is a CRT with the brightness up. Wide tracking and the
+   * unlit-segment ghost behind each number do the separating.
+   *
+   * Palette verified against WCAG AA on its own surfaces, including the whole
+   * zone ladder — "fun" does not get to mean unreadable mid-run.
+   */
+  --bg: #100425;
+  --bg-elev: #170733;
+  --surface: #1e0b40;
+  --surface-2: #27104f;
+  --surface-3: #331761;
+  --line: #4a2280;
+  --line-soft: rgba(255, 46, 196, 0.12);
+  --text: #f5ecff;
+  --muted: #b79ae0;
+  --muted-2: #9377c4;
+  --accent: #ff2ec4;
+  --accent-bright: #ff7ada;
+  --accent-dim: rgba(255, 46, 196, 0.2);
+  --accent-solid: #a3157c;
+  --accent-ink: #16002c;
+  --warn: #ffd23f;
+  --danger: #ff4d6a;
+  --info: #22e0ff;
+
+  /* Chunky, near-square: a moulded bezel, not a rounded card. */
+  --radius: 4px;
+  --radius-sm: 2px;
+  --radius-lg: 6px;
+  --tab-bg: #170733;
+  --tab-inset: 0px;
+  --tab-radius: 0px;
+  --tab-border: #4a2280;
+  --btn-radius: 2px;
+  --chip-radius: 2px;
+  --metric-font: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  /* Attract-mode wide. */
+  --letter-label: 0.2em;
+
+  --map-casing: rgba(16, 4, 37, 0.7);
+  --map-tile-dim: 0.55;
+  --press-scale: 0.965;
+  --shadow-1: 0 0 0 1px rgba(255, 46, 196, 0.1), 0 8px 22px -12px rgba(255, 46, 196, 0.5);
+  --shadow-2: 0 0 0 1px rgba(255, 46, 196, 0.16), 0 16px 34px -14px rgba(255, 46, 196, 0.55);
+  --line-card: var(--line);
+
+  --zone-1: #8f9bd8;
+  --zone-2: #3ddc97;
+  --zone-3: #ffd23f;
+  --zone-4: #ff9f45;
+  --zone-5: #ff4d6a;
+
+  /* How hard the lit-glass effect burns. Referenced by the live dashboard. */
+  --glow: 0 0 14px;
+
+  color-scheme: dark;
+}
+
 [data-theme='day'] {
   /*
    * Daylight — for running in direct sun.
@@ -4551,4 +4619,275 @@ button.cal-event {
 [data-theme='sky'] .splash-title {
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   Per-theme live dashboards
+   --------------------------------------------------------------------------
+   The run screen is the one place the app is read at arm's length, moving, in
+   whatever light there is — so each theme states its case here rather than
+   only in the chrome. Soft and HUD already had a voice; the rest were falling
+   back to Soft's and looked borrowed.
+
+   The variable across all six is the same: how many pods fit a row, how big
+   the hero clock gets, and what a pod is made of. Nothing here changes what is
+   measured or where a control lives, so muscle memory survives a theme switch.
+   ========================================================================== */
+
+/* --- Daylight: maximum legibility in sun --------------------------------- */
+
+/*
+ * Two columns, not three. In direct sunlight the limit is not screen space,
+ * it is how large a glyph has to be to survive glare and a squint, so this
+ * theme trades pod count per row for size and takes the heavier border with it.
+ */
+[data-theme='day'] .metric-grid-live.metric-grid-3x2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+[data-theme='day'] .metric-grid-live .metric-pod {
+  padding: 14px 10px;
+  border-width: 2px;
+}
+
+[data-theme='day'] .metric-grid-live .value {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+[data-theme='day'] .run-live .metric-hero .value-timer {
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+/* --- Crimson Ember: cut gemstone ----------------------------------------- */
+
+/*
+ * The theme's whole idea is a bevelled corner, so the pods carry it literally:
+ * one clipped corner each, mirrored across the pair so a row reads as a cut
+ * stone rather than as two identical tiles. clip-path rather than a rotated
+ * pseudo-element — it survives any background and costs nothing to paint.
+ */
+[data-theme='crimson'] .metric-grid-live.metric-grid-3x2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+[data-theme='crimson'] .metric-grid-live .metric-pod {
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  padding: 13px 10px;
+}
+
+[data-theme='crimson'] .metric-grid-live .metric-pod:nth-child(even) {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+[data-theme='crimson'] .metric-grid-live .label {
+  text-transform: uppercase;
+  letter-spacing: var(--letter-label);
+}
+
+[data-theme='crimson'] .run-live .metric-hero .value-timer {
+  letter-spacing: -0.045em;
+}
+
+/* --- Skyline: soft aviation capsules -------------------------------------- */
+
+/*
+ * Full capsules, two to a row. Sky is the roundest theme (22px cards), and a
+ * 999px pod is the only shape that reads as *more* rounded than its container
+ * instead of merely matching it — the number sits in a lozenge, like a dial.
+ */
+[data-theme='sky'] .metric-grid-live.metric-grid-3x2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+[data-theme='sky'] .metric-grid-live .metric-pod {
+  border-radius: 999px;
+  padding: 14px 12px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface-2));
+}
+
+[data-theme='sky'] .metric-grid-live .label {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+[data-theme='sky'] .run-live .metric-hero .value-timer {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* --- Arcade Neon: lit glass in a bezel ------------------------------------ */
+
+/*
+ * Three across, like a cabinet's score row, and every value is treated as an
+ * illuminated segment: a text-shadow glow on the number only, never the label.
+ *
+ * The pods are recessed rather than raised — an inset shadow plus a darker
+ * ground, so the readout sits *behind* the bezel the way a real LCD does.
+ */
+[data-theme='retro'] .metric-grid-live.metric-grid-3x2 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+[data-theme='retro'] .metric-grid-live .metric-pod {
+  background: #0b0119;
+  border: 2px solid var(--line);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75);
+  padding: 12px 6px;
+}
+
+[data-theme='retro'] .metric-grid-live .value {
+  color: var(--accent-bright);
+  text-shadow: var(--glow) color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+[data-theme='retro'] .metric-grid-live .label {
+  color: var(--info);
+  text-transform: uppercase;
+}
+
+/*
+ * The hero clock, as a CRT.
+ *
+ * Two layers: the number itself glows, and a repeating-gradient overlay lays
+ * scanlines across it. The overlay is a pseudo-element with pointer-events
+ * off so it never intercepts a tap, and it is masked to the hero alone — a
+ * full-screen scanline wash is unreadable, and this is still a running app.
+ */
+[data-theme='retro'] .run-live .metric-hero {
+  position: relative;
+  background: #0b0119;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 10px 12px;
+  overflow: hidden;
+}
+
+[data-theme='retro'] .run-live .metric-hero .value,
+[data-theme='retro'] .run-live .metric-hero .value-timer {
+  color: var(--accent-bright);
+  text-shadow:
+    0 0 6px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+[data-theme='retro'] .run-live .metric-hero .label {
+  color: var(--info);
+}
+
+[data-theme='retro'] .run-live .metric-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+[data-theme='retro'] .live-status-pill,
+[data-theme='retro'] .live-meta-pill {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px;
+}
+
+[data-theme='retro'] .start-control-face {
+  background: #0b0119;
+  border: 2px solid var(--accent);
+  box-shadow:
+    0 0 18px -2px color-mix(in srgb, var(--accent) 55%, transparent),
+    inset 0 0 18px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+[data-theme='retro'] .start-control-label {
+  color: var(--accent-bright);
+  letter-spacing: 0.18em;
+  text-shadow: var(--glow) color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+[data-theme='retro'] .start-control-sub {
+  color: var(--info);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Swatch for the picker. */
+.theme-option-retro .theme-swatch {
+  background: #100425;
+  border-color: #4a2280;
+}
+
+.theme-option-retro .theme-swatch-dot {
+  background: #ff2ec4;
+  box-shadow: 0 0 8px #ff2ec4;
+}
+
+.theme-option-retro .theme-swatch-bar {
+  background: #22e0ff;
+}
+
+/* ==========================================================================
+   Theme picker: a trigger row plus a sheet
+   --------------------------------------------------------------------------
+   Six themes as a permanent inline list pushed everything else in Settings
+   below the fold, for a control most people touch once. It is now one row
+   showing what is active, and the full set lives in a sheet.
+   ========================================================================== */
+
+.theme-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.theme-trigger-cue {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: var(--letter-label);
+  text-transform: uppercase;
+}
+
+/*
+ * The sheet scrolls, the page behind it does not.
+ *
+ * Six options plus a heading and a Done button overflow a short phone in
+ * landscape, and a modal that grows past the viewport puts its primary action
+ * somewhere unreachable. Capping at the visible height and scrolling the list
+ * keeps Done on screen.
+ */
+.theme-modal {
+  max-height: min(78vh, 640px);
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-modal .theme-picker {
+  overflow-y: auto;
+  margin-bottom: 12px;
+  /* Room for the focus ring on the first and last option. */
+  padding: 2px;
+}
+
+.theme-modal h2 {
+  margin-top: 0;
 }

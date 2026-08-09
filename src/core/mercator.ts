@@ -6,6 +6,14 @@
  */
 
 import { boundsOf, type GeoPoint } from './geo';
+/*
+ * Type-only, and deliberately so: settings.ts imports parseMapStyle from here,
+ * so a value import back would be a real cycle. `import type` is erased at
+ * compile time, which keeps this honest about ThemeId instead of restating the
+ * union — the previous inline copy silently went stale every time a theme was
+ * added.
+ */
+import type { ThemeId } from './settings';
 
 /** Tile-space coordinates at a given zoom: integer part is the tile, fraction is the offset inside it. */
 export interface TilePoint {
@@ -164,10 +172,8 @@ export function parseMapStyle(value: unknown): MapStyleId {
 }
 
 /** Pick a concrete basemap from style + UI theme. */
-export function resolveMapBasemap(
-  style: MapStyleId,
-  theme: 'soft' | 'hud' | 'day' | 'crimson' | 'sky',
-): MapBasemapId {
+export function resolveMapBasemap(style: MapStyleId, theme: ThemeId): MapBasemapId {
+  // Only Daylight is a light theme; everything else wants a dark basemap.
   if (style === 'auto') return theme === 'day' ? 'standard' : 'dark';
   return style;
 }

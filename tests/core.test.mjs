@@ -38,7 +38,7 @@ import {
   personalRecords,
   totals,
 } from '../src/core/stats.ts';
-import { sanitise, DEFAULTS, parseTheme } from '../src/core/settings.ts';
+import { sanitise, DEFAULTS, parseTheme, THEME_OPTIONS } from '../src/core/settings.ts';
 import { tipsForRun, tipsForWeek } from '../src/core/coach.ts';
 import {
   project,
@@ -1820,27 +1820,57 @@ check('every zone still carries a real colour to fall back to', () => {
   }
 });
 
-check('the theme parser accepts the three themes and their aliases', () => {
-  equal(parseTheme('soft'), 'soft');
-  equal(parseTheme('hud'), 'hud');
-  equal(parseTheme('day'), 'day');
-  // Aliases, so a value stored by an earlier build still resolves.
+/*
+ * Driven off THEME_OPTIONS rather than a hand-written list.
+ *
+ * The previous version hardcoded the three themes that existed when it was
+ * written, so it kept passing while three more were added — and its "garbage"
+ * sample included 'neon', which later became a real alias. Deriving the set
+ * means adding a theme cannot leave this quietly asserting the wrong thing.
+ */
+const THEME_IDS = THEME_OPTIONS.map((o) => o.id);
+
+check('every registered theme parses to itself', () => {
+  assert(THEME_IDS.length >= 6, `expected the full set, got ${THEME_IDS.length}`);
+  for (const id of THEME_IDS) {
+    equal(parseTheme(id), id, `${id} round-trips`);
+  }
+});
+
+check('theme aliases from earlier builds still resolve', () => {
+  // Values an older localStorage entry could plausibly hold.
   equal(parseTheme('emerald'), 'soft');
   equal(parseTheme('athletic-hud'), 'hud');
   equal(parseTheme('light'), 'day');
   equal(parseTheme('daylight'), 'day');
+  equal(parseTheme('ember'), 'crimson');
+  equal(parseTheme('skyline'), 'sky');
+  equal(parseTheme('arcade'), 'retro');
+  equal(parseTheme('neon'), 'retro');
 });
 
 check('an unknown theme falls back rather than breaking the shell', () => {
-  for (const bad of [null, undefined, '', 'neon', 42, {}]) {
+  for (const bad of [null, undefined, '', 'chartreuse', 42, {}, [], 'HUD ']) {
     const parsed = parseTheme(bad);
-    assert(['soft', 'hud', 'day'].includes(parsed), `"${String(bad)}" resolved to a real theme`);
+    assert(THEME_IDS.includes(parsed), `"${String(bad)}" resolved to a real theme, got ${parsed}`);
   }
 });
 
-check('a profile round-trips the new theme', () => {
-  equal(sanitise({ theme: 'day' }).theme, 'day', 'kept');
-  assert(['soft', 'hud', 'day'].includes(sanitise({ theme: 'nonsense' }).theme), 'garbage falls back');
+check('every theme round-trips through a profile', () => {
+  for (const id of THEME_IDS) {
+    equal(sanitise({ theme: id }).theme, id, `${id} kept`);
+  }
+  assert(THEME_IDS.includes(sanitise({ theme: 'nonsense' }).theme), 'garbage falls back');
+});
+
+check('every theme is presentable in the picker', () => {
+  const seen = new Set();
+  for (const opt of THEME_OPTIONS) {
+    assert(opt.label && opt.label.trim().length > 0, `${opt.id} has a label`);
+    assert(opt.blurb && opt.blurb.trim().length > 0, `${opt.id} has a blurb`);
+    assert(!seen.has(opt.id), `${opt.id} is listed once`);
+    seen.add(opt.id);
+  }
 });
 
 // --- health connect import mapping ----------------------------------------

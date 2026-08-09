@@ -1,6 +1,6 @@
 /** App preferences, routes, and getting the data out — not the athlete profile. */
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Activity } from '../core/activity';
 import { exportFullBackup, importBackup, wipeAllLocalData } from '../core/backup';
 import { saveActivity } from '../core/db';
@@ -143,6 +143,18 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
     });
   };
 
+  const [themeOpen, setThemeOpen] = useState(false);
+  const activeTheme = THEME_OPTIONS.find((o) => o.id === profile.theme) ?? THEME_OPTIONS[0];
+
+  useEffect(() => {
+    if (!themeOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setThemeOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [themeOpen]);
+
   const routes = loadRoutes();
   void routesTick;
 
@@ -210,34 +222,25 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           Same app, different look. Pick whichever is easier to read outdoors — you can switch any
           time.
         </p>
-        <div className="theme-picker" role="radiogroup" aria-label="App theme">
-          {THEME_OPTIONS.map((opt) => {
-            const selected = profile.theme === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                className={`theme-option theme-option-${opt.id}${selected ? ' selected' : ''}`}
-                onClick={() => set('theme', opt.id as ThemeId)}
-              >
-                <span className="theme-swatch" aria-hidden>
-                  <span className="theme-swatch-dot" />
-                  <span className="theme-swatch-bar" />
-                  <span className="theme-swatch-bar short" />
-                </span>
-                <span className="theme-option-body">
-                  <span className="theme-option-label">{opt.label}</span>
-                  <span className="theme-option-blurb">{opt.blurb}</span>
-                </span>
-                <span className="theme-option-check" aria-hidden>
-                  {selected ? '✓' : ''}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <button
+          type="button"
+          className={`theme-trigger theme-option-${profile.theme}`}
+          onClick={() => setThemeOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="theme-swatch" aria-hidden>
+            <span className="theme-swatch-dot" />
+            <span className="theme-swatch-bar" />
+            <span className="theme-swatch-bar short" />
+          </span>
+          <span className="theme-option-body">
+            <span className="theme-option-label">{activeTheme.label}</span>
+            <span className="theme-option-blurb">{activeTheme.blurb}</span>
+          </span>
+          <span className="theme-trigger-cue" aria-hidden>
+            Change
+          </span>
+        </button>
       </div>
 
       <div className="card">
@@ -716,6 +719,59 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           </button>
         )}
       </div>
+
+      {themeOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setThemeOpen(false);
+          }}
+        >
+          <div className="modal theme-modal" role="dialog" aria-modal="true" aria-labelledby="theme-modal-title">
+            <h2 id="theme-modal-title">Theme</h2>
+            <p className="hint" style={{ marginTop: 0 }}>
+              Each one restyles the live run screen too, not just the colours.
+            </p>
+            <div className="theme-picker" role="radiogroup" aria-label="App theme">
+              {THEME_OPTIONS.map((opt) => {
+                const selected = profile.theme === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`theme-option theme-option-${opt.id}${selected ? ' selected' : ''}`}
+                    /*
+                     * Apply immediately and leave the sheet open: the whole app
+                     * behind the backdrop repaints, so the picker doubles as a
+                     * live preview and comparing two themes is one tap each.
+                     */
+                    onClick={() => set('theme', opt.id as ThemeId)}
+                  >
+                    <span className="theme-swatch" aria-hidden>
+                      <span className="theme-swatch-dot" />
+                      <span className="theme-swatch-bar" />
+                      <span className="theme-swatch-bar short" />
+                    </span>
+                    <span className="theme-option-body">
+                      <span className="theme-option-label">{opt.label}</span>
+                      <span className="theme-option-blurb">{opt.blurb}</span>
+                    </span>
+                    <span className="theme-option-check" aria-hidden>
+                      {selected ? '\u2713' : ''}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" className="btn primary wide" onClick={() => setThemeOpen(false)}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

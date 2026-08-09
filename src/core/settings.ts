@@ -22,7 +22,7 @@ export type { BiologicalSex };
  * Visual shell. Tokens + a few layout variants live in styles.css under
  * `[data-theme="…"]`. Soft Emerald is the default (closest to the original app).
  */
-export type ThemeId = 'soft' | 'hud' | 'day' | 'crimson' | 'sky';
+export type ThemeId = 'soft' | 'hud' | 'day' | 'crimson' | 'sky' | 'retro';
 
 export const THEME_OPTIONS: Array<{
   id: ThemeId;
@@ -53,6 +53,11 @@ export const THEME_OPTIONS: Array<{
     id: 'sky',
     label: 'Skyline',
     blurb: 'Sky blue, full pills, floating capsule tab — calm aviation feel.',
+  },
+  {
+    id: 'retro',
+    label: 'Arcade Neon',
+    blurb: 'Magenta on deep violet, segment digits, scanline glow — pure 1985.',
   },
 ];
 
@@ -173,25 +178,28 @@ export function sanitiseBirthDate(raw: unknown): string {
   return ageFromBirthDate(t) !== null ? t : '';
 }
 
+/**
+ * Status bar / PWA chrome, roughly each theme's page background.
+ *
+ * A Record rather than a ternary chain: adding a theme to ThemeId without a
+ * colour here is then a compile error instead of a silently wrong status bar,
+ * which is how the previous five-deep ternary would have failed.
+ */
+const THEME_CHROME: Record<ThemeId, string> = {
+  soft: '#0a0d12',
+  hud: '#050505',
+  day: '#ffffff',
+  crimson: '#12080a',
+  sky: '#070d16',
+  retro: '#100425',
+};
+
 /** Push the active theme onto <html> so CSS tokens apply before paint. */
 export function applyTheme(theme: ThemeId): void {
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.theme = theme;
-  // Status bar / PWA chrome roughly matches the page background.
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) {
-    const bg =
-      theme === 'hud'
-        ? '#050505'
-        : theme === 'day'
-          ? '#ffffff'
-          : theme === 'crimson'
-            ? '#12080a'
-            : theme === 'sky'
-              ? '#070d16'
-              : '#0a0d12';
-    meta.setAttribute('content', bg);
-  }
+  if (meta) meta.setAttribute('content', THEME_CHROME[theme]);
 }
 
 export function parseTheme(value: unknown): ThemeId {
@@ -200,6 +208,7 @@ export function parseTheme(value: unknown): ThemeId {
   if (value === 'soft' || value === 'emerald' || value === 'soft-emerald') return 'soft';
   if (value === 'crimson' || value === 'red' || value === 'ember') return 'crimson';
   if (value === 'sky' || value === 'skyline' || value === 'blue') return 'sky';
+  if (value === 'retro' || value === 'arcade' || value === 'neon') return 'retro';
   return DEFAULTS.theme;
 }
 
