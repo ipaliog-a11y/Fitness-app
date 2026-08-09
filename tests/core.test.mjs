@@ -22,6 +22,7 @@ import {
   toDisplayDistance,
 } from '../src/core/units.ts';
 import { splits, bestEffort } from '../src/core/activity.ts';
+import { applyConsoleEntry } from '../src/core/consoleEntry.ts';
 import { RunSession } from '../src/core/session.ts';
 import {
   summariseHeart,
@@ -542,14 +543,159 @@ check('a session with a distance goal records it and reports progress', () => {
   }), 0.6, 0.02, '60% of a 5k');
 });
 
-check('a treadmill distance can be overridden from the console', () => {
+// --- The treadmill console, applied on the results page ---------------------
+
+/**
+ * A finished treadmill run, with the fields the console panel reads.
+ * Thirty minutes of moving time, so the calorie maths has something to chew on.
+ */
+function treadmillRun(overrides = {}) {
+  return {
+    id: 'run-1',
+    mode: 'treadmill',
+    startedAt: 1_700_000_000_000,
+    durationMs: 1_800_000,
+    distanceM: 4800,
+    distanceSource: 'sensor',
+    segments: [],
+    heart: [],
+    heartReport: null,
+    steps: null,
+    inclinePercent: null,
+    caloriesKcal: 300,
+    goal: null,
+    manualLaps: [],
+    shoeId: null,
+    workoutId: null,
+    workoutName: null,
+    note: '',
+    ...overrides,
+  };
+}
+
+const CONSOLE_CTX = { footpodCalibration: 1, weightKg: 70, age: 35, sex: 'male' };
+
+check('a console distance overrides a step estimate and calibrates stride', () => {
+  const run = treadmillRun({ distanceSource: 'steps', steps: 6000, distanceM: 4200 });
+  const out = applyConsoleEntry(run, { distanceM: 5000, inclinePercent: null }, CONSOLE_CTX);
+
+  equal(out.changed, true, 'the entry changed something');
+  equal(out.activity.distanceM, 5000, 'the console figure wins');
+  equal(out.activity.distanceSource, 'manual', 'provenance follows the number');
+  equal(out.calibration.kind, 'stride');
+  near(out.calibration.strideM, 5000 / 6000, 1e-9, 'stride from steps and true distance');
+  // The input must survive untouched — the caller still needs it to work out
+  // how much mileage to add to the shoe.
+  equal(run.distanceM, 4200, 'the original record is not mutated');
+});
+
+check('a console distance compounds the pod calibration it already had', () => {
+  const run = treadmillRun({ distanceSource: 'sensor', distanceM: 4800 });
+  const out = applyConsoleEntry(
+    run,
+    { distanceM: 5000, inclinePercent: null },
+    { ...CONSOLE_CTX, footpodCalibration: 1.02 },
+  );
+
+  equal(out.calibration.kind, 'footpod');
+  // The pod's 4800 already had 1.02 applied to it, so the correction multiplies
+  // rather than replaces: storing 5000/4800 outright would undo the old fix.
+  near(out.calibration.footpodCalibration, 1.02 * (5000 / 4800), 1e-9, 'factors compound');
+});
+
+check('a second console entry fixes the run but does not calibrate again', () => {
+  const run = treadmillRun({ distanceSource: 'sensor', distanceM: 4800 });
+  const first = applyConsoleEntry(run, { distanceM: 5000, inclinePercent: null }, CONSOLE_CTX);
+  assert(first.calibration !== null, 'the first entry teaches the profile');
+
+  const second = applyConsoleEntry(
+    first.activity,
+    { distanceM: 5200, inclinePercent: null },
+    CONSOLE_CTX,
+  );
+  equal(second.activity.distanceM, 5200, 'the run is still corrected');
+  equal(second.calibration, null, 'but the pod is not re-taught against itself');
+});
+
+check('calories are recomputed from the corrected distance', () => {
+  const run = treadmillRun({ distanceSource: 'steps', steps: 600, distanceM: 400 });
+  const out = applyConsoleEntry(run, { distanceM: 5000, inclinePercent: 4 }, CONSOLE_CTX);
+
+  const expected = Math.round(
+    estimateCalories({
+      distanceM: 5000,
+      durationMs: run.durationMs,
+      weightKg: 70,
+      age: 35,
+      sex: 'male',
+      inclinePercent: 4,
+      heart: [],
+    }).kcal,
+  );
+  equal(out.activity.caloriesKcal, expected, 'the frozen figure is refreshed');
+  assert(
+    out.activity.caloriesKcal > run.caloriesKcal,
+    'twelve times the distance is not the same number of calories',
+  );
+});
+
+check('an incline on its own leaves the distance and its provenance alone', () => {
+  const run = treadmillRun({ distanceSource: 'sensor', distanceM: 4800 });
+  const out = applyConsoleEntry(run, { distanceM: null, inclinePercent: 2.5 }, CONSOLE_CTX);
+
+  equal(out.changed, true);
+  equal(out.activity.inclinePercent, 2.5);
+  equal(out.activity.distanceM, 4800, 'a blank distance box is not a claim of zero');
+  equal(out.activity.distanceSource, 'sensor', 'the pod still measured this run');
+  equal(out.calibration, null, 'nothing to calibrate against');
+});
+
+check('a blank incline clears a grade that was set before', () => {
+  const run = treadmillRun({ inclinePercent: 3 });
+  const out = applyConsoleEntry(run, { distanceM: null, inclinePercent: null }, CONSOLE_CTX);
+  equal(out.changed, true);
+  equal(out.activity.inclinePercent, null);
+});
+
+check('an unchanged entry is a no-op', () => {
+  const run = treadmillRun({ distanceM: 4800, inclinePercent: 2 });
+  const out = applyConsoleEntry(run, { distanceM: 4800, inclinePercent: 2 }, CONSOLE_CTX);
+  equal(out.changed, false);
+  equal(out.activity, run, 'the same object comes back');
+});
+
+check('an absurd console figure corrects the run but refuses to calibrate', () => {
+  const run = treadmillRun({ distanceSource: 'sensor', distanceM: 4800 });
+  // Kilometres typed into a box that wanted metres, or the other way round. The
+  // run is whatever the athlete says it is — but a factor of 0.004 written to
+  // the profile would quietly ruin every treadmill run after it.
+  const out = applyConsoleEntry(run, { distanceM: 20, inclinePercent: null }, CONSOLE_CTX);
+  equal(out.activity.distanceM, 20, 'the record follows the typing');
+  equal(out.calibration, null, 'the profile does not');
+});
+
+check('outdoor runs have nothing for a console to say', () => {
+  const run = treadmillRun({ mode: 'outdoor', distanceSource: 'gps' });
+  const out = applyConsoleEntry(run, { distanceM: 9000, inclinePercent: 5 }, CONSOLE_CTX);
+  equal(out.changed, false);
+  equal(out.activity.distanceM, 4800);
+});
+
+check('a treadmill run nothing measured reports no instrument', () => {
   const t0 = 1_700_000_000_000;
   const session = new RunSession({ mode: 'treadmill', strideM: 0.8 }, t0);
   session.start(t0);
-  session.addSteps(1000);
-  session.setDistance(5000);
   session.finish(t0 + 100_000);
-  equal(session.distanceM, 5000);
+  const activity = session.toActivity();
+  // `manual` with zero metres is how "the phone sat on the tray" is recorded.
+  // The results page keys its hint off the distance to tell that apart from a
+  // run that really was corrected by hand.
+  equal(activity.distanceSource, 'manual');
+  equal(activity.distanceM, 0);
+
+  const out = applyConsoleEntry(activity, { distanceM: 5000, inclinePercent: null }, CONSOLE_CTX);
+  equal(out.activity.distanceM, 5000, 'the console can supply the whole run');
+  equal(out.calibration, null, 'with nothing to compare it against');
 });
 
 check('gps points are refused on a treadmill and steps outdoors', () => {
@@ -1296,7 +1442,7 @@ check('the pod outranks the pedometer', () => {
   equal(session.steps, 1500, 'but they are still counted');
 });
 
-check('a typed distance still beats the pod', () => {
+check('the pod owns the distance until the console overrules it', () => {
   const t0 = 1_700_000_000_000;
   const session = new RunSession({ mode: 'treadmill' }, t0);
   session.start(t0);
@@ -1305,14 +1451,22 @@ check('a typed distance still beats the pod', () => {
     parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 4800 })),
     t0 + 1000,
   );
-  session.setDistance(5000);
-  // Further readings must not overwrite the console's figure.
-  session.addFootpod(
-    parseRscMeasurement(rscPacket({ speedMps: 3, cadenceSpm: 176, totalM: 4900 })),
-    t0 + 2000,
+  session.finish(t0 + 2000);
+
+  // Nothing overrides the pod mid-run any more: the console's total does not
+  // exist until the belt stops, so the live session has one distance source and
+  // the results page is where a second opinion can arrive.
+  const activity = session.toActivity();
+  near(activity.distanceM, 4800, 1e-6, 'the pod measured the run');
+  equal(activity.distanceSource, 'sensor');
+
+  const out = applyConsoleEntry(
+    activity,
+    { distanceM: 5000, inclinePercent: null },
+    { footpodCalibration: 1, weightKg: 70, age: 35, sex: 'male' },
   );
-  equal(session.distanceM, 5000);
-  equal(session.toActivity().distanceSource, 'manual');
+  equal(out.activity.distanceM, 5000, 'the console wins afterwards');
+  equal(out.activity.distanceSource, 'manual');
 });
 
 check('pausing stops the pod counting', () => {
@@ -1660,6 +1814,18 @@ check('shoe mileage and wear warning', () => {
   const next = addDistanceToShoe([shoe], shoe.id, 50_000);
   assert(shoeNeedsWarning(next[0]), 'at limit');
   near(shoeWearFraction(next[0]), 1, 1e-9);
+});
+
+check('a shoe can give mileage back when a run is corrected downwards', () => {
+  const shoe = createShoe({ name: 'Pegs', limitM: 50_000 });
+  const worn = addDistanceToShoe([shoe], shoe.id, 8000)[0];
+  // A console correction can go either way, and the shoe was already credited
+  // at finish. Refusing the negative would leave it permanently over-worn.
+  const corrected = addDistanceToShoe([worn], shoe.id, -3000)[0];
+  equal(corrected.distanceM, 5000);
+  // Never past zero, though: a correction can undo what a run added, no more.
+  equal(addDistanceToShoe([corrected], shoe.id, -9000)[0].distanceM, 0);
+  equal(addDistanceToShoe([corrected], shoe.id, 0)[0].distanceM, 5000, 'zero is a no-op');
 });
 
 check('shoe edit keeps mileage', () => {

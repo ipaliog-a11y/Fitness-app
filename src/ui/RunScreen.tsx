@@ -25,7 +25,6 @@ import type { GeoPoint } from '../core/geo';
 import { autoPauseAction, nextStillMs } from '../core/autoPause';
 import { formatCalories } from '../core/calories';
 import { cueSpeech, makeSnapshot, pendingCues, type CueSnapshot } from '../core/cues';
-import { calibrateAgainst } from '../core/footpod';
 import {
   caloriesGoal,
   distanceGoal,
@@ -48,7 +47,6 @@ import { loadRoutes, type SavedRoute } from '../core/routes';
 import { RunSession } from '../core/session';
 import type { Profile } from '../core/settings';
 import { zoneOf, zoneSwatch } from '../core/heart';
-import { calibrateStride } from '../core/steps';
 import {
   DEFAULT_PACE_BAND,
   formatTargetPace,
@@ -112,7 +110,6 @@ import { useT, useWorkoutText } from '../i18n/react';
 interface Props {
   profile: Profile;
   onFinish(activity: Activity): void;
-  onProfileChange(profile: Profile): void;
   onToast(message: string): void;
   /** True while arming or mid-run so the shell can keep this screen mounted. */
   onLiveChange?(live: boolean): void;
@@ -362,7 +359,6 @@ function speedUnitLabel(units: Profile['units']): string {
 export function RunScreen({
   profile,
   onFinish,
-  onProfileChange,
   onToast,
   onLiveChange,
   visible = true,
@@ -423,9 +419,6 @@ export function RunScreen({
   const [podName, setPodName] = useState<string>();
   const [bpm, setBpm] = useState<number | null>(null);
   const [cadence, setCadence] = useState<number | null>(null);
-  const [manualDistance, setManualDistance] = useState('');
-  const [incline, setIncline] = useState('');
-  const [consoleOpen, setConsoleOpen] = useState(false);
   const [treadView, setTreadView] = useState<TreadView>('effort');
   /*
    * Effort samples for the treadmill trace.
@@ -437,13 +430,6 @@ export function RunScreen({
   const effortRef = useRef<EffortSample[]>([]);
   const [effortTick, setEffortTick] = useState(0);
 
-
-  /** The typed incline as a number, or null when blank or nonsense. */
-  const inclineValue = (() => {
-    if (incline.trim() === '') return null;
-    const n = Number(incline);
-    return Number.isFinite(n) ? n : null;
-  })();
   /** Pause was triggered by stillness, not the Pause button. */
   const [autoPaused, setAutoPaused] = useState(false);
   const [goalFlash, setGoalFlash] = useState(false);
@@ -1007,42 +993,12 @@ export function RunScreen({
     setArming(false);
     void stopLiveRunNotification();
 
-    // A typed-in distance is the treadmill console's own figure, measured from
-    // belt revolutions. That outranks anything worn, so it both wins and
-    // calibrates whichever instrument was being used.
-    const typed = Number(manualDistance);
-    if (current.mode === 'treadmill' && Number.isFinite(typed) && typed > 0) {
-      const metres = typed * (profile.units === 'metric' ? 1000 : 1609.344);
-
-      if (current.footpod.distanceM > 0) {
-        const factor = calibrateAgainst(current.footpod.distanceM, metres);
-        if (factor) {
-          // The pod's reading already includes the old factor, so the new one
-          // multiplies rather than replaces it.
-          const calibration = profile.footpodCalibration * factor;
-          onProfileChange({ ...profile, footpodCalibration: calibration });
-          onToast(`Foot pod calibrated — now ${((calibration - 1) * 100).toFixed(1)}% adjusted.`);
-        }
-      } else if (current.steps > 0) {
-        const stride = calibrateStride(current.steps, metres);
-        if (stride) {
-          onProfileChange({ ...profile, strideM: stride });
-          onToast(`Stride calibrated to ${stride.toFixed(2)} m.`);
-        }
-      }
-
-      current.setDistance(metres);
-    }
-
-    const inclineValue = Number(incline);
-    if (Number.isFinite(inclineValue) && incline.trim() !== '') {
-      current.setIncline(inclineValue);
-    }
-
+    // The console's distance and incline are not asked for here. Both are read
+    // off the machine once the belt has stopped, so both belong on the results
+    // page — see the console panel in DetailScreen, which also owns the
+    // calibration that used to happen at this point.
     const activity = current.toActivity();
     sessionRef.current = null;
-    setManualDistance('');
-    setIncline('');
     setCadence(null);
     setLastGeo(null);
     setAutoPaused(false);
@@ -1058,8 +1014,6 @@ export function RunScreen({
     stopSensors();
     sessionRef.current = null;
     setArming(false);
-    setManualDistance('');
-    setIncline('');
     setAutoPaused(false);
     setGoalFlash(false);
     cuesReadyRef.current = false;
@@ -2348,6 +2302,12 @@ export function RunScreen({
         const kcalPerHour =
           hours > 0.01 && calories > 0 ? Math.round(calories / hours) : null;
 
+        // Steps per minute over the whole bout. Guarded on half a minute so the
+        // first few strides do not divide by almost nothing and print 400.
+        const minutes = elapsed / 60_000;
+        const avgSpm =
+          minutes > 0.5 && session.steps > 0 ? Math.round(session.steps / minutes) : null;
+
         const pods: Array<{
           id: LivePodId;
           face0: { value: string; label: string };
@@ -2374,9 +2334,20 @@ export function RunScreen({
                   value: session.steps > 0 ? String(session.steps) : '—',
                   label: t('run.pod.steps'),
                 },
+                /*
+                 * This face used to show the typed incline, which left with the
+                 * console form — and a figure nobody can enter any more is a
+                 * dead pod face.
+                 *
+                 * Average cadence is not a duplicate of the cadence pod: that
+                 * one reports the foot pod's live reading, which is blank for
+                 * the many treadmill runs done without one. The steps already
+                 * being counted for the face beside it answer the same question
+                 * for free.
+                 */
                 face1: {
-                  value: inclineValue !== null ? `${inclineValue}%` : '—',
-                  label: t('run.pod.incline'),
+                  value: avgSpm !== null ? String(avgSpm) : '—',
+                  label: t('run.pod.avgSpm'),
                 },
               }
             : {
@@ -2507,16 +2478,6 @@ export function RunScreen({
         </div>
       )}
 
-      {/*
-        * Console figures, collapsed to one row.
-        *
-        * This was two text inputs sitting open mid-run: about a third of the
-        * screen, and it pushed Pause and Finish below the fold. Neither field
-        * is something you fill in while your feet are moving — distance is
-        * read off the console at the end, and incline changes a handful of
-        * times at most — so the live screen shows what was entered and the
-        * typing happens in a sheet.
-        */}
       {session.mode === 'treadmill' && (
         <div className="card tread-panel">
           <div className="view-toggle-compact" role="group" aria-label={t('run.panel.label')}>
@@ -2545,97 +2506,6 @@ export function RunScreen({
           ) : (
             <SplitList laps={session.manualLaps} units={profile.units} t={t} />
           )}
-        </div>
-      )}
-
-      {session.mode === 'treadmill' && (
-        <button
-          type="button"
-          className="console-row"
-          onClick={() => setConsoleOpen(true)}
-          aria-haspopup="dialog"
-        >
-          <span className="console-row-body">
-            <span className="console-row-title">{t('run.console.title')}</span>
-            <span className="console-row-values">
-              {manualDistance.trim() !== ''
-                ? `${manualDistance} ${distanceLabel(profile.units)}`
-                : t('run.console.noDistance')}
-              {' · '}
-              {inclineValue !== null
-                ? t('run.console.inclineValue', { percent: inclineValue })
-                : t('run.console.noIncline')}
-            </span>
-          </span>
-          <span className="console-row-cue" aria-hidden>
-            {t('common.change')}
-          </span>
-        </button>
-      )}
-
-      {consoleOpen && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConsoleOpen(false);
-          }}
-        >
-          <div
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="console-modal-title"
-          >
-            <h2 id="console-modal-title">{t('run.console.title')}</h2>
-            <div className="field">
-              <label htmlFor="manual-distance">
-                {t('run.console.distanceLabel', { unit: distanceLabel(profile.units) })}
-              </label>
-              <input
-                id="manual-distance"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                placeholder={formatDistance(distance, profile.units)}
-                value={manualDistance}
-                onChange={(e) => setManualDistance(e.target.value)}
-              />
-              <p className="hint">
-                {podStatus === 'connected'
-                  ? t('run.console.distanceHintPod')
-                  : t('run.console.distanceHintSteps')}
-              </p>
-            </div>
-            <div className="field">
-              <label htmlFor="incline">{t('run.console.inclineLabel')}</label>
-              <input
-                id="incline"
-                type="number"
-                inputMode="decimal"
-                step="0.5"
-                min="0"
-                value={incline}
-                onChange={(e) => {
-                  setIncline(e.target.value);
-                  const n = Number(e.target.value);
-                  if (Number.isFinite(n) && e.target.value.trim() !== '') {
-                    session.setIncline(n);
-                  } else {
-                    session.setIncline(null);
-                  }
-                }}
-              />
-            </div>
-            <button
-              type="button"
-              className="btn primary wide"
-              onClick={() => setConsoleOpen(false)}
-            >
-              {t('common.done')}
-            </button>
-          </div>
         </div>
       )}
 

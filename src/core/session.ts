@@ -98,7 +98,6 @@ export class RunSession {
    */
   readonly footpod = new FootpodTracker();
   private usingFootpod = false;
-  private manualDistance = false;
 
   /** Metres accumulated from accepted fixes (outdoor) or steps (treadmill). */
   distanceM = 0;
@@ -262,7 +261,7 @@ export class RunSession {
     this.steps += count;
     // Steps still count for cadence, but a pod on the shoe is the better
     // instrument and keeps ownership of the distance.
-    if (!this.usingFootpod && !this.manualDistance) {
+    if (!this.usingFootpod) {
       this.distanceM = distanceFromSteps(this.steps, this.strideM);
     }
   }
@@ -278,27 +277,13 @@ export class RunSession {
     this.footpod.update(measurement, t);
     if (this.mode !== 'treadmill') return;
     this.usingFootpod = true;
-    if (!this.manualDistance) this.distanceM = this.footpod.distanceM;
+    this.distanceM = this.footpod.distanceM;
   }
 
   /** Steps per minute, from the pod if there is one. */
   cadence(): number | null {
     if (this.footpod.cadenceSpm > 0) return this.footpod.cadenceSpm;
     return null;
-  }
-
-  /**
-   * Override the distance directly — the treadmill console is the authority
-   * when the athlete is willing to read it off.
-   */
-  setDistance(metres: number): void {
-    if (this.mode !== 'treadmill') return;
-    this.manualDistance = true;
-    this.distanceM = Math.max(0, metres);
-  }
-
-  setIncline(percent: number | null): void {
-    this.inclinePercent = percent;
   }
 
   /** Assign (or clear) the shoe used for this bout — typically on get-ready. */
@@ -331,10 +316,17 @@ export class RunSession {
     return distance / seconds;
   }
 
+  /**
+   * What produced the number being saved.
+   *
+   * A live session can no longer report `manual`: the console's figure is typed
+   * on the results page, after this record exists, and `applyConsoleEntry`
+   * stamps the provenance when it applies one. The `manual` returned for a
+   * treadmill run with no steps means "no instrument measured this" — the
+   * results page tells those two cases apart on the distance being zero.
+   */
   private distanceSource(): DistanceSource {
     if (this.mode === 'outdoor') return 'gps';
-    // Ordered by what actually produced the number that will be saved.
-    if (this.manualDistance) return 'manual';
     if (this.usingFootpod) return 'sensor';
     return this.steps > 0 ? 'steps' : 'manual';
   }

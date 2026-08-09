@@ -5024,64 +5024,33 @@ button.cal-event {
   margin-top: 0;
 }
 
-/* --- Treadmill: console summary row -------------------------------------- */
+/* --- Results page: treadmill console panel ------------------------------- */
 
 /*
- * Shaped like the theme/language triggers rather than a card: it is a control
- * that opens a sheet, and it should read as one. Full-width tap target so it
- * is usable mid-run without aiming.
+ * A card on the results page rather than a control on the live screen. The two
+ * fields sit side by side because they are read off the same machine at the
+ * same moment, and stacking them pushed Apply below the fold on a phone.
  */
-.console-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin: 0 0 12px;
-  padding: 12px 14px;
-  text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line-card, var(--line));
-  border-radius: var(--radius);
-  color: var(--text);
-  min-height: 56px;
+.console-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-.console-row-body {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.console-fields .field {
+  margin: 0;
   min-width: 0;
-  flex: 1;
 }
 
-.console-row-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: var(--letter-label, 0.08em);
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.console-row-values {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.console-row-cue {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.console-row:active {
-  transform: scale(var(--press-scale, 0.98));
+/*
+ * Incline is the narrower number — two digits and a decimal against a
+ * distance's four — so it gets the smaller share rather than an equal one.
+ */
+@media (min-width: 380px) {
+  .console-fields {
+    grid-template-columns: 1.4fr 1fr;
+  }
 }
 
 /* --- Treadmill panel: effort trace / splits ------------------------------ */

@@ -98,10 +98,20 @@ export function updateShoe(
   });
 }
 
+/**
+ * Add mileage to a shoe, or take it back off.
+ *
+ * Negative is allowed because a treadmill run's distance can be corrected from
+ * the console *after* the shoe has been credited, and a silent refusal there
+ * would leave the shoe permanently over-worn. Floored at zero, so a correction
+ * can undo what a run added but never dig past it.
+ */
 export function addDistanceToShoe(shoes: Shoe[], shoeId: string, metres: number): Shoe[] {
-  if (!(metres > 0)) return shoes;
+  if (!Number.isFinite(metres) || metres === 0) return shoes;
   return shoes.map((s) =>
-    s.id === shoeId && !s.retired ? { ...s, distanceM: s.distanceM + metres } : s,
+    s.id === shoeId && !s.retired
+      ? { ...s, distanceM: Math.max(0, s.distanceM + metres) }
+      : s,
   );
 }
 

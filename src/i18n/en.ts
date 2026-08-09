@@ -481,22 +481,12 @@ export const en = {
 
   // --- Live run pods --------------------------------------------------------
   'run.pod.steps': 'steps',
-  'run.pod.incline': 'incline',
   'run.pod.pace': 'pace',
   'run.pod.avg': 'avg',
   'run.pod.laps': 'laps',
   'run.pod.spm': 'spm',
+  'run.pod.avgSpm': 'avg spm',
   'run.pod.cadence': 'cadence',
-
-  // --- Treadmill console ----------------------------------------------------
-  'run.console.title': 'From the console',
-  'run.console.noDistance': 'No distance',
-  'run.console.noIncline': 'No incline',
-  'run.console.inclineValue': '{percent}% incline',
-  'run.console.distanceLabel': 'Distance ({unit}) — optional',
-  'run.console.inclineLabel': 'Incline (%) — optional',
-  'run.console.distanceHintPod': 'Console distance overrides the pod and calibrates it.',
-  'run.console.distanceHintSteps': 'Overrides the step estimate and calibrates stride.',
 
   // --- Treadmill panel ------------------------------------------------------
   'run.panel.label': 'Treadmill view',
@@ -570,6 +560,23 @@ export const en = {
   'detail.chartPaceHint':
     'From GPS — no heart-rate strap on this run. Pace is on by default; turn on Speed if you want both.',
   'detail.coachNotes': 'Notes from the coach',
+
+  // --- Treadmill console, typed once the belt has stopped -------------------
+  'detail.console.title': 'From the console',
+  'detail.console.distanceLabel': 'Distance ({unit})',
+  'detail.console.inclineLabel': 'Incline (%)',
+  'detail.console.hintPod': "The machine's distance beats the pod's. Enter it and the pod is calibrated to match.",
+  'detail.console.hintSteps':
+    "The machine's distance beats a step estimate. Enter it and your stride is calibrated to match.",
+  'detail.console.hintDone':
+    'Already corrected once. Editing again fixes this run only — stride and pod calibration are in Settings.',
+  'detail.console.hintNone':
+    'Nothing measured this run. Type the distance off the machine to record it.',
+  'detail.console.apply': 'Apply console figures',
+  'toast.console.saved': 'Run updated from the console.',
+  'toast.console.podCalibrated': 'Foot pod calibrated — now {percent}% adjusted.',
+  'toast.console.strideCalibrated': 'Stride calibrated to {metres} m.',
+
   'detail.yourNote': 'Your note',
   'detail.notePlaceholder': 'How did it feel?',
   'detail.exportGpx': 'Export GPX',

@@ -525,22 +525,12 @@ export const el: Messages = {
   // Pod labels sit under a large number in a narrow tile — length matters more
   // than completeness here, so these are the shortest honest words.
   'run.pod.steps': 'βήματα',
-  'run.pod.incline': 'κλίση',
   'run.pod.pace': 'ρυθμός',
   'run.pod.avg': 'μ.ό.',
   'run.pod.laps': 'γύροι',
   'run.pod.spm': 'βήμ/λ',
+  'run.pod.avgSpm': 'μ.ό. βήμ/λ',
   'run.pod.cadence': 'καντέντζα',
-
-  // --- Treadmill console ----------------------------------------------------
-  'run.console.title': 'Από την κονσόλα',
-  'run.console.noDistance': 'Χωρίς απόσταση',
-  'run.console.noIncline': 'Χωρίς κλίση',
-  'run.console.inclineValue': 'κλίση {percent}%',
-  'run.console.distanceLabel': 'Απόσταση ({unit}) — προαιρετικό',
-  'run.console.inclineLabel': 'Κλίση (%) — προαιρετικό',
-  'run.console.distanceHintPod': 'Η απόσταση της κονσόλας υπερισχύει του αισθητήρα και τον βαθμονομεί.',
-  'run.console.distanceHintSteps': 'Υπερισχύει της εκτίμησης από βήματα και βαθμονομεί τον διασκελισμό.',
 
   // --- Treadmill panel ------------------------------------------------------
   'run.panel.label': 'Προβολή διαδρόμου',
@@ -616,6 +606,27 @@ export const el: Messages = {
   'detail.chartPaceHint':
     'Από GPS — δεν υπήρχε ζώνη παλμών σε αυτό το τρέξιμο. Ο ρυθμός είναι ενεργός εξ ορισμού· άνοιξε και την Ταχύτητα αν τα θες μαζί.',
   'detail.coachNotes': 'Σημειώσεις από τον προπονητή',
+
+  // --- Treadmill console, typed once the belt has stopped -------------------
+  'detail.console.title': 'Από την κονσόλα',
+  'detail.console.distanceLabel': 'Απόσταση ({unit})',
+  'detail.console.inclineLabel': 'Κλίση (%)',
+  // "του μηχανήματος" (of the machine) rather than "της κονσόλας": Greek puts
+  // the possessor after the noun, and stacking two genitives — the distance of
+  // the console of the treadmill — reads worse than naming the machine once.
+  'detail.console.hintPod':
+    'Η απόσταση του μηχανήματος υπερισχύει του αισθητήρα. Γράψ’ την και ο αισθητήρας βαθμονομείται ανάλογα.',
+  'detail.console.hintSteps':
+    'Η απόσταση του μηχανήματος υπερισχύει της εκτίμησης από βήματα. Γράψ’ την και ο διασκελισμός σου βαθμονομείται ανάλογα.',
+  'detail.console.hintDone':
+    'Έχει ήδη διορθωθεί μία φορά. Νέα αλλαγή διορθώνει μόνο αυτό το τρέξιμο — ο διασκελισμός και η βαθμονόμηση του αισθητήρα είναι στις Ρυθμίσεις.',
+  'detail.console.hintNone':
+    'Τίποτα δεν μέτρησε αυτό το τρέξιμο. Γράψε την απόσταση από το μηχάνημα για να καταγραφεί.',
+  'detail.console.apply': 'Εφαρμογή τιμών κονσόλας',
+  'toast.console.saved': 'Το τρέξιμο ενημερώθηκε από την κονσόλα.',
+  'toast.console.podCalibrated': 'Ο αισθητήρας βαθμονομήθηκε — τώρα {percent}% προσαρμογή.',
+  'toast.console.strideCalibrated': 'Ο διασκελισμός βαθμονομήθηκε στα {metres} μ.',
+
   'detail.yourNote': 'Η σημείωσή σου',
   'detail.notePlaceholder': 'Πώς σου φάνηκε;',
   'detail.exportGpx': 'Εξαγωγή GPX',

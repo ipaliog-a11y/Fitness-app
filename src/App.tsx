@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Activity } from "./core/activity";
 import { byNewest } from "./core/activity";
 import { allActivities, deleteActivity, saveActivity } from "./core/db";
+import { applyConsoleEntry, type ConsoleEntry } from "./core/consoleEntry";
 import {
   applyLocale,
   applyTheme,
@@ -375,6 +376,64 @@ export function App() {
     [activities, profile],
   );
 
+  /**
+   * A console reading typed on the results page.
+   *
+   * More than a field edit, because the distance is load-bearing: the shoe was
+   * credited at finish, lifetime totals were summed, and calories were frozen
+   * from a distance that has just been corrected. Each of those has to move by
+   * the same amount or the correction only half-lands.
+   */
+  const handleConsoleEntry = useCallback(
+    async (id: string, entry: ConsoleEntry) => {
+      const before = activities.find((a) => a.id === id);
+      if (!before) return;
+
+      const { activity, calibration, changed } = applyConsoleEntry(before, entry, profile);
+      if (!changed) return;
+
+      await saveActivity(activity);
+
+      const delta = activity.distanceM - before.distanceM;
+      if (before.shoeId && delta !== 0) {
+        saveShoes(addDistanceToShoe(loadShoes(), before.shoeId, delta));
+      }
+
+      const nextList = activities.map((a) => (a.id === id ? activity : a)).sort(byNewest);
+      setActivities(nextList);
+      syncLifetime(nextList);
+
+      if (calibration) {
+        // Straight through changeProfile so the value is sanitised and clamped
+        // on the way in — a console figure is typed, and typed numbers are the
+        // ones that need a guard rail.
+        changeProfile(
+          calibration.kind === 'footpod'
+            ? { ...profile, footpodCalibration: calibration.footpodCalibration }
+            : { ...profile, strideM: calibration.strideM },
+        );
+      }
+
+      // Correcting a distance upwards can complete a distance achievement, so
+      // this has to run against the corrected list rather than be skipped.
+      const { newly } = refreshAchievements(nextList, profile);
+      if (newly.length === 1) showToast(t('toast.achievement.one', { name: t(newly[0].title) }));
+      else if (newly.length > 1) showToast(t('toast.achievement.many', { count: newly.length }));
+      else if (calibration?.kind === 'footpod') {
+        showToast(
+          t('toast.console.podCalibrated', {
+            percent: ((calibration.footpodCalibration - 1) * 100).toFixed(1),
+          }),
+        );
+      } else if (calibration?.kind === 'stride') {
+        showToast(t('toast.console.strideCalibrated', { metres: calibration.strideM.toFixed(2) }));
+      } else {
+        showToast(t('toast.console.saved'));
+      }
+    },
+    [activities, profile, changeProfile, showToast, t],
+  );
+
   const handleNote = useCallback(
     async (id: string, note: string) => {
       setActivities((current) => {
@@ -416,7 +475,6 @@ export function App() {
           <RunScreen
             profile={profile}
             onFinish={handleFinish}
-            onProfileChange={changeProfile}
             onToast={showToast}
             onLiveChange={setRunLive}
             visible={showRun}
@@ -449,6 +507,7 @@ export function App() {
             }}
             onDelete={handleDelete}
             onNoteChange={handleNote}
+            onConsoleEntry={handleConsoleEntry}
             onToast={showToast}
           />
         )}

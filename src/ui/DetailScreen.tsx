@@ -15,6 +15,7 @@ import {
   formatCalories,
 } from '../core/calories';
 import { tipsForRun } from '../core/coach';
+import type { ConsoleEntry } from '../core/consoleEntry';
 import {
   formatGoalTarget,
   goalKindLabel,
@@ -39,7 +40,9 @@ import {
   formatDistance,
   formatDuration,
   formatPace,
+  fromDisplayDistance,
   paceLabel,
+  toDisplayDistance,
 } from '../core/units';
 import { resolveMapBasemap } from '../core/mercator';
 import { HeartChart, SplitsTable, ZoneBars } from './charts';
@@ -59,7 +62,125 @@ interface Props {
   onSave(): void;
   onDelete(id: string): void;
   onNoteChange(id: string, note: string): void;
+  /**
+   * Apply a treadmill console reading to this run. Optional so the screen still
+   * renders in contexts that have no writer for it.
+   */
+  onConsoleEntry?(id: string, entry: ConsoleEntry): void;
   onToast?(message: string): void;
+}
+
+/**
+ * The treadmill console's own figures, typed after the belt has stopped.
+ *
+ * Lives here rather than on the live run screen because that is when the number
+ * exists: a console shows a total, and a total is only final at the end. The
+ * fields used to sit open mid-run, where they could be filled in but did
+ * nothing until Finish read them — a form pretending to be an instrument.
+ *
+ * Keyed on the activity id by the caller, so opening a different run gets fresh
+ * drafts instead of the last run's typing.
+ */
+function ConsolePanel({
+  activity,
+  units,
+  onApply,
+}: {
+  activity: Activity;
+  units: Profile['units'];
+  onApply(entry: ConsoleEntry): void;
+}) {
+  const t = useT();
+  // Prefilled only once the recorded distance *is* the typed one. Seeding the
+  // box with an estimate would invite confirming it unchanged, which reads as
+  // "the console agrees" and would calibrate the instrument against itself.
+  const [distance, setDistance] = useState(
+    activity.distanceSource === 'manual' && activity.distanceM > 0
+      ? String(Number(toDisplayDistance(activity.distanceM, units).toFixed(3)))
+      : '',
+  );
+  const [incline, setIncline] = useState(
+    activity.inclinePercent !== null ? String(activity.inclinePercent) : '',
+  );
+
+  /*
+   * Four states, not three. `manual` covers both "you already corrected this"
+   * and "nothing measured it" — a treadmill run with the phone parked on the
+   * tray counts no steps, so the session records zero metres from no
+   * instrument. Telling that run it had "already been corrected once" would be
+   * a plain lie, and it is the most common run this panel exists for.
+   */
+  const hint =
+    activity.distanceSource === 'sensor'
+      ? t('detail.console.hintPod')
+      : activity.distanceSource === 'steps'
+        ? t('detail.console.hintSteps')
+        : activity.distanceM > 0
+          ? t('detail.console.hintDone')
+          : t('detail.console.hintNone');
+
+  const parsed = (raw: string): number | null => {
+    if (raw.trim() === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const typedDistance = parsed(distance);
+  const typedIncline = parsed(incline);
+  const dirty =
+    (typedDistance !== null && fromDisplayDistance(typedDistance, units) !== activity.distanceM) ||
+    typedIncline !== activity.inclinePercent;
+
+  return (
+    <div className="card console-panel">
+      <h2>{t('detail.console.title')}</h2>
+      <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
+        {hint}
+      </p>
+      <div className="console-fields">
+        <div className="field">
+          <label htmlFor="console-distance">
+            {t('detail.console.distanceLabel', { unit: distanceLabel(units) })}
+          </label>
+          <input
+            id="console-distance"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            placeholder={formatDistance(activity.distanceM, units)}
+            value={distance}
+            onChange={(e) => setDistance(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="console-incline">{t('detail.console.inclineLabel')}</label>
+          <input
+            id="console-incline"
+            type="number"
+            inputMode="decimal"
+            step="0.5"
+            min="0"
+            value={incline}
+            onChange={(e) => setIncline(e.target.value)}
+          />
+        </div>
+      </div>
+      <button
+        type="button"
+        className="btn primary wide"
+        disabled={!dirty}
+        onClick={() =>
+          onApply({
+            distanceM: typedDistance === null ? null : fromDisplayDistance(typedDistance, units),
+            inclinePercent: typedIncline,
+          })
+        }
+      >
+        {t('detail.console.apply')}
+      </button>
+    </div>
+  );
 }
 
 export function DetailScreen({
@@ -71,6 +192,7 @@ export function DetailScreen({
   onSave,
   onDelete,
   onNoteChange,
+  onConsoleEntry,
   onToast,
 }: Props) {
   const t = useT();
@@ -212,6 +334,15 @@ export function DetailScreen({
       <p className="hint" style={{ marginTop: -4, marginBottom: 12, textAlign: 'center' }}>
         Estimated {calorieSourceLabel(calorieSource)}
       </p>
+
+      {activity.mode === 'treadmill' && onConsoleEntry && (
+        <ConsolePanel
+          key={activity.id}
+          activity={activity}
+          units={profile.units}
+          onApply={(entry) => onConsoleEntry(activity.id, entry)}
+        />
+      )}
 
       {activity.goal && (
         <div className={`goal-track${goalHit ? ' met' : ''}`} style={{ marginBottom: 12 }}>
