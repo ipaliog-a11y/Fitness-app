@@ -2166,6 +2166,8 @@ const SHARED = new Set([
   'phase.stride',
   'workout.tempo-20.name',
   'planKind.tempo',
+  // 'splits' is what Greek runners say; «ενδιάμεσοι χρόνοι» is a textbook term.
+  'run.panel.splits',
   'workout.cruise-5x5.name',
   'workout.fartlek-20.name',
   'workout.mona-fartlek.name',
