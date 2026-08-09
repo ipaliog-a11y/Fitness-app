@@ -37,7 +37,9 @@ export const THEME_OPTIONS: Array<{
   {
     id: 'hud',
     label: 'Athletic HUD',
-    blurb: 'Pure black, volt lime, mono numbers, solid dock.',
+    // Reads "near-black" rather than "pure black" so it stays distinct from
+    // Arcade Neon in the picker — that one really is #000, this one is #050505.
+    blurb: 'Near-black, volt lime, mono numbers, solid dock.',
   },
   {
     id: 'day',
@@ -57,7 +59,7 @@ export const THEME_OPTIONS: Array<{
   {
     id: 'retro',
     label: 'Arcade Neon',
-    blurb: 'Magenta on deep violet, segment digits, scanline glow — pure 1985.',
+    blurb: 'Neon purple on pure black, glowing dock, segment digits — pure 1985.',
   },
 ];
 
@@ -191,7 +193,7 @@ const THEME_CHROME: Record<ThemeId, string> = {
   day: '#ffffff',
   crimson: '#12080a',
   sky: '#070d16',
-  retro: '#100425',
+  retro: '#000000',
 };
 
 /** Push the active theme onto <html> so CSS tokens apply before paint. */

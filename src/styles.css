@@ -245,65 +245,85 @@
 
 [data-theme='retro'] {
   /*
-   * Arcade Neon — identity: a 1985 cabinet in a dark room.
+   * Arcade Neon — identity: a 1985 cabinet in an unlit room.
    *
    * The only theme where light comes *out* of the interface. Every other theme
    * paints ink on a surface; this one treats numbers as lit glass and the
    * chrome around them as unlit plastic. That is the whole idea, and it is why
    * the glow lives on values only — a glowing label is just blur.
    *
+   * The ground is true #000, not a dark violet. Two reasons: on the OLED panel
+   * this app actually runs on, #000 is *off* pixels, so the neon has genuine
+   * darkness to bloom into instead of a lit purple haze; and it doubles the
+   * battery advantage of a theme people pick for evening runs. Surfaces then
+   * step up from black in near-black violets, so cards are still separable
+   * with the lights off — but the real separator here is the purple edge, not
+   * a fill, which is why --line-card points at --line.
+   *
    * Mono like HUD, but the opposite temperament: HUD is a flat industrial
    * readout, this is a CRT with the brightness up. Wide tracking and the
    * unlit-segment ghost behind each number do the separating.
    *
    * Palette verified against WCAG AA on its own surfaces, including the whole
-   * zone ladder — "fun" does not get to mean unreadable mid-run.
+   * zone ladder — "fun" does not get to mean unreadable mid-run. Worst pair is
+   * --accent on --surface-2 at 4.90:1.
    */
-  --bg: #100425;
-  --bg-elev: #170733;
-  --surface: #1e0b40;
-  --surface-2: #27104f;
-  --surface-3: #331761;
-  --line: #4a2280;
-  --line-soft: rgba(255, 46, 196, 0.12);
-  --text: #f5ecff;
-  --muted: #b79ae0;
-  --muted-2: #9377c4;
-  --accent: #ff2ec4;
-  --accent-bright: #ff7ada;
-  --accent-dim: rgba(255, 46, 196, 0.2);
-  --accent-solid: #a3157c;
-  --accent-ink: #16002c;
+  --bg: #000000;
+  --bg-elev: #060310;
+  --surface: #0a0612;
+  --surface-2: #120b22;
+  --surface-3: #1b1033;
+  --line: #4a2a85;
+  --line-soft: rgba(177, 77, 255, 0.14);
+  --text: #f3ecff;
+  --muted: #b9a4dc;
+  --muted-2: #9c85c4;
+  --accent: #b14dff;
+  --accent-bright: #cd8dff;
+  --accent-dim: rgba(177, 77, 255, 0.18);
+  --accent-solid: #7b1fd6;
+  /*
+   * --accent-ink is always painted *on* --accent (primary buttons, pressed
+   * toggles), never on a surface, so it has to clear 4.5:1 against #b14dff at
+   * 16px/600 — white only manages 3.91 there. A violet-black legend on a lit
+   * key is the arcade read anyway, and measures 5.07.
+   */
+  --accent-ink: #12002a;
   --warn: #ffd23f;
-  --danger: #ff4d6a;
-  --info: #22e0ff;
+  --danger: #ff5c7a;
+  --info: #3de3ff;
 
   /* Chunky, near-square: a moulded bezel, not a rounded card. */
   --radius: 4px;
   --radius-sm: 2px;
   --radius-lg: 6px;
-  --tab-bg: #170733;
+  --tab-bg: #000000;
   --tab-inset: 0px;
   --tab-radius: 0px;
-  --tab-border: #4a2280;
+  --tab-border: #b14dff;
   --btn-radius: 2px;
   --chip-radius: 2px;
   --metric-font: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   /* Attract-mode wide. */
   --letter-label: 0.2em;
 
-  --map-casing: rgba(16, 4, 37, 0.7);
-  --map-tile-dim: 0.55;
+  --map-casing: rgba(0, 0, 0, 0.78);
+  --map-tile-dim: 0.5;
   --press-scale: 0.965;
-  --shadow-1: 0 0 0 1px rgba(255, 46, 196, 0.1), 0 8px 22px -12px rgba(255, 46, 196, 0.5);
-  --shadow-2: 0 0 0 1px rgba(255, 46, 196, 0.16), 0 16px 34px -14px rgba(255, 46, 196, 0.55);
+  /*
+   * On black a dark drop shadow is literally invisible, so elevation is carried
+   * by a purple ring plus a coloured bloom — light spilling off the edge rather
+   * than a shadow falling under it.
+   */
+  --shadow-1: 0 0 0 1px rgba(177, 77, 255, 0.16), 0 6px 20px -10px rgba(177, 77, 255, 0.45);
+  --shadow-2: 0 0 0 1px rgba(177, 77, 255, 0.24), 0 12px 32px -12px rgba(177, 77, 255, 0.55);
   --line-card: var(--line);
 
   --zone-1: #8f9bd8;
   --zone-2: #3ddc97;
   --zone-3: #ffd23f;
   --zone-4: #ff9f45;
-  --zone-5: #ff4d6a;
+  --zone-5: #ff5c7a;
 
   /* How hard the lit-glass effect burns. Referenced by the live dashboard. */
   --glow: 0 0 14px;
@@ -4723,11 +4743,97 @@ button.cal-event {
 /* --- Arcade Neon: lit glass in a bezel ------------------------------------ */
 
 /*
+ * The dock, as the cabinet's lit trim.
+ *
+ * A backdrop blur over #000 is pure cost for no effect — there is nothing to
+ * frost — so it comes off, and the bar becomes solid black with a neon top
+ * edge. The bloom is a *negative* y box-shadow: light spills upward onto the
+ * content, which is the direction it would actually travel off a strip under
+ * glass. Three stops, because one blur reads as a fuzzy border while a tight
+ * core plus a wide falloff reads as something emitting.
+ */
+[data-theme='retro'] .tabs {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border: 0;
+  border-top: 2px solid var(--accent);
+  border-radius: 0;
+  background: #000000;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    0 -2px 6px -1px color-mix(in srgb, var(--accent) 65%, transparent),
+    0 -10px 26px -6px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 -26px 56px -20px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/*
+ * Each tab is a key on the panel, so it gets its own edges: hairline violet
+ * dividers, and the first one suppressed so the row does not open with a
+ * stray line against the screen edge.
+ */
+[data-theme='retro'] .tabs button {
+  position: relative;
+  border-left: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+[data-theme='retro'] .tabs button:first-child {
+  border-left: 0;
+}
+
+/*
+ * The lit key. The ::before is a bright segment sitting *on* the bar's top
+ * edge — the same trick a cabinet uses to show which button is armed — and the
+ * inset gradient is the light falling down into the key's well.
+ */
+[data-theme='retro'] .tabs button[aria-current='page'] {
+  color: var(--accent-bright);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    transparent 70%
+  );
+}
+
+[data-theme='retro'] .tabs button[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-bright);
+  box-shadow:
+    0 0 8px var(--accent),
+    0 0 18px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+[data-theme='retro'] .tabs button[aria-current='page'] .glyph {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+
+/* Cyan against the purple trim so a live run reads as a different signal. */
+[data-theme='retro'] .tabs .tab-live {
+  background: var(--info);
+  box-shadow:
+    0 0 0 2px #000000,
+    0 0 8px var(--info);
+}
+
+/*
  * Three across, like a cabinet's score row, and every value is treated as an
  * illuminated segment: a text-shadow glow on the number only, never the label.
  *
- * The pods are recessed rather than raised — an inset shadow plus a darker
- * ground, so the readout sits *behind* the bezel the way a real LCD does.
+ * The pods are recessed rather than raised — a well of pure black inside a
+ * lighter card, so the readout sits *behind* the bezel the way a real LCD
+ * does. A black inset shadow used to do that job and is now a no-op against a
+ * black ground, so the inset is violet instead: light pooling along the rim of
+ * the well rather than a shadow cast into it.
  */
 [data-theme='retro'] .metric-grid-live.metric-grid-3x2 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4735,9 +4841,9 @@ button.cal-event {
 }
 
 [data-theme='retro'] .metric-grid-live .metric-pod {
-  background: #0b0119;
+  background: #000000;
   border: 2px solid var(--line);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75);
+  box-shadow: inset 0 1px 8px -2px color-mix(in srgb, var(--accent) 40%, transparent);
   padding: 12px 6px;
 }
 
@@ -4761,7 +4867,7 @@ button.cal-event {
  */
 [data-theme='retro'] .run-live .metric-hero {
   position: relative;
-  background: #0b0119;
+  background: #000000;
   border: 2px solid var(--line);
   border-radius: var(--radius);
   padding: 14px 10px 12px;
@@ -4800,7 +4906,7 @@ button.cal-event {
 }
 
 [data-theme='retro'] .start-control-face {
-  background: #0b0119;
+  background: #000000;
   border: 2px solid var(--accent);
   box-shadow:
     0 0 18px -2px color-mix(in srgb, var(--accent) 55%, transparent),
@@ -4821,12 +4927,13 @@ button.cal-event {
 
 /* Swatch for the picker. */
 .theme-option-retro .theme-swatch {
-  background: #100425;
-  border-color: #4a2280;
+  background: #000000;
+  border-color: #b14dff;
+  box-shadow: 0 0 10px -2px rgba(177, 77, 255, 0.7);
 }
 
 .theme-option-retro .theme-swatch-dot {
-  background: #ff2ec4;
+  background: #b14dff;
   box-shadow: 0 0 8px #ff2ec4;
 }
 
