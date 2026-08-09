@@ -12,6 +12,8 @@ import { byNewest } from './core/activity';
 import { allActivities, deleteActivity, saveActivity } from './core/db';
 import { applyTheme, loadProfile, saveProfile, sanitise, type Profile } from './core/settings';
 import { addDistanceToShoe, loadShoes, saveShoes, shoeNeedsWarning } from './core/shoes';
+import { refreshAchievements } from './core/achievements';
+import { syncLifetime } from './core/lifetime';
 import { exitApp, listenHardwareBack, minimizeApp } from './platform/appBack';
 import { hapticChange } from './platform/haptics';
 import {
@@ -300,29 +302,42 @@ export function App() {
           showToast(`${shoe.name} has reached its wear limit.`);
         }
       }
-      setActivities((current) => [activity, ...current].sort(byNewest));
+      const nextList = [activity, ...activities].sort(byNewest);
+      setActivities(nextList);
+      syncLifetime(nextList);
+      const { newly } = refreshAchievements(nextList, profile);
+      if (newly.length === 1) showToast(`Achievement: ${newly[0].title}`);
+      else if (newly.length > 1) showToast(`${newly.length} new achievements unlocked`);
       setOpenId(activity.id);
       setTab('history');
       setResultDecisionLock(true);
     },
-    [showToast],
+    [showToast, activities, profile],
   );
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteActivity(id);
-    setActivities((current) => current.filter((a) => a.id !== id));
+    const nextList = activities.filter((a) => a.id !== id);
+    setActivities(nextList);
+    syncLifetime(nextList);
+    refreshAchievements(nextList, profile);
     setOpenId(null);
     setResultDecisionLock(false);
-  }, []);
+  }, [activities, profile]);
 
   const handleNote = useCallback(async (id: string, note: string) => {
     setActivities((current) => {
       const next = current.map((a) => (a.id === id ? { ...a, note } : a));
       const updated = next.find((a) => a.id === id);
       if (updated) void saveActivity(updated);
+      // Notes can unlock the note-taker achievement.
+      queueMicrotask(() => {
+        const { newly } = refreshAchievements(next, profile);
+        if (newly.length === 1) showToast(`Achievement: ${newly[0].title}`);
+      });
       return next;
     });
-  }, []);
+  }, [profile, showToast]);
 
   const open = activities.find((a) => a.id === openId) ?? null;
   const showRun = !open && tab === 'run';
@@ -409,6 +424,7 @@ export function App() {
       {showProfile && (
         <ProfileScreen
           profile={profile}
+          activities={activities}
           onChange={changeProfile}
           onToast={showToast}
           onWeightLogChange={() => setWeightTick((t) => t + 1)}

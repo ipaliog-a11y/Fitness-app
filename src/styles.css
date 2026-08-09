@@ -1235,6 +1235,103 @@ textarea:focus-visible {
   border-color: var(--accent);
 }
 
+/* --- Achievements -------------------------------------------------------- */
+
+.achievement-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin: 0 0 16px;
+}
+
+.achievement-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.25s ease-out;
+}
+
+.achievement-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.achievement-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 12px);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.achievement-row.locked {
+  opacity: 0.55;
+}
+
+.achievement-row.unlocked {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent-dim) 40%, var(--surface-2));
+}
+
+.achievement-icon-wrap {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--accent);
+}
+
+.achievement-row.locked .achievement-icon-wrap {
+  color: var(--muted);
+}
+
+.achievement-icon-svg {
+  width: 22px;
+  height: 22px;
+}
+
+.achievement-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.achievement-copy strong {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.achievement-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.achievement-date {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.achievement-date.muted {
+  color: var(--muted-2, var(--muted));
+}
+
 /* --- Coach / plans ------------------------------------------------------- */
 
 .coach-guide-list {

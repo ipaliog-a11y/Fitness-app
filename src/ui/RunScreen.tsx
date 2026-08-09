@@ -66,6 +66,8 @@ import {
   paceSecondsPerUnit,
   toDisplayDistance,
 } from '../core/units';
+import { refreshAchievements } from '../core/achievements';
+import { allActivities } from '../core/db';
 import {
   addSavedWorkout,
   deleteSavedWorkout,
@@ -1241,6 +1243,12 @@ export function RunScreen({
                       setCustomTemplate(templateFromSaved(saved));
                       setWorkoutId(saved.id);
                       onToast(`Saved “${saved.name}” to My Workouts`);
+                      void allActivities().then((acts) => {
+                        const { newly } = refreshAchievements(acts, profile);
+                        if (newly.length === 1) {
+                          onToast(`Achievement: ${newly[0].title}`);
+                        }
+                      });
                     }}
                   >
                     Save workout

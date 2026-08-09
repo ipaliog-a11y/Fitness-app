@@ -5,6 +5,7 @@
 
 import { useMemo, useState, type CSSProperties } from 'react';
 import type { Activity } from '../core/activity';
+import { refreshAchievements } from '../core/achievements';
 import { tipsForRecovery, tipsForWeek } from '../core/coach';
 import {
   loadSnapshot,
@@ -161,6 +162,8 @@ export function CoachScreen({
     setActive(state);
     setBrowse(false);
     onToast(`Started: ${planById(planId)?.name ?? 'plan'}`);
+    const { newly } = refreshAchievements(activities, profile);
+    if (newly.length === 1) onToast(`Achievement: ${newly[0].title}`);
   };
 
   const stop = () => {

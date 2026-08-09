@@ -5,8 +5,16 @@
  * numbers that change how runs are measured.
  */
 
-import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
+import { Component, useEffect, useMemo, useState, type ErrorInfo, type ReactNode } from 'react';
+import type { Activity } from '../core/activity';
+import {
+  ACHIEVEMENTS,
+  loadUnlocks,
+  refreshAchievements,
+  unlockedCount,
+} from '../core/achievements';
 import { estimateMaxHeartRate, ZONES, zoneBounds, zoneSwatch } from '../core/heart';
+import { loadLifetime, syncLifetime, type LifetimeStats } from '../core/lifetime';
 import {
   createShoe,
   DEFAULT_SHOE_LIMIT_M,
@@ -32,10 +40,12 @@ import {
   weightTrendKg,
   weightUnitLabel,
 } from '../core/weight';
+import { AchievementsScreen } from './AchievementsScreen';
 import { WeightScreen } from './WeightScreen';
 
 interface Props {
   profile: Profile;
+  activities: Activity[];
   onChange(profile: Profile): void;
   onToast(message: string): void;
   onWeightLogChange?(): void;
@@ -90,6 +100,7 @@ export function ProfileScreen(props: Props) {
 
 function ProfileScreenInner({
   profile: rawProfile,
+  activities,
   onChange,
   onToast,
   onWeightLogChange,
@@ -111,13 +122,36 @@ function ProfileScreenInner({
   const [shoeLimit, setShoeLimit] = useState(
     String(toDisplayDistance(DEFAULT_SHOE_LIMIT_M, profile.units).toFixed(0)),
   );
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [lifetime, setLifetime] = useState<LifetimeStats>(() => loadLifetime());
+  const [unlockTick, setUnlockTick] = useState(0);
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     onChange({ ...profile, [key]: value });
 
+  const runAchievementPass = (list: Activity[] = activities) => {
+    const { lifetime: nextLife, newly } = refreshAchievements(list, profile);
+    setLifetime(nextLife);
+    setUnlockTick((t) => t + 1);
+    if (newly.length === 1) onToast(`Achievement: ${newly[0].title}`);
+    else if (newly.length > 1) onToast(`${newly.length} new achievements unlocked`);
+  };
+
+  useEffect(() => {
+    setLifetime(syncLifetime(activities));
+    runAchievementPass(activities);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- evaluate when history/profile change
+  }, [activities, profile.displayName, profile.birthDate, profile.heightCm]);
+
+  const unlockN = useMemo(() => {
+    void unlockTick;
+    return unlockedCount(loadUnlocks());
+  }, [unlockTick]);
+
   const persistShoes = (next: Shoe[]) => {
     setShoes(next);
     saveShoes(next);
+    runAchievementPass();
   };
 
   const openAddShoe = () => {
@@ -256,10 +290,69 @@ function ProfileScreenInner({
     );
   }
 
+  if (achievementsOpen) {
+    return (
+      <AchievementsScreen
+        profile={profile}
+        activities={activities}
+        onBack={() => {
+          setAchievementsOpen(false);
+          setUnlockTick((t) => t + 1);
+          setLifetime(loadLifetime());
+        }}
+        onToast={onToast}
+      />
+    );
+  }
+
   return (
     <div className="screen">
       <h1>{greeting}</h1>
       <p className="subtitle">Your body, zones, and shoes — all on this device.</p>
+
+      <div className="card">
+        <h2>Lifetime mileage</h2>
+        <div className="metric-grid" style={{ marginTop: 8 }}>
+          <div className="metric">
+            <div className="value">
+              {formatDistance(lifetime.distanceM, profile.units)}
+            </div>
+            <div className="label">{distanceLabel(profile.units)} total</div>
+          </div>
+          <div className="metric">
+            <div className="value">{lifetime.runs}</div>
+            <div className="label">Runs</div>
+          </div>
+          <div className="metric">
+            <div className="value">
+              {formatDistance(lifetime.longestRunM, profile.units)}
+            </div>
+            <div className="label">Longest</div>
+          </div>
+        </div>
+        <p className="hint" style={{ marginBottom: 0 }}>
+          Sum of every saved run on this device (updates when you finish or delete).
+        </p>
+      </div>
+
+      <div className="card">
+        <div className="row">
+          <h2 style={{ margin: 0 }}>Achievements</h2>
+          <span className="hint" style={{ margin: 0 }}>
+            {unlockN}/{ACHIEVEMENTS.length}
+          </span>
+        </div>
+        <p className="hint" style={{ marginTop: 8 }}>
+          Distance, lifetime mileage, recovery, performance, and fun unlocks for using RunLog.
+        </p>
+        <button
+          type="button"
+          className="btn primary wide"
+          onClick={() => setAchievementsOpen(true)}
+        >
+          Open achievements
+        </button>
+      </div>
 
       <div className="card">
         <h2>Profile</h2>
