@@ -35,8 +35,6 @@ import { loadShoes } from '../core/shoes';
 import { ascentFromIncline } from '../core/steps';
 import {
   distanceLabel,
-  formatClock,
-  formatDay,
   formatDistance,
   formatDuration,
   formatPace,
@@ -47,7 +45,7 @@ import {
 import { resolveMapBasemap } from '../core/mercator';
 import { HeartChart, SplitsTable, ZoneBars } from './charts';
 import { RouteMap } from './RouteMap';
-import { useT, useTipText } from '../i18n/react';
+import { useDateText, useT, useTipText } from '../i18n/react';
 
 interface Props {
   activity: Activity;
@@ -197,6 +195,7 @@ export function DetailScreen({
 }: Props) {
   const t = useT();
   const tipText = useTipText();
+  const dates = useDateText();
   const [note, setNote] = useState(activity.note);
   const [confirming, setConfirming] = useState(false);
 
@@ -256,8 +255,11 @@ export function DetailScreen({
         {formatDistance(activity.distanceM, profile.units)} {distanceLabel(profile.units)}
       </h1>
       <p className="subtitle">
-        {modeName(activity.mode)} · {formatDay(activity.startedAt)} at{' '}
-        {formatClock(activity.startedAt)}
+        {t(modeName(activity.mode))} ·{' '}
+        {t('history.atTime', {
+          day: dates.day(activity.startedAt),
+          time: dates.clock(activity.startedAt),
+        })}
         {activity.workoutName ? ` · ${activity.workoutName}` : ''}
       </p>
 

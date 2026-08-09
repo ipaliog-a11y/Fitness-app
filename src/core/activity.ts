@@ -7,6 +7,7 @@
  * the app never has to care which kind it is holding.
  */
 
+import type { MessageKey } from '../i18n';
 import { distanceBetween, elevationGain, type GeoPoint } from './geo';
 import type { RunGoal } from './goal';
 import type { HeartReport } from './heart';
@@ -93,8 +94,14 @@ export interface Activity {
 
 export const SCHEMA_VERSION = 1;
 
-export function modeName(mode: RunMode): string {
-  return mode === 'outdoor' ? 'Outdoor run' : 'Treadmill run';
+/**
+ * The mode as a message key rather than a name.
+ *
+ * It returned English from the pure core, which is how "Treadmill run" ended up
+ * printed above a Greek results page.
+ */
+export function modeName(mode: RunMode): MessageKey {
+  return mode === 'outdoor' ? 'mode.outdoor' : 'mode.treadmill';
 }
 
 export function modeIcon(mode: RunMode): string {

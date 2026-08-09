@@ -50,8 +50,22 @@ const ALLOWED = new Set(
     'RunLog', 'GPS', 'GPX', 'TCX', 'JSON', 'Strava', 'Garmin', 'Android',
     'Samsung', 'Google', 'Health', 'Connect', 'Bluetooth', 'OpenStreetMap',
     'OpenTopoMap', 'Carto', 'Keytel', 'ACSM', 'PWA', 'IndexedDB',
-    // Language names are shown in their own script by design.
-    'English', 'Nederlands', 'Polski',
+    // The language picker is deliberately readable to someone who cannot read
+    // the current UI: each row shows the endonym in its own script plus the
+    // English name, and the swatch shows the code.
+    'English', 'Nederlands', 'Polski', 'Greek', 'EN', 'EL', 'NL', 'PL',
+    /*
+     * The running glossary, and the one place this check has to defer to a
+     * translator's judgement. Greek runners say "tempo", "fartlek", "strides"
+     * and "cruise" in English; el.ts records the decision at the phase-label
+     * block. Rendering "χαλαρός ρυθμός κατωφλίου" instead reads like a
+     * textbook, not like something anyone says at a track.
+     */
+    'tempo', 'fartlek', 'strides', 'cruise', 'threshold',
+    // Theme names keeping an English term the Greek copy also keeps.
+    'HUD', 'Arcade',
+    // Greek prose says "browser"; "περιηγητής" is correct and nobody uses it.
+    'browser',
   ].map((w) => w.toLowerCase()),
 );
 

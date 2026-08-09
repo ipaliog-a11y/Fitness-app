@@ -1,7 +1,7 @@
 /** App preferences, routes, and getting the data out — not the athlete profile. */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Activity } from '../core/activity';
+import { modeName, type Activity } from '../core/activity';
 import { exportFullBackup, importBackup, wipeAllLocalData } from '../core/backup';
 import { saveActivity } from '../core/db';
 import { activityFromGpx } from '../core/gpx';
@@ -13,11 +13,10 @@ import {
 } from '../core/mercator';
 import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
 import { LOCALE_OPTIONS, type LocaleId } from '../i18n';
-import { useT } from '../i18n/react';
+import { useDateText, useT } from '../i18n/react';
 import { estimateStride } from '../core/steps';
 import {
   distanceLabel,
-  formatDay,
   formatDistance,
   formatDuration,
   fromDisplayDistance,
@@ -101,7 +100,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       if (preview.candidates.length === 0) {
         onToast(
           preview.skippedDuplicate > 0
-            ? `No new runs · ${preview.skippedDuplicate} already in history.`
+            ? t('settings.hc.noneNew', { count: preview.skippedDuplicate })
             : t('settings.hc.noneFound'),
         );
       }
@@ -126,7 +125,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       setHealthSelected(new Set());
       onToast(
         result.imported > 0
-          ? `Imported ${result.imported} run${result.imported === 1 ? '' : 's'}.`
+          ? t('settings.hc.imported', { count: result.imported })
           : t('settings.hc.nothingNew'),
       );
     } catch (error) {
@@ -146,6 +145,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
   };
 
   const t = useT();
+  const dates = useDateText();
   const [themeOpen, setThemeOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const activeTheme = THEME_OPTIONS.find((o) => o.id === profile.theme) ?? THEME_OPTIONS[0];
@@ -184,24 +184,27 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       if (result.profileRestored) onChange(loadProfile());
       onReload();
       setRoutesTick((t) => t + 1);
-      if (result.fullBackup) {
-        onToast(
-          `Full backup: ${result.activitiesImported} runs` +
-            (result.activitiesSkipped ? ` (${result.activitiesSkipped} skipped)` : '') +
-            (result.profileRestored ? ', profile' : '') +
-            (result.shoes ? `, ${result.shoes} shoes` : '') +
-            (result.routes ? `, ${result.routes} routes` : '') +
-            (result.planRestored ? ', plan' : '') +
-            (result.weightRestored ? ', weight log' : '') +
-            '.',
-        );
-      } else {
-        onToast(
-          `Imported ${result.activitiesImported} runs` +
-            (result.activitiesSkipped ? `, skipped ${result.activitiesSkipped}` : '') +
-            '.',
-        );
+      /*
+        * Assembled as a list rather than one sentence per outcome. Seven
+        * optional clauses is 128 sentences, and no catalogue should hold
+        * those — so the catalogue holds the pieces and the join is code.
+        */
+      const parts = [t('settings.backup.partRuns', { count: result.activitiesImported })];
+      if (result.activitiesSkipped) {
+        parts.push(t('settings.backup.partSkipped', { count: result.activitiesSkipped }));
       }
+      if (result.fullBackup) {
+        if (result.profileRestored) parts.push(t('settings.backup.partProfile'));
+        if (result.shoes) parts.push(t('settings.backup.partShoes', { count: result.shoes }));
+        if (result.routes) parts.push(t('settings.backup.partRoutes', { count: result.routes }));
+        if (result.planRestored) parts.push(t('settings.backup.partPlan'));
+        if (result.weightRestored) parts.push(t('settings.backup.partWeight'));
+      }
+      onToast(
+        t(result.fullBackup ? 'settings.backup.restored' : 'settings.backup.imported', {
+          parts: parts.join(', '),
+        }),
+      );
     } catch (error) {
       onToast(error instanceof Error ? error.message : t('settings.backup.unreadable'));
     }
@@ -212,7 +215,10 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       const activity = activityFromGpx(await file.text());
       await saveActivity(activity);
       onToast(
-        `Imported GPX — ${formatDistance(activity.distanceM, profile.units)} ${distanceLabel(profile.units)}.`,
+        t('settings.gpxDone', {
+          distance: formatDistance(activity.distanceM, profile.units),
+          unit: distanceLabel(profile.units),
+        }),
       );
       onReload();
     } catch (error) {
@@ -384,8 +390,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             }}
           />
           <p className="hint">
-            Used when counting steps without a foot pod. Finish a treadmill run with the console
-            distance typed in to auto-calibrate.{' '}
+            {t('settings.strideHint')}{' '}
             <button
               type="button"
               className="pill"
@@ -394,10 +399,10 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                 const next = estimateStride(profile.heightCm);
                 set('strideM', next);
                 setStrideDraft(next.toFixed(2));
-                onToast(`Stride reset from height → ${next.toFixed(2)} m.`);
+                onToast(t('settings.strideResetDone', { metres: next.toFixed(2) }));
               }}
             >
-              Reset from height
+              {t('settings.strideReset')}
             </button>
           </p>
         </div>
@@ -480,18 +485,17 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           <p className="hint">
             {profile.footpodCalibration === 1
               ? t('settings.footpod.hint')
-              : `The pod reads ${(
-                  (1 / profile.footpodCalibration - 1) * 100
-                ).toFixed(1)}% off; distances are corrected by ${(
-                  (profile.footpodCalibration - 1) * 100
-                ).toFixed(1)}%.`}{' '}
+              : t('settings.footpod.offBy', {
+                  reported: ((1 / profile.footpodCalibration - 1) * 100).toFixed(1),
+                  applied: ((profile.footpodCalibration - 1) * 100).toFixed(1),
+                })}{' '}
             <button
               type="button"
               className="pill"
               onClick={() => set('footpodCalibration', 1)}
               style={{ cursor: 'pointer' }}
             >
-              Reset
+              {t('settings.footpod.reset')}
             </button>
           </p>
         </div>
@@ -500,7 +504,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       <div className="card">
         <h2>{t('settings.routes.title')}</h2>
         <p className="hint" style={{ marginTop: 0 }}>
-          Save a route from a finished outdoor run&apos;s detail screen.
+          {t('settings.routes.hint')}
         </p>
         {routes.length === 0 && <p className="hint">{t('settings.routes.empty')}</p>}
         {routes.map((route) => (
@@ -523,7 +527,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                 setRoutesTick((t) => t + 1);
               }}
             >
-              Delete
+              {t('common.delete')}
             </button>
           </div>
         ))}
@@ -532,9 +536,8 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       <div className="card">
         <h2>{t('settings.hc.title')}</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          Pull runs that <strong>{t('settings.hc.samsung')}</strong> (or other apps) has shared into Health
-          Connect. Choose a date range, scan, then tick which sessions to import. Routes may be
-          empty if only session totals were shared.
+          {t('settings.hc.blurbBefore')} <strong>{t('settings.hc.samsung')}</strong>{' '}
+          {t('settings.hc.blurbAfter')}
         </p>
 
         <div className="chip-row" style={{ marginBottom: 10 }}>
@@ -545,7 +548,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
               className={`chip${healthRange === d ? ' active' : ''}`}
               onClick={() => setHealthRange(d)}
             >
-              Last {d}d
+              {t('settings.hc.lastDays', { days: d })}
             </button>
           ))}
           <button
@@ -553,14 +556,14 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             className={`chip${healthRange === 'custom' ? ' active' : ''}`}
             onClick={() => setHealthRange('custom')}
           >
-            Custom
+            {t('settings.hc.custom')}
           </button>
         </div>
 
         {healthRange === 'custom' && (
           <div className="field-row" style={{ marginBottom: 10 }}>
             <div className="field">
-              <label htmlFor="hc-from">From</label>
+              <label htmlFor="hc-from">{t('settings.hc.from')}</label>
               <input
                 id="hc-from"
                 type="date"
@@ -569,7 +572,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
               />
             </div>
             <div className="field">
-              <label htmlFor="hc-to">To</label>
+              <label htmlFor="hc-to">{t('settings.hc.to')}</label>
               <input
                 id="hc-to"
                 type="date"
@@ -594,8 +597,13 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           <div className="health-import-list">
             <div className="row" style={{ marginBottom: 8 }}>
               <span className="hint" style={{ margin: 0 }}>
-                {healthSelected.size}/{healthCandidates.length} selected
-                {healthSkippedDup > 0 ? ` · ${healthSkippedDup} already saved` : ''}
+                {t('settings.hc.selected', {
+                  selected: healthSelected.size,
+                  total: healthCandidates.length,
+                })}
+                {healthSkippedDup > 0
+                  ? ` · ${t('settings.hc.alreadySaved', { count: healthSkippedDup })}`
+                  : ''}
               </span>
               <button
                 type="button"
@@ -608,7 +616,9 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                   }
                 }}
               >
-                {healthSelected.size === healthCandidates.length ? 'Clear' : 'All'}
+                {healthSelected.size === healthCandidates.length
+                  ? t('settings.hc.clear')
+                  : t('settings.hc.all')}
               </button>
             </div>
             <ul className="health-import-items">
@@ -626,10 +636,10 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                         {distanceLabel(profile.units)}
                       </strong>
                       <span>
-                        {formatDay(a.startedAt)} · {formatDuration(a.durationMs)}
+                        {dates.day(a.startedAt)} · {formatDuration(a.durationMs)}
                         {a.caloriesKcal != null ? ` · ${a.caloriesKcal} kcal` : ''}
                       </span>
-                      <span className="muted">{a.note || a.mode}</span>
+                      <span className="muted">{a.note || t(modeName(a.mode))}</span>
                     </span>
                   </label>
                 </li>
@@ -644,7 +654,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             >
               {healthImporting
                 ? t('settings.hc.importing')
-                : `Import selected (${healthSelected.size})`}
+                : t('settings.hc.importSelected', { count: healthSelected.size })}
             </button>
             <button
               type="button"
@@ -655,7 +665,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                 setHealthSelected(new Set());
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         )}
@@ -667,7 +677,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             style={{ marginTop: 8 }}
             onClick={() => void openHealthConnectSettings()}
           >
-            Open Health Connect settings
+            {t('settings.hc.openSettings')}
           </button>
         ) : (
           <p className="hint">{t('settings.hc.androidNote')}</p>
@@ -677,20 +687,19 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       <div className="card">
         <h2>{t('settings.data.title')}</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          Everything stays on this device. Use a <strong>full backup</strong> before clearing the
-          browser or moving to another phone (or Android).
+          {t('settings.data.blurbBefore')} <strong>{t('settings.data.fullBackup')}</strong>{' '}
+          {t('settings.data.blurbAfter')}
         </p>
         <div className="btn-row" style={{ marginBottom: 10 }}>
           <button type="button" className="btn primary" onClick={() => void download()}>
-            Export full backup
+            {t('settings.data.export')}
           </button>
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-            Import backup
+            {t('settings.data.import')}
           </button>
         </div>
         <p className="hint" style={{ marginBottom: 12 }}>
-          Backup includes runs, profile, shoes, routes, and active plan. Older activity-only JSON
-          files still import.
+          {t('settings.data.backupNote')}
         </p>
         <button
           type="button"
@@ -698,11 +707,10 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           style={{ marginBottom: 10 }}
           onClick={() => gpxRef.current?.click()}
         >
-          Import GPX
+          {t('settings.data.importGpx')}
         </button>
         <p className="hint">
-          GPX brings in outdoor tracks from other apps. Export GPX or TCX from a run&apos;s detail
-          screen (Strava-friendly).
+          {t('settings.data.gpxNote')}
         </p>
         <input
           ref={fileRef}
@@ -730,7 +738,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
         {confirmingWipe ? (
           <div className="btn-row">
             <button type="button" className="btn" onClick={() => setConfirmingWipe(false)}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -743,12 +751,12 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                 onToast(t('settings.wiped'));
               }}
             >
-              Delete everything
+              {t('settings.data.deleteEverything')}
             </button>
           </div>
         ) : (
           <button type="button" className="btn danger wide" onClick={() => setConfirmingWipe(true)}>
-            Delete all runs &amp; gear data
+            {t('settings.data.deleteAll')}
           </button>
         )}
       </div>

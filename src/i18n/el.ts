@@ -17,7 +17,11 @@ import type { Messages } from './en';
 
 export const el: Messages = {
   // --- Shared ------------------------------------------------------------
+  'date.today': 'Σήμερα',
+  'date.yesterday': 'Χθες',
   'common.done': 'Τέλος',
+  'common.view': 'Άνοιγμα',
+  'common.avgOf': 'Μ.ό. {unit}',
   'common.change': 'Αλλαγή',
   'common.cancel': 'Άκυρο',
   'common.save': 'Αποθήκευση',
@@ -490,6 +494,7 @@ export const el: Messages = {
   // --- History --------------------------------------------------------------
   // Greek forms the possessive with the genitive, so "{name}’s runs" becomes
   // "the runs of {name}" — the placeholder has to move to the end.
+  'history.atTime': '{day} στις {time}',
   'history.title': 'Ιστορικό',
   'history.titleNamed': 'Τα τρεξίματα του/της {name}',
   'history.noRuns': 'Κανένα τρέξιμο ακόμη',
@@ -518,6 +523,8 @@ export const el: Messages = {
   'history.group.none': 'Απλή λίστα',
   'history.group.whenLabel': 'Πότε',
   'history.group.withLabel': 'Με',
+  'mode.outdoor': 'Τρέξιμο σε εξωτερικό χώρο',
+  'mode.treadmill': 'Τρέξιμο σε διάδρομο',
   'run.outdoor': 'Έξω',
   'run.treadmill': 'Διάδρομος',
 
@@ -639,6 +646,32 @@ export const el: Messages = {
   'detail.deleteForGood': 'Οριστική διαγραφή',
 
   // --- Coach screen ---------------------------------------------------------
+  'coach.title': 'Προπονητής',
+  // "Προπονητής για τη Μαρία" would need the article and the accusative, and
+  // the catalogue cannot decline a name it has never seen. A colon sidesteps
+  // the case system entirely and still reads as a heading.
+  'coach.titleFor': 'Προπονητής: {name}',
+  'coach.subtitle': 'Πλάνα, αποκατάσταση και σημειώσεις προπόνησης — όλα μένουν σε αυτή τη συσκευή',
+  // Four characters at most, same as English: this sits inside a small ring.
+  'coach.ring.fresh': 'ΦΡΕΣΚ',
+  'coach.ring.ok': 'ΟΚ',
+  'coach.ring.load': 'ΦΟΡΤΟ',
+  'coach.ring.high': 'ΥΨΗΛΟ',
+  'coach.ring.none': '—',
+  'coach.explainNumbers': 'Τι σημαίνουν αυτοί οι αριθμοί;',
+  'coach.planPitch':
+    'Διάλεξε ένα απλό πλάνο λίγων εβδομάδων. Τσέκαρε τις προπονήσεις καθώς τις ολοκληρώνεις — ο προπονητής δεν βγάζει μόνος του προπονήσεις από το GPS.',
+  'coach.browsePlans': 'Δες τα πλάνα',
+  'coach.planWeeks': {
+    one: '{count} εβδ.',
+    other: '{count} εβδ.',
+  },
+  'coach.startPlan': 'Ξεκίνα αυτό το πλάνο',
+  'coach.weekOf': 'Εβδομάδα {week} από {total}',
+  'coach.sessionsThisWeek': '{done}/{total} προπονήσεις αυτή την εβδομάδα',
+  'coach.planTicked': '{percent}% του πλάνου ολοκληρωμένο',
+  'coach.weekN': 'εβδομάδα {week}',
+  'coach.goToRun': 'Πάμε για τρέξιμο',
   'coach.planStartFailed': 'Δεν ήταν δυνατή η έναρξη αυτού του πλάνου.',
   'coach.planStarted': 'Ξεκίνησε: {name}',
   'coach.planFallback': 'πλάνο',
@@ -730,6 +763,73 @@ export const el: Messages = {
   'settings.gpxFailed': 'Η εισαγωγή GPX απέτυχε.',
   'settings.wiped':
     'Όλα τα τρεξίματα, τα παπούτσια, οι διαδρομές και το πλάνο διαγράφηκαν. Το προφίλ διατηρήθηκε.',
+  // --- Settings: treadmill, pod, routes -------------------------------------
+  'settings.strideHint':
+    'Χρησιμοποιείται όταν μετράμε βήματα χωρίς αισθητήρα ποδιού. Γράψε την απόσταση του μηχανήματος σε ένα τελειωμένο τρέξιμο στον διάδρομο και βαθμονομείται μόνο του.',
+  'settings.strideReset': 'Επαναφορά από το ύψος',
+  'settings.strideResetDone': 'Ο διασκελισμός επανήλθε από το ύψος → {metres} μ.',
+  'settings.footpod.offBy':
+    'Ο αισθητήρας δείχνει {reported}% απόκλιση· οι αποστάσεις διορθώνονται κατά {applied}%.',
+  'settings.footpod.reset': 'Επαναφορά',
+  'settings.routes.hint': 'Αποθήκευσε μια διαδρομή από την καρτέλα ενός τελειωμένου τρεξίματος σε εξωτερικό χώρο.',
+
+  // --- Settings: Health Connect ---------------------------------------------
+  // Το σπάσιμο γίνεται γύρω από την επωνυμία με έντονα γράμματα. Στα ελληνικά
+  // το άρθρο πάει πριν το όνομα, οπότε το "before" μισό το κουβαλάει.
+  'settings.hc.blurbBefore': 'Τράβα τρεξίματα που το',
+  'settings.hc.blurbAfter':
+    '(ή άλλες εφαρμογές) έχει μοιραστεί στο Health Connect. Διάλεξε εύρος ημερομηνιών, κάνε σάρωση και μετά τσέκαρε ποιες προπονήσεις θα εισαχθούν. Οι διαδρομές μπορεί να είναι κενές αν μοιράστηκαν μόνο τα σύνολα.',
+  'settings.hc.lastDays': 'Τελευταίες {days} ημ.',
+  'settings.hc.custom': 'Προσαρμογή',
+  'settings.hc.from': 'Από',
+  'settings.hc.to': 'Έως',
+  'settings.hc.selected': '{selected}/{total} επιλεγμένα',
+  'settings.hc.alreadySaved': '{count} ήδη αποθηκευμένα',
+  'settings.hc.noneNew': 'Κανένα νέο τρέξιμο · {count} υπάρχουν ήδη στο ιστορικό.',
+  'settings.hc.imported': {
+    one: 'Εισήχθη {count} τρέξιμο.',
+    other: 'Εισήχθησαν {count} τρεξίματα.',
+  },
+  'settings.hc.clear': 'Κανένα',
+  'settings.hc.all': 'Όλα',
+  'settings.hc.importSelected': 'Εισαγωγή επιλεγμένων ({count})',
+  'settings.hc.openSettings': 'Άνοιγμα ρυθμίσεων Health Connect',
+
+  // --- Settings: your data --------------------------------------------------
+  'settings.data.blurbBefore': 'Όλα μένουν σε αυτή τη συσκευή. Κάνε ένα',
+  'settings.data.fullBackup': 'πλήρες αντίγραφο ασφαλείας',
+  'settings.data.blurbAfter':
+    'πριν καθαρίσεις τον browser ή αλλάξεις τηλέφωνο (ή περάσεις σε Android).',
+  'settings.data.export': 'Εξαγωγή πλήρους αντιγράφου',
+  'settings.data.import': 'Εισαγωγή αντιγράφου',
+  'settings.data.backupNote':
+    'Το αντίγραφο περιλαμβάνει τρεξίματα, προφίλ, παπούτσια, διαδρομές και το ενεργό πλάνο. Παλιότερα αρχεία JSON μόνο με δραστηριότητες εξακολουθούν να εισάγονται.',
+  'settings.data.importGpx': 'Εισαγωγή GPX',
+  'settings.data.gpxNote':
+    'Το GPX φέρνει διαδρομές εξωτερικού χώρου από άλλες εφαρμογές. Εξήγαγε GPX ή TCX από την καρτέλα ενός τρεξίματος (συμβατό με Strava).',
+  'settings.data.deleteEverything': 'Διαγραφή των πάντων',
+  'settings.data.deleteAll': 'Διαγραφή όλων των τρεξιμάτων και του εξοπλισμού',
+  'settings.gpxDone': 'Εισήχθη GPX — {distance} {unit}.',
+
+  'settings.backup.restored': 'Πλήρες αντίγραφο: {parts}.',
+  'settings.backup.imported': 'Εισήχθησαν: {parts}.',
+  'settings.backup.partRuns': {
+    one: '{count} τρέξιμο',
+    other: '{count} τρεξίματα',
+  },
+  'settings.backup.partSkipped': '{count} παραλείφθηκαν',
+  'settings.backup.partProfile': 'προφίλ',
+  'settings.backup.partShoes': {
+    one: '{count} ζευγάρι παπούτσια',
+    other: '{count} ζευγάρια παπούτσια',
+  },
+  'settings.backup.partRoutes': {
+    one: '{count} διαδρομή',
+    other: '{count} διαδρομές',
+  },
+  'settings.backup.partPlan': 'πλάνο',
+  'settings.backup.partWeight': 'ημερολόγιο βάρους',
+
   'settings.hc.androidOnly': 'Η εισαγωγή από το Health Connect λειτουργεί μόνο στην εφαρμογή Android.',
   'settings.hc.noneFound': 'Δεν βρέθηκαν τρεξίματα σε αυτό το εύρος ημερομηνιών.',
   'settings.hc.scanFailed': 'Η σάρωση του Health Connect απέτυχε.',
@@ -763,6 +863,7 @@ export const el: Messages = {
   'profile.female': 'Γυναίκα',
   'profile.male': 'Άνδρας',
   'profile.sexHint': 'Χρησιμοποιείται από το μοντέλο θερμίδων με βάση τους παλμούς (Keytel).',
+  'profile.born': 'Γέννηση',
   'profile.age': 'Ηλικία',
   'profile.height': 'Ύψος',
   'profile.sex': 'Φύλο',
@@ -777,8 +878,18 @@ export const el: Messages = {
     'Τα ζυγίσματα ενημερώνουν τις εκτιμήσεις θερμίδων και εμφανίζονται στο ημερολόγιο του Ιστορικού.',
   'profile.setUpWeight': 'Ρύθμισε το ημερολόγιο βάρους',
   'profile.openWeight': 'Άνοιξε το ημερολόγιο βάρους',
+  'profile.noWeightLog': 'Δεν υπάρχει ακόμη καταγραφή — πρόσθεσε το αρχικό σου βάρος.',
+  'profile.weightReadings': {
+    one: '{count} καταγραφή.',
+    other: '{count} καταγραφές.',
+  },
+  'profile.achievementsBlurb':
+    'Αποστάσεις, συνολικά χιλιόμετρα, αποκατάσταση, επιδόσεις και διασκεδαστικά επιτεύγματα για τη χρήση του RunLog.',
+  'profile.openAchievements': 'Άνοιγμα επιτευγμάτων',
   'profile.zones': 'Ζώνες καρδιακών παλμών',
   'profile.maxHr': 'Μέγιστοι καρδιακοί παλμοί (bpm)',
+  'profile.maxHrHint':
+    'Προεπιλεγμένη εκτίμηση 220 − ηλικία ({estimate}). Άλλαξέ την αν έχεις μετρημένη τιμή. Σβήσε και ξαναγράψε ελεύθερα — αποθηκεύεται μόλις φύγεις από το πεδίο.',
   'profile.shoes.title': 'Παπούτσια',
   'profile.shoes.empty': 'Κανένα παπούτσι ακόμη — πάτα Προσθήκη ζευγαριού.',
   'profile.shoes.add': 'Προσθήκη ζευγαριού',
@@ -793,6 +904,10 @@ export const el: Messages = {
   'profile.shoes.restore': 'Επαναφορά',
   'profile.shoes.needName': 'Δώσε ένα όνομα στα παπούτσια.',
   'profile.shoes.updated': 'Τα παπούτσια ενημερώθηκαν.',
+  'profile.shoes.added': 'Προστέθηκαν: {name}.',
+  'profile.shoes.retiredTag': '(αποσύρθηκαν)',
+  'profile.shoes.namePlaceholder': 'π.χ. Καθημερινά',
+  'profile.shoes.brandPlaceholder': 'Μάρκα',
 
   // --- Run screen -----------------------------------------------------------
   /*

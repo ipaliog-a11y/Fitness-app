@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { averagePace, modeIcon, type Activity } from '../core/activity';
 import {
-  WEEKDAY_LABELS,
+  weekdayLabels,
   addMonths,
   dayHasRuns,
   eventsOnDay,
@@ -32,15 +32,13 @@ import {
 import type { Profile } from '../core/settings';
 import {
   distanceLabel,
-  formatDay,
   formatDistance,
   formatDuration,
-  formatClock,
   formatPace,
   paceLabel,
 } from '../core/units';
 import { toDisplayWeight, weightUnitLabel } from '../core/weight';
-import { useLocale, useT } from '../i18n/react';
+import { useDateText, useLocale, useT } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -64,6 +62,9 @@ function RunRow({
   /** Calendar day list uses a compact run badge instead of the date badge. */
   variant?: 'list' | 'cal-run';
 }) {
+  const t = useT();
+  const { tag } = useLocale();
+  const dates = useDateText();
   const calories =
     activity.caloriesKcal ??
     Math.round(
@@ -89,9 +90,9 @@ function RunRow({
   const hasHr = Boolean(report || (activity.heart && activity.heart.length > 0));
   const started = new Date(activity.startedAt);
   const dayNum = started.getDate();
-  const weekday = started.toLocaleDateString(undefined, { weekday: 'short' });
+  const weekday = started.toLocaleDateString(tag, { weekday: 'short' });
   const monoWhen = started
-    .toLocaleDateString(undefined, { weekday: 'short', day: '2-digit' })
+    .toLocaleDateString(tag, { weekday: 'short', day: '2-digit' })
     .replace(',', '')
     .toUpperCase();
 
@@ -129,7 +130,10 @@ function RunRow({
           <span className="run-item-when">{monoWhen}</span>
         </span>
         <span className="meta">
-          {formatDay(activity.startedAt)} at {formatClock(activity.startedAt)} ·{' '}
+          {t('history.atTime', {
+            day: dates.day(activity.startedAt),
+            time: dates.clock(activity.startedAt),
+          })}{' '}·{' '}
           {formatPace(averagePace(activity, profile.units))} {paceLabel(profile.units)}
           {hasHr ? ' · ❤' : ''}
           {report ? ` · avg ${report.averageBpm} bpm` : ''}
@@ -205,6 +209,7 @@ function CalendarView({
   weightTick?: number;
 }) {
   const t = useT();
+  const { tag } = useLocale();
   const now = Date.now();
   const [monthStart, setMonthStart] = useState(() => startOfMonth(now));
   const [selected, setSelected] = useState<number>(() => startOfDay(now));
@@ -218,7 +223,7 @@ function CalendarView({
 
   const dayEvents = useMemo(() => eventsOnDay(events, selected), [events, selected]);
 
-  const selectedLabel = new Date(selected).toLocaleDateString(undefined, {
+  const selectedLabel = new Date(selected).toLocaleDateString(tag, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
@@ -228,7 +233,7 @@ function CalendarView({
     <div className="history-calendar-wrap">
       <div className="card history-calendar">
         <div className="cal-head">
-          <h2 className="cal-title">{monthTitle(monthStart)}</h2>
+          <h2 className="cal-title">{monthTitle(monthStart, tag)}</h2>
           <div className="cal-nav-btns">
             <button
               type="button"
@@ -258,8 +263,8 @@ function CalendarView({
         </div>
 
         <div className="cal-weekdays">
-          {WEEKDAY_LABELS.map((d) => (
-            <span key={d}>{d.slice(0, 1)}</span>
+          {weekdayLabels(tag).map((d, i) => (
+            <span key={i}>{d.slice(0, 1)}</span>
           ))}
         </div>
 
@@ -391,8 +396,8 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
     [activities, filters],
   );
   const groups = useMemo(
-    () => groupActivities(filtered, filters.groupBy),
-    [filtered, filters.groupBy],
+    () => groupActivities(filtered, filters.groupBy, tag),
+    [filtered, filters.groupBy, tag],
   );
 
   const set = <K extends keyof HistoryFilters>(key: K, value: HistoryFilters[K]) =>

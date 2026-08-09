@@ -78,21 +78,22 @@ export interface HistoryGroup {
   activities: Activity[];
 }
 
-function monthLabel(t: number): string {
-  return new Date(t).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+function monthLabel(t: number, tag: string): string {
+  return new Date(t).toLocaleDateString(tag, { month: 'long', year: 'numeric' });
 }
 
-function weekLabel(weekStart: number): string {
+function weekLabel(weekStart: number, tag: string): string {
   const end = new Date(weekStart);
   end.setDate(end.getDate() + 6);
-  const a = new Date(weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const b = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const a = new Date(weekStart).toLocaleDateString(tag, { month: 'short', day: 'numeric' });
+  const b = end.toLocaleDateString(tag, { month: 'short', day: 'numeric' });
   return `${a} – ${b}`;
 }
 
 export function groupActivities(
   activities: Activity[],
   groupBy: HistoryGroupBy,
+  tag: string,
 ): HistoryGroup[] {
   if (groupBy === 'none') {
     return [{ key: 'all', label: '', activities }];
@@ -107,7 +108,7 @@ export function groupActivities(
       const t = Number(key);
       group = {
         key,
-        label: groupBy === 'week' ? weekLabel(t) : monthLabel(t),
+        label: groupBy === 'week' ? weekLabel(t, tag) : monthLabel(t, tag),
         activities: [],
       };
       map.set(key, group);

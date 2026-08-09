@@ -19,7 +19,7 @@ import { zoneBounds, type HeartSummary, zoneSwatch } from '../core/heart';
 import type { HeartSample } from '../core/activity';
 import type { Split } from '../core/activity';
 import type { WeekBucket } from '../core/stats';
-import { useT } from '../i18n/react';
+import { useT, useLocale } from '../i18n/react';
 import {
   distanceLabel,
   formatDistance,
@@ -661,6 +661,7 @@ export function HeartChart({
 
 export function WeeklyBars({ weeks, units }: { weeks: WeekBucket[]; units: UnitSystem }) {
   const t = useT();
+  const { tag } = useLocale();
   const peak = Math.max(...weeks.map((w) => w.distanceM), 1);
 
   return (
@@ -682,7 +683,7 @@ export function WeeklyBars({ weeks, units }: { weeks: WeekBucket[]; units: UnitS
             {/* Only every other label, or they collide on a narrow phone. */}
             <div className="tick">
               {i % 2 === weeks.length % 2
-                ? new Date(week.start).toLocaleDateString(undefined, {
+                ? new Date(week.start).toLocaleDateString(tag, {
                     day: 'numeric',
                     month: 'short',
                   })

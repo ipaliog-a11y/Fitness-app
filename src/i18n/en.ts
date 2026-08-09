@@ -20,7 +20,11 @@ import type { Message } from './types';
 
 export const en = {
   // --- Shared ------------------------------------------------------------
+  'date.today': 'Today',
+  'date.yesterday': 'Yesterday',
   'common.done': 'Done',
+  'common.view': 'View',
+  'common.avgOf': 'Avg {unit}',
   'common.change': 'Change',
   'common.cancel': 'Cancel',
   'common.save': 'Save',
@@ -448,6 +452,7 @@ export const en = {
     'Records come from GPS runs — the fastest continuous stretch inside any run, so a quick 5 km buried in a longer one still counts.',
 
   // --- History --------------------------------------------------------------
+  'history.atTime': '{day} at {time}',
   'history.title': 'History',
   'history.titleNamed': '{name}’s runs',
   'history.noRuns': 'No runs yet',
@@ -476,6 +481,8 @@ export const en = {
   'history.group.none': 'Flat list',
   'history.group.whenLabel': 'When',
   'history.group.withLabel': 'With',
+  'mode.outdoor': 'Outdoor run',
+  'mode.treadmill': 'Treadmill run',
   'run.outdoor': 'Outdoor',
   'run.treadmill': 'Treadmill',
 
@@ -589,6 +596,30 @@ export const en = {
   'detail.deleteForGood': 'Delete for good',
 
   // --- Coach screen ---------------------------------------------------------
+  'coach.title': 'Coach',
+  'coach.titleFor': 'Coach for {name}',
+  'coach.subtitle': 'Plans, recovery, and training notes — still all on this device',
+  // Ring labels are four characters at most: the ring is a small circle and
+  // "High load" sliced to three read as "HIG".
+  'coach.ring.fresh': 'FRESH',
+  'coach.ring.ok': 'OK',
+  'coach.ring.load': 'LOAD',
+  'coach.ring.high': 'HIGH',
+  'coach.ring.none': 'N/A',
+  'coach.explainNumbers': 'What do these numbers mean?',
+  'coach.planPitch':
+    'Pick a simple multi-week plan. Tick sessions when you complete them — the coach does not invent workouts from GPS alone.',
+  'coach.browsePlans': 'Browse plans',
+  'coach.planWeeks': {
+    one: '{count} wk',
+    other: '{count} wk',
+  },
+  'coach.startPlan': 'Start this plan',
+  'coach.weekOf': 'Week {week} of {total}',
+  'coach.sessionsThisWeek': '{done}/{total} sessions this week',
+  'coach.planTicked': '{percent}% of plan ticked off',
+  'coach.weekN': 'week {week}',
+  'coach.goToRun': 'Go to Run',
   'coach.planStartFailed': 'Could not start that plan.',
   'coach.planStarted': 'Started: {name}',
   'coach.planFallback': 'plan',
@@ -676,6 +707,78 @@ export const en = {
   'settings.backup.unreadable': 'That file could not be read.',
   'settings.gpxFailed': 'GPX import failed.',
   'settings.wiped': 'All runs, shoes, routes and plan cleared. Profile kept.',
+  // --- Settings: treadmill, pod, routes -------------------------------------
+  'settings.strideHint':
+    'Used when counting steps without a foot pod. Type the machine’s distance on a finished treadmill run and this calibrates itself.',
+  'settings.strideReset': 'Reset from height',
+  'settings.strideResetDone': 'Stride reset from height → {metres} m.',
+  'settings.footpod.offBy':
+    'The pod reads {reported}% off; distances are corrected by {applied}%.',
+  'settings.footpod.reset': 'Reset',
+  'settings.routes.hint': 'Save a route from a finished outdoor run’s detail screen.',
+
+  // --- Settings: Health Connect ---------------------------------------------
+  // The blurb is split around a bolded product name. Both halves are
+  // translated, so a language that wants the brand elsewhere in the sentence
+  // moves the words across the split rather than being stuck with English
+  // order.
+  'settings.hc.blurbBefore': 'Pull runs that',
+  'settings.hc.blurbAfter':
+    '(or other apps) has shared into Health Connect. Choose a date range, scan, then tick which sessions to import. Routes may be empty if only session totals were shared.',
+  'settings.hc.lastDays': 'Last {days}d',
+  'settings.hc.custom': 'Custom',
+  'settings.hc.from': 'From',
+  'settings.hc.to': 'To',
+  'settings.hc.selected': '{selected}/{total} selected',
+  'settings.hc.alreadySaved': '{count} already saved',
+  'settings.hc.noneNew': 'No new runs · {count} already in history.',
+  'settings.hc.imported': {
+    one: 'Imported {count} run.',
+    other: 'Imported {count} runs.',
+  },
+  'settings.hc.clear': 'Clear',
+  'settings.hc.all': 'All',
+  'settings.hc.importSelected': 'Import selected ({count})',
+  'settings.hc.openSettings': 'Open Health Connect settings',
+
+  // --- Settings: your data --------------------------------------------------
+  'settings.data.blurbBefore': 'Everything stays on this device. Use a',
+  'settings.data.fullBackup': 'full backup',
+  'settings.data.blurbAfter':
+    'before clearing the browser or moving to another phone (or Android).',
+  'settings.data.export': 'Export full backup',
+  'settings.data.import': 'Import backup',
+  'settings.data.backupNote':
+    'Backup includes runs, profile, shoes, routes, and active plan. Older activity-only JSON files still import.',
+  'settings.data.importGpx': 'Import GPX',
+  'settings.data.gpxNote':
+    'GPX brings in outdoor tracks from other apps. Export GPX or TCX from a run’s detail screen (Strava-friendly).',
+  'settings.data.deleteEverything': 'Delete everything',
+  'settings.data.deleteAll': 'Delete all runs & gear data',
+  'settings.gpxDone': 'Imported GPX — {distance} {unit}.',
+
+  // Restore reports a list of what came back, assembled from the parts below.
+  // Built as a list rather than one sentence per combination: seven optional
+  // clauses is 128 sentences, and no catalogue should hold those.
+  'settings.backup.restored': 'Full backup: {parts}.',
+  'settings.backup.imported': 'Imported: {parts}.',
+  'settings.backup.partRuns': {
+    one: '{count} run',
+    other: '{count} runs',
+  },
+  'settings.backup.partSkipped': '{count} skipped',
+  'settings.backup.partProfile': 'profile',
+  'settings.backup.partShoes': {
+    one: '{count} shoe',
+    other: '{count} shoes',
+  },
+  'settings.backup.partRoutes': {
+    one: '{count} route',
+    other: '{count} routes',
+  },
+  'settings.backup.partPlan': 'plan',
+  'settings.backup.partWeight': 'weight log',
+
   'settings.hc.androidOnly': 'Health Connect import works in the Android app only.',
   'settings.hc.noneFound': 'No running workouts found in that date range.',
   'settings.hc.scanFailed': 'Health Connect scan failed.',
@@ -707,6 +810,7 @@ export const en = {
   'profile.female': 'Female',
   'profile.male': 'Male',
   'profile.sexHint': 'Used by the HR-based calorie model (Keytel).',
+  'profile.born': 'Born',
   'profile.age': 'Age',
   'profile.height': 'Height',
   'profile.sex': 'Sex',
@@ -720,8 +824,18 @@ export const en = {
   'profile.weightHint': 'Weigh-ins update calorie estimates and appear on the History calendar.',
   'profile.setUpWeight': 'Set up weight log',
   'profile.openWeight': 'Open weight log',
+  'profile.noWeightLog': 'No log yet — add your starting weight.',
+  'profile.weightReadings': {
+    one: '{count} logged reading.',
+    other: '{count} logged readings.',
+  },
+  'profile.achievementsBlurb':
+    'Distance, lifetime mileage, recovery, performance, and fun unlocks for using RunLog.',
+  'profile.openAchievements': 'Open achievements',
   'profile.zones': 'Heart rate zones',
   'profile.maxHr': 'Maximum heart rate (bpm)',
+  'profile.maxHrHint':
+    'Default estimate 220 − age ({estimate}). Override with a tested figure if you have one. Clear and retype freely — commits on blur.',
   'profile.shoes.title': 'Shoes',
   'profile.shoes.empty': 'No shoes yet — tap Add a pair.',
   'profile.shoes.add': 'Add a pair',
@@ -736,6 +850,10 @@ export const en = {
   'profile.shoes.restore': 'Restore',
   'profile.shoes.needName': 'Give the shoes a name.',
   'profile.shoes.updated': 'Shoes updated.',
+  'profile.shoes.added': 'Added {name}.',
+  'profile.shoes.retiredTag': '(retired)',
+  'profile.shoes.namePlaceholder': 'e.g. Daily trainers',
+  'profile.shoes.brandPlaceholder': 'Brand',
 
   // --- Run screen -----------------------------------------------------------
   'gps.ready': 'Ready',

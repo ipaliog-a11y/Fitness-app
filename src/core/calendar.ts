@@ -189,11 +189,24 @@ export function monthGrid(monthStart: number, now = Date.now()): MonthCell[] {
   return cells;
 }
 
-export function monthTitle(monthStart: number): string {
-  return new Date(monthStart).toLocaleDateString(undefined, {
+export function monthTitle(monthStart: number, tag: string): string {
+  return new Date(monthStart).toLocaleDateString(tag, {
     month: 'long',
     year: 'numeric',
   });
 }
 
-export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+/**
+ * Monday-first weekday initials for the calendar header.
+ *
+ * Built from Intl rather than held as a constant array: the old constant was
+ * seven English strings, so the calendar stayed English in every language. Any
+ * Monday works as the seed — 5 Jan 1970 is one.
+ */
+export function weekdayLabels(tag: string): string[] {
+  const format = new Intl.DateTimeFormat(tag, { weekday: 'short' });
+  const monday = new Date(1970, 0, 5);
+  return Array.from({ length: 7 }, (_, i) =>
+    format.format(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)),
+  );
+}

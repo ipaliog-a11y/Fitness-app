@@ -43,7 +43,7 @@ import {
 import { AchievementsScreen } from './AchievementsScreen';
 import { WeightScreen } from './WeightScreen';
 import type { Translate } from '../i18n';
-import { useT } from '../i18n/react';
+import { useLocale, useT } from '../i18n/react';
 
 interface Props {
   profile: Profile;
@@ -118,6 +118,7 @@ function ProfileScreenInner({
   onWeightLogChange,
 }: Props) {
   const t = useT();
+  const { tag } = useLocale();
   // Never trust a half-written profile from storage/HMR.
   const profile = sanitise(rawProfile);
 
@@ -196,7 +197,7 @@ function ProfileScreenInner({
     if (shoeModal === 'new') {
       const shoe = createShoe({ name: shoeName, brand: shoeBrand, limitM });
       persistShoes([shoe, ...shoes]);
-      onToast(`Added ${shoe.name}.`);
+      onToast(t('profile.shoes.added', { name: shoe.name }));
     } else if (typeof shoeModal === 'string') {
       persistShoes(
         updateShoe(shoes, shoeModal, {
@@ -356,14 +357,14 @@ function ProfileScreenInner({
           </span>
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
-          Distance, lifetime mileage, recovery, performance, and fun unlocks for using RunLog.
+          {t('profile.achievementsBlurb')}
         </p>
         <button
           type="button"
           className="btn primary wide"
           onClick={() => setAchievementsOpen(true)}
         >
-          Open achievements
+          {t('profile.openAchievements')}
         </button>
       </div>
 
@@ -433,7 +434,7 @@ function ProfileScreenInner({
             </div>
             <div className="name-edit-row" style={{ marginTop: 8 }}>
               <button type="button" className="btn name-action primary-soft" onClick={saveIdentity}>
-                Save
+                {t('common.save')}
               </button>
               {identityComplete && (
                 <button
@@ -455,14 +456,17 @@ function ProfileScreenInner({
         ) : (
           <div className="identity-display">
             <div className="identity-row">
-              <span className="kv-k">Name</span>
+              <span className="kv-k">{t('profile.name')}</span>
               <span className="kv-v">{savedName || '—'}</span>
             </div>
             <div className="identity-row">
-              <span className="kv-k">Born</span>
+              <span className="kv-k">{t('profile.born')}</span>
               <span className="kv-v">
+                {/* `undefined` here means the *device* locale, so a Greek UI on
+                    an English phone printed "Aug". The app's own tag is the
+                    only one that follows the language the user picked. */}
                 {profile.birthDate
-                  ? new Date(profile.birthDate + 'T12:00:00').toLocaleDateString(undefined, {
+                  ? new Date(profile.birthDate + 'T12:00:00').toLocaleDateString(tag, {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',
@@ -534,15 +538,22 @@ function ProfileScreenInner({
             {Math.abs(toGoal) < 0.05
               ? t('weight.atGoal')
               : toGoal > 0
-                ? `${toDisplayWeight(toGoal, profile.units).toFixed(1)} ${unit} above goal.`
-                : `${toDisplayWeight(-toGoal, profile.units).toFixed(1)} ${unit} below goal.`}
+                ? t('weight.aboveGoal', {
+                    amount: toDisplayWeight(toGoal, profile.units).toFixed(1),
+                    unit,
+                  })
+                : t('weight.belowGoal', {
+                    amount: toDisplayWeight(-toGoal, profile.units).toFixed(1),
+                    unit,
+                  })}
           </p>
         )}
         <p className="hint" style={{ marginTop: 0 }}>
           {t('profile.weightHint')}
+          {' '}
           {weightLog.entries.length === 0
-            ? ' No log yet — add your starting weight.'
-            : ` ${weightLog.entries.length} logged reading${weightLog.entries.length === 1 ? '' : 's'}.`}
+            ? t('profile.noWeightLog')
+            : t('profile.weightReadings', { count: weightLog.entries.length })}
         </p>
         <button
           type="button"
@@ -570,8 +581,7 @@ function ProfileScreenInner({
             }}
           />
           <p className="hint">
-            Default estimate 220 − age ({estimateMaxHeartRate(profile.age)}). Override with a
-            tested figure if you have one. Clear and retype freely — commits on blur.
+            {t('profile.maxHrHint', { estimate: estimateMaxHeartRate(profile.age) })}
           </p>
         </div>
 
@@ -608,7 +618,7 @@ function ProfileScreenInner({
               <div className="body">
                 <strong>
                   {shoe.name}
-                  {shoe.retired ? ' (retired)' : ''}
+                  {shoe.retired ? ` ${t('profile.shoes.retiredTag')}` : ''}
                 </strong>
                 <span className="meta">
                   {shoe.brand ? `${shoe.brand} · ` : ''}
@@ -628,7 +638,7 @@ function ProfileScreenInner({
               </div>
               <div className="shoe-actions">
                 <button type="button" className="btn" onClick={() => openEditShoe(shoe)}>
-                  Edit
+                  {t('profile.edit')}
                 </button>
                 <button
                   type="button"
@@ -658,7 +668,7 @@ function ProfileScreenInner({
           style={{ marginTop: 12 }}
           onClick={openAddShoe}
         >
-          Add a pair
+          {t('profile.shoes.add')}
         </button>
       </div>
 
@@ -683,7 +693,7 @@ function ProfileScreenInner({
               <label htmlFor="shoe-name">{t('profile.name')}</label>
               <input
                 id="shoe-name"
-                placeholder="e.g. Daily trainers"
+                placeholder={t('profile.shoes.namePlaceholder')}
                 value={shoeName}
                 // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
@@ -694,7 +704,7 @@ function ProfileScreenInner({
               <label htmlFor="shoe-brand">{t('profile.shoes.brand')}</label>
               <input
                 id="shoe-brand"
-                placeholder="Brand"
+                placeholder={t('profile.shoes.brandPlaceholder')}
                 value={shoeBrand}
                 onChange={(e) => setShoeBrand(e.target.value)}
               />
@@ -715,7 +725,7 @@ function ProfileScreenInner({
             )}
             <div className="btn-row" style={{ marginTop: 8 }}>
               <button type="button" className="btn" onClick={closeShoeModal}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="button" className="btn primary" onClick={saveShoeModal}>
                 {shoeModal === 'new' ? t('profile.shoes.savePair') : t('profile.shoes.saveChanges')}

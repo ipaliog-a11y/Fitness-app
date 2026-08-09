@@ -103,26 +103,49 @@ export function formatSpeed(metres: number, ms: number, units: UnitSystem): stri
   return (toDisplayDistance(metres, units) / hours).toFixed(1);
 }
 
-/** "Today", "Yesterday", then a plain date once it stops being either. */
-export function formatDay(timestamp: number, now = Date.now()): string {
+/**
+ * Words for the two days that get one instead of a date.
+ *
+ * Passed in rather than looked up: this module is pure and knows nothing about
+ * catalogues, the same way it takes a locale tag rather than reaching for the
+ * profile. `useDateText` in i18n/react wires both ends together.
+ */
+export interface DayLabels {
+  today: string;
+  yesterday: string;
+}
+
+/**
+ * "Today", "Yesterday", then a plain date once it stops being either.
+ *
+ * `tag` is the app's language, not the device's. Passing `undefined` to
+ * `toLocaleDateString` — which is what this did — formats by the phone's
+ * setting, so a Greek interface on an English handset printed "Aug".
+ */
+export function formatDay(
+  timestamp: number,
+  tag: string,
+  labels: DayLabels,
+  now = Date.now(),
+): string {
   const startOfDay = (ms: number): number => {
     const d = new Date(ms);
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   };
   const days = Math.round((startOfDay(now) - startOfDay(timestamp)) / 86_400_000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return new Date(timestamp).toLocaleDateString(undefined, { weekday: 'long' });
-  return new Date(timestamp).toLocaleDateString(undefined, {
+  if (days === 0) return labels.today;
+  if (days === 1) return labels.yesterday;
+  if (days < 7) return new Date(timestamp).toLocaleDateString(tag, { weekday: 'long' });
+  return new Date(timestamp).toLocaleDateString(tag, {
     day: 'numeric',
     month: 'short',
     year: days > 300 ? 'numeric' : undefined,
   });
 }
 
-export function formatClock(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString(undefined, {
+export function formatClock(timestamp: number, tag: string): string {
+  return new Date(timestamp).toLocaleTimeString(tag, {
     hour: 'numeric',
     minute: '2-digit',
   });

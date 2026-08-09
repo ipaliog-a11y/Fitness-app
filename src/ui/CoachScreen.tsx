@@ -80,18 +80,18 @@ function statusClass(status: RecoveryStatus): string {
 }
 
 /** Short ring label — slice(0,3) made "High load" → "HIG" and looked broken on HUD. */
-function recoveryRingLabel(status: RecoveryStatus): string {
+function recoveryRingLabel(status: RecoveryStatus): MessageKey {
   switch (status) {
     case 'fresh':
-      return 'FRESH';
+      return 'coach.ring.fresh';
     case 'balanced':
-      return 'OK';
+      return 'coach.ring.ok';
     case 'loaded':
-      return 'LOAD';
+      return 'coach.ring.load';
     case 'high':
-      return 'HIGH';
+      return 'coach.ring.high';
     default:
-      return 'N/A';
+      return 'coach.ring.none';
   }
 }
 
@@ -130,7 +130,7 @@ export function CoachScreen({
   };
 
   const name = (profile.displayName ?? '').trim();
-  const greeting = name ? `Coach for ${name}` : 'Coach';
+  const greeting = name ? t('coach.titleFor', { name }) : t('coach.title');
 
   const load = useMemo(
     () => loadSnapshot(activities, now, profile.maxHeartRate),
@@ -282,8 +282,8 @@ export function CoachScreen({
     <div className="screen">
       <h1>{greeting}</h1>
       <p className="subtitle">
-        Plans, recovery, and training notes — still all on this device
-        {streak > 0 ? ` · ${streak}-day streak` : ''}.
+        {t('coach.subtitle')}
+        {streak > 0 ? ` · ${t('stats.streak', { count: streak })}` : ''}.
       </p>
 
       {/* Recovery / load — hero layout (ring on HUD theme via CSS) */}
@@ -299,7 +299,7 @@ export function CoachScreen({
             aria-hidden
           >
             <span className="recovery-ring-inner">
-              <b>{recoveryRingLabel(load.status)}</b>
+              <b>{t(recoveryRingLabel(load.status))}</b>
               <span>{t('coach.ringLoad')}</span>
             </span>
           </div>
@@ -344,7 +344,7 @@ export function CoachScreen({
           style={{ marginTop: 12 }}
           onClick={() => setGuideOpen(true)}
         >
-          What do these numbers mean?
+          {t('coach.explainNumbers')}
         </button>
       </div>
 
@@ -362,8 +362,7 @@ export function CoachScreen({
         {!active || !plan ? (
           <>
             <p className="hint" style={{ marginTop: 10 }}>
-              Pick a simple multi-week plan. Tick sessions when you complete them — the coach does
-              not invent workouts from GPS alone.
+              {t('coach.planPitch')}
             </p>
             {!browse ? (
               <button
@@ -372,7 +371,7 @@ export function CoachScreen({
                 style={{ marginTop: 8 }}
                 onClick={() => setBrowse(true)}
               >
-                Browse plans
+                {t('coach.browsePlans')}
               </button>
             ) : (
               <div className="plan-list">
@@ -380,7 +379,7 @@ export function CoachScreen({
                   <div className="plan-card" key={p.id}>
                     <div className="row">
                       <strong>{t(p.name)}</strong>
-                      <span className="pill">{p.weeks} wk</span>
+                      <span className="pill">{t('coach.planWeeks', { count: p.weeks })}</span>
                     </div>
                     <p className="hint" style={{ marginTop: 6 }}>
                       {t(p.blurb)}
@@ -391,12 +390,12 @@ export function CoachScreen({
                       style={{ marginTop: 8 }}
                       onClick={() => start(p.id)}
                     >
-                      Start this plan
+                      {t('coach.startPlan')}
                     </button>
                   </div>
                 ))}
                 <button type="button" className="btn wide" onClick={() => setBrowse(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             )}
@@ -407,13 +406,17 @@ export function CoachScreen({
               {t(plan.name)}
             </p>
             <p className="hint">
-              Week {planWeek + 1} of {plan.weeks}
-              {progress ? ` · ${progress.done}/${progress.total} sessions this week` : ''}
+              {t('coach.weekOf', { week: planWeek + 1, total: plan.weeks })}
+              {progress
+                ? ` · ${t('coach.sessionsThisWeek', { done: progress.done, total: progress.total })}`
+                : ''}
             </p>
             <div className="goal-bar" style={{ marginTop: 8 }}>
               <span style={{ width: `${Math.min(100, overall * 100)}%` }} />
             </div>
-            <p className="hint">{Math.round(overall * 100)}% of plan ticked off</p>
+            <p className="hint">
+              {t('coach.planTicked', { percent: Math.round(overall * 100) })}
+            </p>
 
             {upcoming && (
               <div className="next-session next-session-hero">
@@ -422,7 +425,9 @@ export function CoachScreen({
                   <span className="pill">{t(kindLabel(upcoming.kind))}</span>
                   <span className="hint" style={{ margin: 0 }}>
                     {dayName(upcoming.dayOfWeek, tag)}
-                    {upcoming.week !== planWeek ? ` · week ${upcoming.week + 1}` : ''}
+                    {upcoming.week !== planWeek
+                      ? ` · ${t('coach.weekN', { week: upcoming.week + 1 })}`
+                      : ''}
                   </span>
                 </div>
                 <strong>{t(upcoming.title)}</strong>
@@ -432,7 +437,7 @@ export function CoachScreen({
                 </p>
                 {onStartRun && (
                   <button type="button" className="btn primary wide" onClick={onStartRun}>
-                    Go to Run
+                    {t('coach.goToRun')}
                   </button>
                 )}
               </div>
@@ -497,14 +502,14 @@ export function CoachScreen({
           </div>
           <div className="metric">
             <div className="value">{formatPace(thisWeek.paceSecondsPerUnit)}</div>
-            <div className="label">Avg {paceLabel(profile.units)}</div>
+            <div className="label">{t('common.avgOf', { unit: paceLabel(profile.units) })}</div>
           </div>
         </div>
         {profile.weeklyGoalM > 0 && (
           <>
             <div className="zone-row" style={{ marginTop: 16, marginBottom: 4 }}>
               <span className="name" style={{ width: 'auto' }}>
-                Goal
+                {t('stats.goal')}
               </span>
               <span className="track">
                 <span style={{ width: `${goalShare * 100}%`, background: 'var(--accent)' }} />
@@ -512,16 +517,21 @@ export function CoachScreen({
               <span className="time">{Math.round(goalShare * 100)}%</span>
             </div>
             <p className="hint">
-              {formatDistance(thisWeek.distanceM, profile.units, 1)} of{' '}
-              {formatDistance(profile.weeklyGoalM, profile.units, 1)}{' '}
-              {distanceLabel(profile.units)} this week
+              {t('stats.goalProgress', {
+                distance: formatDistance(thisWeek.distanceM, profile.units, 1),
+                goal: formatDistance(profile.weeklyGoalM, profile.units, 1),
+                unit: distanceLabel(profile.units),
+              })}
             </p>
           </>
         )}
         <p className="hint" style={{ marginBottom: 0 }}>
-          {allTime.runs} run{allTime.runs === 1 ? '' : 's'} ·{' '}
-          {formatDistance(allTime.distanceM, profile.units, 1)} {distanceLabel(profile.units)} all
-          time
+          {t('stats.subtitle', {
+            count: allTime.runs,
+            runs: allTime.runs,
+            distance: formatDistance(allTime.distanceM, profile.units, 1),
+            unit: distanceLabel(profile.units),
+          })}
         </p>
       </div>
 
@@ -533,15 +543,15 @@ export function CoachScreen({
       <div className="card">
         <h2>{t('stats.records')}</h2>
         {records.every((r) => r.durationMs === null) ? (
-          <p className="hint">
-            Records come from GPS runs — the fastest continuous stretch inside any run.
-          </p>
+          <p className="hint">{t('stats.recordsHint')}</p>
         ) : (
           records
             .filter((record) => record.durationMs !== null)
             .map((record) => (
               <div className="row" key={record.label}>
-                <span>{record.label}</span>
+                {/* A MessageKey, not a label — rendering it bare printed
+                    "record.1km" to anyone who had actually set a record. */}
+                <span>{t(record.label)}</span>
                 <span style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <strong>{formatDuration(record.durationMs!)}</strong>
                   {record.activityId && (
@@ -551,7 +561,7 @@ export function CoachScreen({
                       onClick={() => onOpen(record.activityId!)}
                       style={{ cursor: 'pointer' }}
                     >
-                      View
+                      {t('common.view')}
                     </button>
                   )}
                 </span>
