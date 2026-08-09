@@ -205,7 +205,7 @@ function sensorPillClass(kind: 'good' | 'warn' | 'bad' | 'neutral'): string {
 type GoalPick = 'none' | GoalKind;
 
 /** Six live pods; face 0 = primary, face 1 = alternate (tap to flip). */
-type LivePodId = 'pace' | 'distance' | 'hr' | 'kcal' | 'avg' | 'cadence';
+type LivePodId = 'pace' | 'distance' | 'hr' | 'kcal' | 'avg' | 'cadence' | 'belt';
 
 function flipPod(
   setPodFace: Dispatch<SetStateAction<Record<LivePodId, 0 | 1>>>,
@@ -291,6 +291,13 @@ export function RunScreen({
   const [cadence, setCadence] = useState<number | null>(null);
   const [manualDistance, setManualDistance] = useState('');
   const [incline, setIncline] = useState('');
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  /** The typed incline as a number, or null when blank or nonsense. */
+  const inclineValue = (() => {
+    if (incline.trim() === '') return null;
+    const n = Number(incline);
+    return Number.isFinite(n) ? n : null;
+  })();
   /** Pause was triggered by stillness, not the Pause button. */
   const [autoPaused, setAutoPaused] = useState(false);
   const [goalFlash, setGoalFlash] = useState(false);
@@ -311,6 +318,7 @@ export function RunScreen({
     kcal: 0,
     avg: 0,
     cadence: 0,
+    belt: 0,
   });
   /** Confirm before ending a run so Finish / Discard are not one-tap accidents. */
   const [confirmAction, setConfirmAction] = useState<null | 'finish' | 'discard'>(null);
@@ -2169,17 +2177,45 @@ export function RunScreen({
           face0: { value: string; label: string };
           face1: { value: string; label: string };
         }> = [
-          {
-            id: 'pace',
-            face0: {
-              value: formatPace(paceNow ?? paceAvg),
-              label: paceNow ? `pace ${paceLabel(profile.units)}` : `avg ${paceLabel(profile.units)}`,
-            },
-            face1: {
-              value: formatSpeedMps(speedMps ?? avgSpeedMps, profile.units),
-              label: speedUnitLabel(profile.units),
-            },
-          },
+          /*
+           * Outdoors this is live pace. On a treadmill it was a duplicate.
+           *
+           * `paceNow` needs an instantaneous speed source, and without a foot
+           * pod a treadmill has none — so face0 fell through to its `avg`
+           * label and this pod showed the same number as the `avg` pod below
+           * it for the whole run. A third of the dashboard, permanently
+           * repeating itself.
+           *
+           * The treadmill pod is deliberately *not* conditional on whether a
+           * pod happens to be connected: the layout must not rearrange itself
+           * mid-run when a pod drops or reconnects. Live pace is still one tap
+           * away on the `avg` pod's second face.
+           */
+          session.mode === 'treadmill'
+            ? {
+                id: 'belt' as const,
+                face0: {
+                  value: session.steps > 0 ? String(session.steps) : '—',
+                  label: t('run.pod.steps'),
+                },
+                face1: {
+                  value: inclineValue !== null ? `${inclineValue}%` : '—',
+                  label: t('run.pod.incline'),
+                },
+              }
+            : {
+                id: 'pace' as const,
+                face0: {
+                  value: formatPace(paceNow ?? paceAvg),
+                  label: paceNow
+                    ? `${t('run.pod.pace')} ${paceLabel(profile.units)}`
+                    : `${t('run.pod.avg')} ${paceLabel(profile.units)}`,
+                },
+                face1: {
+                  value: formatSpeedMps(speedMps ?? avgSpeedMps, profile.units),
+                  label: speedUnitLabel(profile.units),
+                },
+              },
           {
             id: 'distance',
             face0: {
@@ -2228,21 +2264,14 @@ export function RunScreen({
             id: 'cadence',
             face0: {
               value: cadence !== null ? String(Math.round(cadence)) : '—',
-              label: cadence !== null ? 'spm' : 'cadence',
+              label: cadence !== null ? t('run.pod.spm') : t('run.pod.cadence'),
             },
+            // Steps have their own pod on a treadmill now, so this face is
+            // laps in both modes rather than doubling up.
             face1: {
               value:
-                session.manualLaps.length > 0
-                  ? String(session.manualLaps.length)
-                  : session.mode === 'treadmill' && session.steps > 0
-                    ? String(session.steps)
-                    : '—',
-              label:
-                session.manualLaps.length > 0
-                  ? 'laps'
-                  : session.mode === 'treadmill'
-                    ? 'steps'
-                    : 'laps',
+                session.manualLaps.length > 0 ? String(session.manualLaps.length) : '—',
+              label: t('run.pod.laps'),
             },
           },
         ];
@@ -2302,48 +2331,103 @@ export function RunScreen({
         </div>
       )}
 
+      {/*
+        * Console figures, collapsed to one row.
+        *
+        * This was two text inputs sitting open mid-run: about a third of the
+        * screen, and it pushed Pause and Finish below the fold. Neither field
+        * is something you fill in while your feet are moving — distance is
+        * read off the console at the end, and incline changes a handful of
+        * times at most — so the live screen shows what was entered and the
+        * typing happens in a sheet.
+        */}
       {session.mode === 'treadmill' && (
-        <div className="card live-console">
-          <h2>From the console</h2>
-          <div className="field">
-            <label htmlFor="manual-distance">
-              Distance ({distanceLabel(profile.units)}) — optional
-            </label>
-            <input
-              id="manual-distance"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0"
-              placeholder={formatDistance(distance, profile.units)}
-              value={manualDistance}
-              onChange={(e) => setManualDistance(e.target.value)}
-            />
-            <p className="hint">
-              {podStatus === 'connected'
-                ? 'Console distance overrides the pod and calibrates it.'
-                : 'Overrides the step estimate and calibrates stride.'}
-            </p>
-          </div>
-          <div className="field">
-            <label htmlFor="incline">Incline (%) — optional</label>
-            <input
-              id="incline"
-              type="number"
-              inputMode="decimal"
-              step="0.5"
-              min="0"
-              value={incline}
-              onChange={(e) => {
-                setIncline(e.target.value);
-                const n = Number(e.target.value);
-                if (Number.isFinite(n) && e.target.value.trim() !== '') {
-                  session.setIncline(n);
-                } else {
-                  session.setIncline(null);
-                }
-              }}
-            />
+        <button
+          type="button"
+          className="console-row"
+          onClick={() => setConsoleOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="console-row-body">
+            <span className="console-row-title">{t('run.console.title')}</span>
+            <span className="console-row-values">
+              {manualDistance.trim() !== ''
+                ? `${manualDistance} ${distanceLabel(profile.units)}`
+                : t('run.console.noDistance')}
+              {' · '}
+              {inclineValue !== null
+                ? t('run.console.inclineValue', { percent: inclineValue })
+                : t('run.console.noIncline')}
+            </span>
+          </span>
+          <span className="console-row-cue" aria-hidden>
+            {t('common.change')}
+          </span>
+        </button>
+      )}
+
+      {consoleOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConsoleOpen(false);
+          }}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="console-modal-title"
+          >
+            <h2 id="console-modal-title">{t('run.console.title')}</h2>
+            <div className="field">
+              <label htmlFor="manual-distance">
+                {t('run.console.distanceLabel', { unit: distanceLabel(profile.units) })}
+              </label>
+              <input
+                id="manual-distance"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                placeholder={formatDistance(distance, profile.units)}
+                value={manualDistance}
+                onChange={(e) => setManualDistance(e.target.value)}
+              />
+              <p className="hint">
+                {podStatus === 'connected'
+                  ? t('run.console.distanceHintPod')
+                  : t('run.console.distanceHintSteps')}
+              </p>
+            </div>
+            <div className="field">
+              <label htmlFor="incline">{t('run.console.inclineLabel')}</label>
+              <input
+                id="incline"
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                min="0"
+                value={incline}
+                onChange={(e) => {
+                  setIncline(e.target.value);
+                  const n = Number(e.target.value);
+                  if (Number.isFinite(n) && e.target.value.trim() !== '') {
+                    session.setIncline(n);
+                  } else {
+                    session.setIncline(null);
+                  }
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn primary wide"
+              onClick={() => setConsoleOpen(false)}
+            >
+              {t('common.done')}
+            </button>
           </div>
         </div>
       )}

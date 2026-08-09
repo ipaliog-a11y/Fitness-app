@@ -520,4 +520,25 @@ export const el: Messages = {
   'history.group.withLabel': 'Με',
   'run.outdoor': 'Έξω',
   'run.treadmill': 'Διάδρομος',
+
+  // --- Live run pods --------------------------------------------------------
+  // Pod labels sit under a large number in a narrow tile — length matters more
+  // than completeness here, so these are the shortest honest words.
+  'run.pod.steps': 'βήματα',
+  'run.pod.incline': 'κλίση',
+  'run.pod.pace': 'ρυθμός',
+  'run.pod.avg': 'μ.ό.',
+  'run.pod.laps': 'γύροι',
+  'run.pod.spm': 'βήμ/λ',
+  'run.pod.cadence': 'καντέντζα',
+
+  // --- Treadmill console ----------------------------------------------------
+  'run.console.title': 'Από την κονσόλα',
+  'run.console.noDistance': 'Χωρίς απόσταση',
+  'run.console.noIncline': 'Χωρίς κλίση',
+  'run.console.inclineValue': 'κλίση {percent}%',
+  'run.console.distanceLabel': 'Απόσταση ({unit}) — προαιρετικό',
+  'run.console.inclineLabel': 'Κλίση (%) — προαιρετικό',
+  'run.console.distanceHintPod': 'Η απόσταση της κονσόλας υπερισχύει του αισθητήρα και τον βαθμονομεί.',
+  'run.console.distanceHintSteps': 'Υπερισχύει της εκτίμησης από βήματα και βαθμονομεί τον διασκελισμό.',
 };

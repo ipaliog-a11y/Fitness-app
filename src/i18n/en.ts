@@ -478,6 +478,25 @@ export const en = {
   'history.group.withLabel': 'With',
   'run.outdoor': 'Outdoor',
   'run.treadmill': 'Treadmill',
+
+  // --- Live run pods --------------------------------------------------------
+  'run.pod.steps': 'steps',
+  'run.pod.incline': 'incline',
+  'run.pod.pace': 'pace',
+  'run.pod.avg': 'avg',
+  'run.pod.laps': 'laps',
+  'run.pod.spm': 'spm',
+  'run.pod.cadence': 'cadence',
+
+  // --- Treadmill console ----------------------------------------------------
+  'run.console.title': 'From the console',
+  'run.console.noDistance': 'No distance',
+  'run.console.noIncline': 'No incline',
+  'run.console.inclineValue': '{percent}% incline',
+  'run.console.distanceLabel': 'Distance ({unit}) — optional',
+  'run.console.inclineLabel': 'Incline (%) — optional',
+  'run.console.distanceHintPod': 'Console distance overrides the pod and calibrates it.',
+  'run.console.distanceHintSteps': 'Overrides the step estimate and calibrates stride.',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */
