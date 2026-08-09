@@ -1102,20 +1102,41 @@ check('a large odometer survives the 32-bit field', () => {
   near(m.totalDistanceM, 400000, 0.5, '400 km');
 });
 
-check('a truncated packet is refused rather than misread', () => {
+check('a packet too short for the mandatory fields is refused', () => {
+  // Flags, speed and cadence are the four bytes every RSC frame must carry.
+  // Below that there is nothing to salvage.
   equal(parseRscMeasurement(new DataView(new Uint8Array([0x04, 0x00]).buffer)), null, 'too short');
+  equal(parseRscMeasurement(new DataView(new Uint8Array([0x01, 0x00, 0x03]).buffer)), null, 'no cadence');
+});
+
+/*
+ * Real pods set an optional-field flag and then omit the field — seen on the
+ * Zwift pod during testing, which is what prompted the lenient path in
+ * parseRscMeasurement. Speed and cadence in those frames are perfectly good,
+ * and they are the two numbers a treadmill run is actually built from, so
+ * throwing the packet away would stall the readout over a field we do not use
+ * for distance. The truncated optional field comes back null; nothing is
+ * decoded from bytes that are not there.
+ */
+check('a flagged-but-absent optional field keeps speed and cadence', () => {
   // Claims a stride length but stops before it.
-  equal(
-    parseRscMeasurement(new DataView(new Uint8Array([0x01, 0x00, 0x03, 0xb4]).buffer)),
-    null,
-    'stride promised, absent',
+  const stride = parseRscMeasurement(
+    new DataView(new Uint8Array([0x01, 0x00, 0x03, 0xb4]).buffer),
   );
+  assert(stride !== null, 'stride promised, absent: kept rather than dropped');
+  near(stride.speedMps, 3, 0.001, 'speed still decoded');
+  equal(stride.cadenceSpm, 180, 'cadence still decoded');
+  equal(stride.strideLengthM, null, 'stride not invented');
+  equal(stride.totalDistanceM, null, 'no odometer claimed');
+
   // Claims an odometer but only supplies two of its four bytes.
-  equal(
-    parseRscMeasurement(new DataView(new Uint8Array([0x02, 0x00, 0x03, 0xb4, 0x10, 0x27]).buffer)),
-    null,
-    'odometer truncated',
+  const odo = parseRscMeasurement(
+    new DataView(new Uint8Array([0x02, 0x00, 0x03, 0xb4, 0x10, 0x27]).buffer),
   );
+  assert(odo !== null, 'odometer truncated: kept rather than dropped');
+  near(odo.speedMps, 3, 0.001, 'speed still decoded');
+  equal(odo.cadenceSpm, 180, 'cadence still decoded');
+  equal(odo.totalDistanceM, null, 'odometer not read from missing bytes');
 });
 
 check('the first pod reading only sets a baseline', () => {
