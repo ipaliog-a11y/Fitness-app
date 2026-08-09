@@ -419,6 +419,65 @@ export const en = {
   'planKind.rest': 'Rest',
   'history.upcoming': 'upcoming',
   'history.done': 'done',
+
+  'splash.tagline': 'Local-first running',
+  'splash.status': 'Getting ready…',
+  'record.1km': '1 km',
+  'record.1mile': '1 mile',
+  'record.5km': '5 km',
+  'record.10km': '10 km',
+  'record.half': 'Half marathon',
+  'record.marathon': 'Marathon',
+
+  'stats.title': 'Dashboard',
+  'stats.subtitle': {
+    one: '{runs} run · {distance} {unit} all time',
+    other: '{runs} runs · {distance} {unit} all time',
+  },
+  'stats.streak': {
+    one: '{count}-day streak',
+    other: '{count}-day streak',
+  },
+  'stats.thisWeek': 'This week',
+  'stats.time': 'Time',
+  'stats.last12': 'Last 12 weeks',
+  'stats.records': 'Personal records',
+  'stats.goal': 'Goal',
+  'stats.goalProgress': '{distance} of {goal} {unit} this week',
+  'stats.recordsHint':
+    'Records come from GPS runs — the fastest continuous stretch inside any run, so a quick 5 km buried in a longer one still counts.',
+
+  // --- History --------------------------------------------------------------
+  'history.title': 'History',
+  'history.titleNamed': '{name}’s runs',
+  'history.noRuns': 'No runs yet',
+  'history.runsThisMonth': {
+    one: '{count} run this month',
+    other: '{count} runs this month',
+  },
+  'history.runsTotal': {
+    one: '{count} run',
+    other: '{count} runs',
+  },
+  'history.runsFiltered': '{count} of {total} runs',
+  'history.viewLabel': 'History view',
+  'history.filtersLabel': 'Quick filters',
+  'history.filter.all': 'All',
+  'history.range.all': 'All time',
+  'history.range.week': 'This week',
+  'history.range.month': 'This month',
+  'history.range.year': 'This year',
+  'history.extra.all': 'Anything',
+  'history.extra.hr': 'Heart rate',
+  'history.extra.workout': 'Workout',
+  'history.extra.goal': 'Had a goal',
+  'history.group.week': 'By week',
+  'history.group.month': 'By month',
+  'history.group.none': 'Flat list',
+  'history.group.whenLabel': 'When',
+  'history.group.withLabel': 'With',
+  'run.outdoor': 'Outdoor',
+  'run.treadmill': 'Treadmill',
 } satisfies Record<string, Message>;
 
 /** Every key the app may ask for. Locales are checked against this. */

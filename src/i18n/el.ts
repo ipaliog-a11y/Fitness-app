@@ -459,4 +459,65 @@ export const el: Messages = {
   'planKind.rest': 'Ξεκούραση',
   'history.upcoming': 'επερχόμενη',
   'history.done': 'ολοκληρώθηκε',
+
+  'splash.tagline': 'Τρέξιμο που μένει στη συσκευή σου',
+  'splash.status': 'Ετοιμαζόμαστε…',
+  'record.1km': '1 χλμ',
+  'record.1mile': '1 μίλι',
+  'record.5km': '5 χλμ',
+  'record.10km': '10 χλμ',
+  'record.half': 'Ημιμαραθώνιος',
+  'record.marathon': 'Μαραθώνιος',
+
+  'stats.title': 'Πίνακας',
+  'stats.subtitle': {
+    one: '{runs} τρέξιμο · {distance} {unit} συνολικά',
+    other: '{runs} τρεξίματα · {distance} {unit} συνολικά',
+  },
+  'stats.streak': {
+    one: 'σερί {count} ημέρας',
+    other: 'σερί {count} ημερών',
+  },
+  'stats.thisWeek': 'Αυτή την εβδομάδα',
+  'stats.time': 'Χρόνος',
+  'stats.last12': 'Τελευταίες 12 εβδομάδες',
+  'stats.records': 'Προσωπικά ρεκόρ',
+  'stats.goal': 'Στόχος',
+  'stats.goalProgress': '{distance} από {goal} {unit} αυτή την εβδομάδα',
+  'stats.recordsHint':
+    'Τα ρεκόρ βγαίνουν από τρεξίματα με GPS — το γρηγορότερο συνεχόμενο κομμάτι μέσα σε κάθε τρέξιμο, οπότε ένα γρήγορο 5άρι μέσα σε μεγαλύτερο τρέξιμο μετράει κανονικά.',
+
+  // --- History --------------------------------------------------------------
+  // Greek forms the possessive with the genitive, so "{name}’s runs" becomes
+  // "the runs of {name}" — the placeholder has to move to the end.
+  'history.title': 'Ιστορικό',
+  'history.titleNamed': 'Τα τρεξίματα του/της {name}',
+  'history.noRuns': 'Κανένα τρέξιμο ακόμη',
+  'history.runsThisMonth': {
+    one: '{count} τρέξιμο αυτόν τον μήνα',
+    other: '{count} τρεξίματα αυτόν τον μήνα',
+  },
+  'history.runsTotal': {
+    one: '{count} τρέξιμο',
+    other: '{count} τρεξίματα',
+  },
+  'history.runsFiltered': '{count} από {total} τρεξίματα',
+  'history.viewLabel': 'Προβολή ιστορικού',
+  'history.filtersLabel': 'Γρήγορα φίλτρα',
+  'history.filter.all': 'Όλα',
+  'history.range.all': 'Όλος ο χρόνος',
+  'history.range.week': 'Αυτή την εβδομάδα',
+  'history.range.month': 'Αυτόν τον μήνα',
+  'history.range.year': 'Φέτος',
+  'history.extra.all': 'Οτιδήποτε',
+  'history.extra.hr': 'Καρδιακοί παλμοί',
+  'history.extra.workout': 'Προπόνηση',
+  'history.extra.goal': 'Είχε στόχο',
+  'history.group.week': 'Ανά εβδομάδα',
+  'history.group.month': 'Ανά μήνα',
+  'history.group.none': 'Απλή λίστα',
+  'history.group.whenLabel': 'Πότε',
+  'history.group.withLabel': 'Με',
+  'run.outdoor': 'Έξω',
+  'run.treadmill': 'Διάδρομος',
 };

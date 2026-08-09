@@ -14,7 +14,7 @@ import {
 } from '../core/stats';
 import { distanceLabel, formatDistance, formatDuration, formatPace, paceLabel } from '../core/units';
 import { WeeklyBars } from './charts';
-import { useTipText } from '../i18n/react';
+import { useT, useTipText } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -23,6 +23,7 @@ interface Props {
 }
 
 export function StatsScreen({ activities, profile, onOpen }: Props) {
+  const t = useT();
   const tipText = useTipText();
   const now = Date.now();
   const weekStart = startOfWeek(now);
@@ -48,16 +49,19 @@ export function StatsScreen({ activities, profile, onOpen }: Props) {
 
   return (
     <div className="screen">
-      <h1>Dashboard</h1>
+      <h1>{t('stats.title')}</h1>
       <p className="subtitle">
-        {allTime.runs} run{allTime.runs === 1 ? '' : 's'} ·{' '}
-        {formatDistance(allTime.distanceM, profile.units, 1)} {distanceLabel(profile.units)} all
-        time
-        {streak > 0 && ` · ${streak}-day streak`}
+        {t('stats.subtitle', {
+          runs: allTime.runs,
+          count: allTime.runs,
+          distance: formatDistance(allTime.distanceM, profile.units, 1),
+          unit: distanceLabel(profile.units),
+        })}
+        {streak > 0 && ` · ${t('stats.streak', { count: streak })}`}
       </p>
 
       <div className="card">
-        <h2>This week</h2>
+        <h2>{t('stats.thisWeek')}</h2>
         <div className="metric-grid">
           <div className="metric">
             <div className="value">{formatDistance(thisWeek.distanceM, profile.units, 1)}</div>
@@ -65,7 +69,7 @@ export function StatsScreen({ activities, profile, onOpen }: Props) {
           </div>
           <div className="metric">
             <div className="value">{formatDuration(thisWeek.durationMs)}</div>
-            <div className="label">Time</div>
+            <div className="label">{t('stats.time')}</div>
           </div>
           <div className="metric">
             <div className="value">{formatPace(thisWeek.paceSecondsPerUnit)}</div>
@@ -77,7 +81,7 @@ export function StatsScreen({ activities, profile, onOpen }: Props) {
           <>
             <div className="zone-row" style={{ marginTop: 16, marginBottom: 4 }}>
               <span className="name" style={{ width: 'auto' }}>
-                Goal
+                {t('stats.goal')}
               </span>
               <span className="track">
                 <span style={{ width: `${goalShare * 100}%`, background: 'var(--accent)' }} />
@@ -85,32 +89,31 @@ export function StatsScreen({ activities, profile, onOpen }: Props) {
               <span className="time">{Math.round(goalShare * 100)}%</span>
             </div>
             <p className="hint">
-              {formatDistance(thisWeek.distanceM, profile.units, 1)} of{' '}
-              {formatDistance(profile.weeklyGoalM, profile.units, 1)}{' '}
-              {distanceLabel(profile.units)} this week
+              {t('stats.goalProgress', {
+                distance: formatDistance(thisWeek.distanceM, profile.units, 1),
+                goal: formatDistance(profile.weeklyGoalM, profile.units, 1),
+                unit: distanceLabel(profile.units),
+              })}
             </p>
           </>
         )}
       </div>
 
       <div className="card">
-        <h2>Last 12 weeks</h2>
+        <h2>{t('stats.last12')}</h2>
         <WeeklyBars weeks={weeks} units={profile.units} />
       </div>
 
       <div className="card">
-        <h2>Personal records</h2>
+        <h2>{t('stats.records')}</h2>
         {records.every((r) => r.durationMs === null) ? (
-          <p className="hint">
-            Records come from GPS runs — the fastest continuous stretch inside any run, so a quick
-            5 km buried in a longer one still counts.
-          </p>
+          <p className="hint">{t('stats.recordsHint')}</p>
         ) : (
           records
             .filter((record) => record.durationMs !== null)
             .map((record) => (
               <div className="row" key={record.label}>
-                <span>{record.label}</span>
+                <span>{t(record.label)}</span>
                 <span style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <strong>{formatDuration(record.durationMs!)}</strong>
                   {record.activityId && (
@@ -130,7 +133,7 @@ export function StatsScreen({ activities, profile, onOpen }: Props) {
 
       {tips.length > 0 && (
         <div className="card">
-          <h2>Coach</h2>
+          <h2>{t('app.tab.coach')}</h2>
           {tips.map((tip, i) => (
             <div className={`tip ${tip.tone}`} key={i}>
               <div className="title">{tipText(tip).title}</div>

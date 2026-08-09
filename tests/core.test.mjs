@@ -839,11 +839,11 @@ check('personal records come from efforts inside runs', () => {
   const slow = activityFrom([straightTrack({ points: 151, stepM: 20, secondsPerPoint: 9 })]);
   const records = personalRecords([{ ...slow, id: 'slow' }, { ...fast, id: 'fast' }]);
 
-  const oneK = records.find((r) => r.label === '1 km');
+  const oneK = records.find((r) => r.label === 'record.1km');
   near(oneK.durationMs / 1000, 300, 2, 'best kilometre');
   equal(oneK.activityId, 'fast', 'credited to the fast run');
 
-  const marathon = records.find((r) => r.label === 'Marathon');
+  const marathon = records.find((r) => r.label === 'record.marathon');
   equal(marathon.durationMs, null, 'never run one');
 });
 
@@ -857,7 +857,7 @@ check('treadmill runs do not set route records', () => {
     durationMs: 1_000_000,
   };
   const records = personalRecords([treadmill]);
-  equal(records.find((r) => r.label === '5 km').durationMs, null);
+  equal(records.find((r) => r.label === 'record.5km').durationMs, null);
 });
 
 check('totals weight pace by distance', () => {

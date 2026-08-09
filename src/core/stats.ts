@@ -2,6 +2,8 @@
  * The dashboard's arithmetic: totals, weeks, and records.
  */
 
+import type { MessageKey } from '../i18n';
+
 import { bestEffort, type Activity } from './activity';
 import { paceSecondsPerUnit, type UnitSystem } from './units';
 
@@ -90,7 +92,7 @@ export function weeklyBuckets(
 }
 
 export interface Record {
-  label: string;
+  label: MessageKey;
   distanceM: number;
   /** Best time in ms, or null when no run has covered the distance. */
   durationMs: number | null;
@@ -98,13 +100,13 @@ export interface Record {
 }
 
 /** The distances worth having a record for. */
-export const RECORD_DISTANCES: Array<{ label: string; metres: number }> = [
-  { label: '1 km', metres: 1000 },
-  { label: '1 mile', metres: 1609.344 },
-  { label: '5 km', metres: 5000 },
-  { label: '10 km', metres: 10000 },
-  { label: 'Half marathon', metres: 21097.5 },
-  { label: 'Marathon', metres: 42195 },
+export const RECORD_DISTANCES: Array<{ label: MessageKey; metres: number }> = [
+  { label: 'record.1km', metres: 1000 },
+  { label: 'record.1mile', metres: 1609.344 },
+  { label: 'record.5km', metres: 5000 },
+  { label: 'record.10km', metres: 10000 },
+  { label: 'record.half', metres: 21097.5 },
+  { label: 'record.marathon', metres: 42195 },
 ];
 
 /**

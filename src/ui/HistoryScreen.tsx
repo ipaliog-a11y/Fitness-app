@@ -40,7 +40,7 @@ import {
   paceLabel,
 } from '../core/units';
 import { toDisplayWeight, weightUnitLabel } from '../core/weight';
-import { useT } from '../i18n/react';
+import { useLocale, useT } from '../i18n/react';
 
 interface Props {
   activities: Activity[];
@@ -383,6 +383,8 @@ function CalendarView({
 }
 
 export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: Props) {
+  const t = useT();
+  const { tag } = useLocale();
   const [view, setView] = useState<ViewMode>('list');
   const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
   const [moreFilters, setMoreFilters] = useState(false);
@@ -400,7 +402,7 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
     setFilters((f) => ({ ...f, [key]: value }));
 
   const name = (profile.displayName ?? '').trim();
-  const title = name ? `${name}'s runs` : 'History';
+  const title = name ? t('history.titleNamed', { name }) : t('history.title');
   const hasPlan = loadPlanEvents().length > 0;
 
   const monthCount = useMemo(() => {
@@ -412,14 +414,14 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
 
   const subtitle =
     view === 'calendar'
-      ? new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+      ? new Date().toLocaleDateString(tag, { month: 'long', year: 'numeric' })
       : activities.length === 0
-        ? 'No runs yet'
+        ? t('history.noRuns')
         : filtered.length === activities.length
           ? monthCount > 0
-            ? `${monthCount} run${monthCount === 1 ? '' : 's'} this month`
-            : `${activities.length} run${activities.length === 1 ? '' : 's'}`
-          : `${filtered.length} of ${activities.length} runs`;
+            ? t('history.runsThisMonth', { count: monthCount })
+            : t('history.runsTotal', { count: activities.length })
+          : t('history.runsFiltered', { count: filtered.length, total: activities.length });
 
   const quickAll = filters.mode === 'all' && filters.range === 'all' && filters.extra === 'all';
   const filtersDirty =
@@ -432,7 +434,7 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
           <h1>{title}</h1>
           <p className="subtitle">{subtitle}</p>
         </div>
-        <div className="view-toggle-compact" role="group" aria-label="History view">
+        <div className="view-toggle-compact" role="group" aria-label={t('history.viewLabel')}>
           <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
             List
           </button>
@@ -475,7 +477,7 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
         </div>
       ) : (
         <>
-          <div className="filter-bar" role="toolbar" aria-label="Quick filters">
+          <div className="filter-bar" role="toolbar" aria-label={t('history.filtersLabel')}>
             <button
               type="button"
               className={`chip${quickAll ? ' active' : ''}`}
@@ -519,31 +521,31 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
                 value={filters.mode}
                 onChange={(v) => set('mode', v)}
                 options={[
-                  { id: 'all', label: 'All' },
-                  { id: 'outdoor', label: 'Outdoor' },
-                  { id: 'treadmill', label: 'Treadmill' },
+                  { id: 'all', label: t('history.filter.all') },
+                  { id: 'outdoor', label: t('run.outdoor') },
+                  { id: 'treadmill', label: t('run.treadmill') },
                 ]}
               />
               <ChipRow<HistoryRangeFilter>
-                label="When"
+                label={t('history.group.whenLabel')}
                 value={filters.range}
                 onChange={(v) => set('range', v)}
                 options={[
-                  { id: 'all', label: 'All time' },
-                  { id: 'week', label: 'This week' },
-                  { id: 'month', label: 'This month' },
-                  { id: 'year', label: 'This year' },
+                  { id: 'all', label: t('history.range.all') },
+                  { id: 'week', label: t('history.range.week') },
+                  { id: 'month', label: t('history.range.month') },
+                  { id: 'year', label: t('history.range.year') },
                 ]}
               />
               <ChipRow<HistoryExtraFilter>
-                label="With"
+                label={t('history.group.withLabel')}
                 value={filters.extra}
                 onChange={(v) => set('extra', v)}
                 options={[
-                  { id: 'all', label: 'Anything' },
-                  { id: 'hr', label: 'Heart rate' },
-                  { id: 'workout', label: 'Workout' },
-                  { id: 'goal', label: 'Had a goal' },
+                  { id: 'all', label: t('history.extra.all') },
+                  { id: 'hr', label: t('history.extra.hr') },
+                  { id: 'workout', label: t('history.extra.workout') },
+                  { id: 'goal', label: t('history.extra.goal') },
                 ]}
               />
               <ChipRow<HistoryGroupBy>
@@ -551,9 +553,9 @@ export function HistoryScreen({ activities, profile, onOpen, weightTick = 0 }: P
                 value={filters.groupBy}
                 onChange={(v) => set('groupBy', v)}
                 options={[
-                  { id: 'week', label: 'By week' },
-                  { id: 'month', label: 'By month' },
-                  { id: 'none', label: 'Flat list' },
+                  { id: 'week', label: t('history.group.week') },
+                  { id: 'month', label: t('history.group.month') },
+                  { id: 'none', label: t('history.group.none') },
                 ]}
               />
               {filtersDirty && (
