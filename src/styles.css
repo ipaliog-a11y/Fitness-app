@@ -2007,6 +2007,22 @@ button.cal-event {
   border-color: transparent;
 }
 
+/*
+ * On/Off (and similar) toggles: when pressed=true the control is clearly "on"
+ * so it is not confused with a neutral Off button.
+ */
+.btn[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink, #06210f);
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.btn[aria-pressed='false'] {
+  opacity: 0.85;
+}
+
 .btn.danger {
   background: transparent;
   color: var(--danger);
@@ -2028,6 +2044,19 @@ button.cal-event {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 13px;
+}
+
+[data-theme='hud'] .btn[aria-pressed='true'] {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+[data-theme='day'] .btn[aria-pressed='true'] {
+  /* Accent ink on white themes is dark enough for On labels. */
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .btn.wide {

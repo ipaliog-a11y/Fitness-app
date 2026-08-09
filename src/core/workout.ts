@@ -20,6 +20,56 @@ export interface WorkoutPhase {
   target: PhaseTarget;
 }
 
+/** Picker categories for built-in presets. */
+export type WorkoutGroupId =
+  | 'easy'
+  | 'walk-run'
+  | 'recovery'
+  | 'mixed'
+  | 'tempo'
+  | 'speed';
+
+export interface WorkoutGroup {
+  id: WorkoutGroupId;
+  name: string;
+  /** Short line on the group tile. */
+  blurb: string;
+}
+
+/** Six distinctive groups for the workout picker. */
+export const WORKOUT_GROUPS: WorkoutGroup[] = [
+  {
+    id: 'easy',
+    name: 'Easy & base',
+    blurb: 'Conversational runs that build endurance without much fatigue.',
+  },
+  {
+    id: 'walk-run',
+    name: 'Walk / run',
+    blurb: 'Alternating run and walk — safe progression for new runners.',
+  },
+  {
+    id: 'recovery',
+    name: 'Recovery + strides',
+    blurb: 'Easy volume with short pickups for form and feel.',
+  },
+  {
+    id: 'mixed',
+    name: 'Fartlek & mixed',
+    blurb: 'Surges, ladders, and progressive efforts — quality without a track.',
+  },
+  {
+    id: 'tempo',
+    name: 'Tempo & threshold',
+    blurb: 'Comfortably hard pace work for race-day strength.',
+  },
+  {
+    id: 'speed',
+    name: 'Speed, hills & VO₂',
+    blurb: 'Short hard efforts for power, speed, and max aerobic capacity.',
+  },
+];
+
 export interface WorkoutTemplate {
   id: string;
   name: string;
@@ -28,6 +78,8 @@ export interface WorkoutTemplate {
   phases: WorkoutPhase[];
   /** Picker effort 1–5 (explicit on presets; else derived). */
   effort?: number;
+  /** Built-in category; custom/saved omit this. */
+  group?: WorkoutGroupId;
 }
 
 /** Compact recipe used to build presets. */
@@ -35,6 +87,8 @@ export interface WorkoutRecipe {
   id: string;
   name: string;
   blurb: string;
+  /** Built-in category; omit for custom intervals. */
+  group?: WorkoutGroupId;
   /** Display / sort effort 1 (easiest) … 5 (hardest). Optional for custom. */
   effort?: number;
   steps: Array<
@@ -95,6 +149,7 @@ export function expandRecipe(recipe: WorkoutRecipe): WorkoutTemplate {
     blurb: recipe.blurb,
     phases,
     effort: recipe.effort,
+    group: recipe.group,
   };
 }
 
@@ -106,11 +161,13 @@ const sec = (n: number) => n * 1_000;
  * (easy → hard). New templates should be added here, not hand-ordered.
  */
 const WORKOUT_RECIPES: WorkoutRecipe[] = [
-  // --- Easy / recovery -------------------------------------------------
+  // --- Easy & base -----------------------------------------------------
   {
     id: 'easy-30',
     name: 'Easy 30',
-    blurb: 'Continuous easy effort with bookends.',
+    group: 'easy',
+    blurb:
+      'Short easy run. Builds aerobic base and habit with low injury risk — most training should feel this easy.',
     effort: 1,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -121,7 +178,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'easy-40',
     name: 'Easy 40',
-    blurb: 'Conversational aerobic base — longer easy block.',
+    group: 'easy',
+    blurb:
+      'Longer conversational run. More time on feet for endurance without hard stress — great base day.',
     effort: 1,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -132,7 +191,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'long-easy-45',
     name: 'Long easy 45',
-    blurb: 'Steady volume builder.',
+    group: 'easy',
+    blurb:
+      'Mid-length long run. Improves durability and fat-burning comfort at easy pace — weekly cornerstone.',
     effort: 1,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -143,7 +204,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'long-easy-60',
     name: 'Long easy 60',
-    blurb: 'Hour of easy volume for endurance base.',
+    group: 'easy',
+    blurb:
+      'Hour of easy volume. Builds deep aerobic endurance and mental ease with long duration — when 45 min feels short.',
     effort: 2,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -151,28 +214,13 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
     ],
   },
-  {
-    id: 'recovery-strides',
-    name: 'Recovery + strides',
-    blurb: 'Easy run with 6 short form strides (20 s).',
-    effort: 2,
-    steps: [
-      { kind: 'warmup', label: 'Easy warm-up', timeMs: min(10) },
-      { kind: 'steady', label: 'Easy', timeMs: min(15) },
-      {
-        kind: 'repeat',
-        times: 6,
-        work: { label: 'Stride', timeMs: sec(20) },
-        rest: { label: 'Walk', timeMs: sec(40) },
-      },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
-    ],
-  },
-  // --- Walk/run progression --------------------------------------------
+  // --- Walk / run ------------------------------------------------------
   {
     id: 'beginner-walk-run',
     name: 'Beginner walk/run',
-    blurb: '8 × 1 min run / 90 s walk — classic starter.',
+    group: 'walk-run',
+    blurb:
+      '8 × 1 min run / 90 s walk. Classic starter — builds run time safely and lowers overload risk for new runners.',
     effort: 2,
     steps: [
       { kind: 'warmup', label: 'Warm-up walk', timeMs: min(5) },
@@ -188,7 +236,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'walk-run-2-1',
     name: 'Walk/run 2–1',
-    blurb: '6 × 2 min run / 1 min walk.',
+    group: 'walk-run',
+    blurb:
+      '6 × 2 min run / 1 min walk. Next step after short bouts — more continuous running with still-easy recoveries.',
     effort: 2,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -204,7 +254,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'walk-run-3-1',
     name: 'Walk/run 3–1',
-    blurb: '5 × 3 min run / 1 min walk — next step up.',
+    group: 'walk-run',
+    blurb:
+      '5 × 3 min run / 1 min walk. Bridge toward continuous easy runs while keeping walk breaks for recovery.',
     effort: 3,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -217,11 +269,33 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
     ],
   },
-  // --- Aerobic quality / progressive -----------------------------------
+  // --- Recovery + strides ----------------------------------------------
+  {
+    id: 'recovery-strides',
+    name: 'Recovery + strides',
+    group: 'recovery',
+    blurb:
+      'Easy run plus 6 × 20 s form strides. Active recovery with a little speed and technique — ideal day after hard work.',
+    effort: 2,
+    steps: [
+      { kind: 'warmup', label: 'Easy warm-up', timeMs: min(10) },
+      { kind: 'steady', label: 'Easy', timeMs: min(15) },
+      {
+        kind: 'repeat',
+        times: 6,
+        work: { label: 'Stride', timeMs: sec(20) },
+        rest: { label: 'Walk', timeMs: sec(40) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+    ],
+  },
+  // --- Fartlek & mixed -------------------------------------------------
   {
     id: 'progressive-35',
     name: 'Progressive 35',
-    blurb: 'Easy → steady → strong finish (builds without intervals).',
+    group: 'mixed',
+    blurb:
+      'Easy → steady → strong finish. Teaches pace control and late-run toughness without full track intervals.',
     effort: 3,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -234,7 +308,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'fartlek-20',
     name: 'Fartlek 20',
-    blurb: 'Playful surges: 1 hard / 1 easy, ten times.',
+    group: 'mixed',
+    blurb:
+      '10 × 1 min hard / 1 min easy. Playful speed + aerobic mix — fun quality without rigid track pacing.',
     effort: 3,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
@@ -250,7 +326,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'ladder-fartlek',
     name: 'Ladder 5–4–3–2–1',
-    blurb: 'Descending hard blocks with equal easy recovery.',
+    group: 'mixed',
+    blurb:
+      'Descending hard blocks with equal easy recovery. Sustained effort then sharper finish — strong quality session.',
     effort: 4,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
@@ -269,7 +347,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'mona-fartlek',
     name: 'Mona fartlek',
-    blurb: '2×90 s, 4×60 s, 4×30 s, 4×15 s hard / equal float.',
+    group: 'mixed',
+    blurb:
+      '2×90 s, 4×60 s, 4×30 s, 4×15 s hard with equal float. Classic speed-play — neuromuscular snap plus aerobic stress.',
     effort: 4,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
@@ -300,52 +380,12 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
     ],
   },
-  // --- Threshold / tempo -----------------------------------------------
-  {
-    id: 'tempo-20',
-    name: 'Tempo 20',
-    blurb: 'Comfortably hard middle block.',
-    effort: 4,
-    steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
-      { kind: 'work', label: 'Tempo', timeMs: min(20) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
-    ],
-  },
-  {
-    id: 'cruise-5x5',
-    name: 'Cruise 5 × 5',
-    blurb: 'Threshold intervals with short 1 min recoveries.',
-    effort: 4,
-    steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
-      {
-        kind: 'repeat',
-        times: 5,
-        work: { label: 'Cruise', timeMs: min(5) },
-        rest: { label: 'Easy', timeMs: min(1) },
-      },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
-    ],
-  },
-  {
-    id: 'double-tempo',
-    name: 'Double tempo 2 × 12',
-    blurb: 'Two threshold blocks with a 3 min jog between.',
-    effort: 4,
-    steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
-      { kind: 'work', label: 'Tempo 1', timeMs: min(12) },
-      { kind: 'rest', label: 'Easy jog', timeMs: min(3) },
-      { kind: 'work', label: 'Tempo 2', timeMs: min(12) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
-    ],
-  },
-  // --- Speed / hills / VO2 ---------------------------------------------
   {
     id: 'pyramid',
     name: 'Pyramid 1–2–3–2–1',
-    blurb: 'Climb and descend the minutes.',
+    group: 'mixed',
+    blurb:
+      'Climb then descend hard minutes. Mixes short and mid efforts for variety and general fitness quality.',
     effort: 4,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(8) },
@@ -361,10 +401,60 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
       { kind: 'cooldown', label: 'Cool-down', timeMs: min(8) },
     ],
   },
+  // --- Tempo & threshold -----------------------------------------------
+  {
+    id: 'tempo-20',
+    name: 'Tempo 20',
+    group: 'tempo',
+    blurb:
+      '20 min comfortably hard. Classic threshold work — raises the pace you can hold and toughens race feel (10K–HM).',
+    effort: 4,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'work', label: 'Tempo', timeMs: min(20) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  {
+    id: 'cruise-5x5',
+    name: 'Cruise 5 × 5',
+    group: 'tempo',
+    blurb:
+      '5 × 5 min threshold with 1 min easy. More total threshold time than one long tempo, with short resets between.',
+    effort: 4,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      {
+        kind: 'repeat',
+        times: 5,
+        work: { label: 'Cruise', timeMs: min(5) },
+        rest: { label: 'Easy', timeMs: min(1) },
+      },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  {
+    id: 'double-tempo',
+    name: 'Double tempo 2 × 12',
+    group: 'tempo',
+    blurb:
+      'Two 12 min threshold blocks with a 3 min jog. Same goal as tempo, often easier to complete with a short break.',
+    effort: 4,
+    steps: [
+      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'work', label: 'Tempo 1', timeMs: min(12) },
+      { kind: 'rest', label: 'Easy jog', timeMs: min(3) },
+      { kind: 'work', label: 'Tempo 2', timeMs: min(12) },
+      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+    ],
+  },
+  // --- Speed, hills & VO2 ----------------------------------------------
   {
     id: 'hill-8x45',
     name: 'Hills 8 × 45 s',
-    blurb: 'Hard uphill efforts, easy down / recover (or flat power).',
+    group: 'speed',
+    blurb:
+      '8 × 45 s hard up (or flat drive) / 90 s easy. Strength, form, and power without pure track speed — great for hills or “power” days.',
     effort: 4,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
@@ -380,7 +470,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: '400-repeats',
     name: '6 × 400 m',
-    blurb: 'Speed work with 90 s recoveries (distance-based).',
+    group: 'speed',
+    blurb:
+      'Short fast reps with 90 s recoveries. Builds leg speed, economy, and anaerobic snap — classic 5K speed work.',
     effort: 5,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
@@ -396,7 +488,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: '800-repeats',
     name: '5 × 800 m',
-    blurb: 'Classic track intervals, 2 min recoveries.',
+    group: 'speed',
+    blurb:
+      'Classic mid-distance track intervals, 2 min recoveries. VO₂ and pace control around 3–5K effort — race prep staple.',
     effort: 5,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
@@ -412,7 +506,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'vo2-3min',
     name: '5 × 3 min',
-    blurb: 'Hard 3-minute efforts, equal rest.',
+    group: 'speed',
+    blurb:
+      'Hard 3 min with equal easy rest. Targets max aerobic capacity (VO₂) — high-quality fitness builder.',
     effort: 5,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
@@ -428,7 +524,9 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'vo2-4x4',
     name: '4 × 4 min',
-    blurb: 'Classic VO₂ intervals — hard with equal easy recovery.',
+    group: 'speed',
+    blurb:
+      'Classic 4×4 VO₂ intervals with equal recovery. Strong stimulus for aerobic max — best when you already have a base.',
     effort: 5,
     steps: [
       { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
@@ -443,11 +541,25 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   },
 ];
 
-/** Built-in presets — sorted easiest → hardest for the workout picker. */
+/** Built-in presets — sorted easiest → hardest within the full list. */
 export let WORKOUT_PRESETS: WorkoutTemplate[] = WORKOUT_RECIPES.map(expandRecipe);
 
 export function workoutById(id: string): WorkoutTemplate | null {
   return WORKOUT_PRESETS.find((w) => w.id === id) ?? null;
+}
+
+export function workoutGroupById(id: WorkoutGroupId): WorkoutGroup | null {
+  return WORKOUT_GROUPS.find((g) => g.id === id) ?? null;
+}
+
+/** Presets in a group, easiest first. */
+export function workoutsInGroup(groupId: WorkoutGroupId): WorkoutTemplate[] {
+  return WORKOUT_PRESETS.filter((w) => w.group === groupId).sort((a, b) => {
+    const ea = workoutEffortLevel(a);
+    const eb = workoutEffortLevel(b);
+    if (ea !== eb) return ea - eb;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 export function phaseKindLabel(kind: PhaseKind): string {

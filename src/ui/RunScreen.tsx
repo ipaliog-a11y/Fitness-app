@@ -75,15 +75,19 @@ import {
   type SavedWorkout,
 } from '../core/savedWorkouts';
 import {
+  WORKOUT_GROUPS,
   WORKOUT_PRESETS,
   WorkoutRunner,
   customIntervals,
   phaseKindLabel,
   phaseVisualWeight,
   workoutEffortLevel,
+  workoutGroupById,
   workoutTimeMs,
+  workoutsInGroup,
   workoutWorkCount,
   type PhaseKind,
+  type WorkoutGroupId,
   type WorkoutPhase,
   type WorkoutTemplate,
 } from '../core/workout';
@@ -230,8 +234,10 @@ export function RunScreen({
   const [workoutId, setWorkoutId] = useState<string>('none');
   /** Dedicated workout tile picker (replaces the old <select>). */
   const [workoutPickerOpen, setWorkoutPickerOpen] = useState(false);
-  /** Main grid vs My Workouts list. */
-  const [workoutPickerView, setWorkoutPickerView] = useState<'main' | 'mine'>('main');
+  /** Main grid, My Workouts, or a preset group list. */
+  const [workoutPickerView, setWorkoutPickerView] = useState<'main' | 'mine' | WorkoutGroupId>(
+    'main',
+  );
   const [myWorkouts, setMyWorkouts] = useState<SavedWorkout[]>(() => loadSavedWorkouts());
   const [customWork, setCustomWork] = useState('3');
   const [customRest, setCustomRest] = useState('2');
@@ -735,12 +741,11 @@ export function RunScreen({
     if (!backHandlerRef) return;
     backHandlerRef.current = () => {
       if (workoutPickerOpen) {
-        if (workoutPickerView === 'mine') {
+        if (workoutPickerView !== 'main') {
           setWorkoutPickerView('main');
           return true;
         }
         setWorkoutPickerOpen(false);
-        setWorkoutPickerView('main');
         return true;
       }
       const sess = sessionRef.current;
@@ -893,6 +898,10 @@ export function RunScreen({
   if (!session && !arming && workoutPickerOpen) {
     const freeSelected = workoutId === 'none';
     const customSelected = workoutId === 'custom';
+    const openGroup =
+      workoutPickerView !== 'main' && workoutPickerView !== 'mine'
+        ? workoutGroupById(workoutPickerView)
+        : null;
 
     if (workoutPickerView === 'mine') {
       return (
@@ -961,6 +970,49 @@ export function RunScreen({
       );
     }
 
+    if (openGroup) {
+      const list = workoutsInGroup(openGroup.id);
+      return (
+        <div className="screen workout-picker-screen">
+          <button
+            type="button"
+            className="back"
+            onClick={() => setWorkoutPickerView('main')}
+          >
+            ‹ Workouts
+          </button>
+          <h1>{openGroup.name}</h1>
+          <p className="subtitle">{openGroup.blurb}</p>
+          <div className="workout-tile-grid">
+            {list.map((w) => {
+              const selected = workoutId === w.id;
+              return (
+                <button
+                  key={w.id}
+                  type="button"
+                  className={`workout-tile${selected ? ' selected' : ''}`}
+                  onClick={() => {
+                    setWorkoutId(w.id);
+                    setWorkoutPickerOpen(false);
+                    setWorkoutPickerView('main');
+                    onToast(`Workout: ${w.name}`);
+                  }}
+                >
+                  <div className="workout-tile-top">
+                    <span className="workout-tile-name">{w.name}</span>
+                    <EffortDots level={workoutEffortLevel(w)} />
+                  </div>
+                  <WorkoutIntervalStrip phases={w.phases} />
+                  <p className="workout-tile-blurb">{w.blurb}</p>
+                  <span className="workout-tile-meta">{workoutTileMeta(w)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="screen workout-picker-screen">
         <button
@@ -974,7 +1026,9 @@ export function RunScreen({
           ‹ Back
         </button>
         <h1>Workout</h1>
-        <p className="subtitle">Choose a structure — each tile shows effort and intervals</p>
+        <p className="subtitle">
+          Free run, your saves, or open a group — each preset lists purpose and benefits
+        </p>
 
         <div className="workout-tile-grid">
           <button
@@ -1027,25 +1081,30 @@ export function RunScreen({
             </span>
           </button>
 
-          {WORKOUT_PRESETS.map((w) => {
-            const selected = workoutId === w.id;
+          {WORKOUT_GROUPS.map((g) => {
+            const list = workoutsInGroup(g.id);
+            const selectedHere = list.some((w) => w.id === workoutId);
+            const preview = list[0];
             return (
               <button
-                key={w.id}
+                key={g.id}
                 type="button"
-                className={`workout-tile${selected ? ' selected' : ''}`}
-                onClick={() => {
-                  setWorkoutId(w.id);
-                  setWorkoutPickerOpen(false);
-                }}
+                className={`workout-tile${selectedHere ? ' selected' : ''}`}
+                onClick={() => setWorkoutPickerView(g.id)}
               >
                 <div className="workout-tile-top">
-                  <span className="workout-tile-name">{w.name}</span>
-                  <EffortDots level={workoutEffortLevel(w)} />
+                  <span className="workout-tile-name">{g.name}</span>
+                  <span className="workout-tile-badge">{list.length}</span>
                 </div>
-                <WorkoutIntervalStrip phases={w.phases} />
-                <p className="workout-tile-blurb">{w.blurb}</p>
-                <span className="workout-tile-meta">{workoutTileMeta(w)}</span>
+                {preview ? (
+                  <WorkoutIntervalStrip phases={preview.phases} />
+                ) : (
+                  <WorkoutIntervalStrip
+                    phases={[{ kind: 'steady', label: '—', target: { type: 'time', ms: 1 } }]}
+                  />
+                )}
+                <p className="workout-tile-blurb">{g.blurb}</p>
+                <span className="workout-tile-meta">Open group ›</span>
               </button>
             );
           })}
