@@ -479,7 +479,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           />
           <p className="hint">
             {profile.footpodCalibration === 1
-              ? 'No correction — the pod is believed as-is. Finish a treadmill run with the console distance typed in and this sets itself.'
+              ? t('settings.footpod.hint')
               : `The pod reads ${(
                   (1 / profile.footpodCalibration - 1) * 100
                 ).toFixed(1)}% off; distances are corrected by ${(
@@ -530,9 +530,9 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
       </div>
 
       <div className="card">
-        <h2>Health Connect</h2>
+        <h2>{t('settings.hc.title')}</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          Pull runs that <strong>Samsung Health</strong> (or other apps) has shared into Health
+          Pull runs that <strong>{t('settings.hc.samsung')}</strong> (or other apps) has shared into Health
           Connect. Choose a date range, scan, then tick which sessions to import. Routes may be
           empty if only session totals were shared.
         </p>
@@ -587,7 +587,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           disabled={healthImporting}
           onClick={() => void scanHealth()}
         >
-          {healthImporting ? 'Scanning…' : 'Scan Health Connect'}
+          {healthImporting ? t('settings.hc.scanning') : t('settings.hc.scan')}
         </button>
 
         {healthCandidates && healthCandidates.length > 0 && (
@@ -643,7 +643,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
               onClick={() => void importHealthSelected()}
             >
               {healthImporting
-                ? 'Importing…'
+                ? t('settings.hc.importing')
                 : `Import selected (${healthSelected.size})`}
             </button>
             <button
@@ -670,7 +670,7 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             Open Health Connect settings
           </button>
         ) : (
-          <p className="hint">Available in the installed Android app, not in the browser.</p>
+          <p className="hint">{t('settings.hc.androidNote')}</p>
         )}
       </div>
 

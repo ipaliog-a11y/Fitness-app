@@ -106,7 +106,7 @@ import {
 } from '../platform/liveRunNative';
 import { resolveMapBasemap } from '../core/mercator';
 import { RouteMap } from './RouteMap';
-import type { Translate } from '../i18n';
+import type { MessageKey, Translate } from '../i18n';
 import { useT, useWorkoutText } from '../i18n/react';
 
 interface Props {
@@ -128,20 +128,26 @@ interface Props {
   backHandlerRef?: { current: (() => boolean) | null };
 }
 
-function geoLabel(status: GeoStatus, detail?: string): string {
+/**
+ * Status as a key. The browser's own error text, when there is one, is more
+ * specific than anything here and stays untranslated on purpose — it comes
+ * from the platform, not from us, and paraphrasing it would lose the detail
+ * that makes it worth showing.
+ */
+function geoLabel(status: GeoStatus): MessageKey {
   switch (status) {
     case 'tracking':
-      return 'Ready';
+      return 'gps.ready';
     case 'acquiring':
-      return detail ?? 'Finding fix…';
+      return 'gps.finding';
     case 'denied':
-      return 'Permission denied';
+      return 'gps.denied';
     case 'unavailable':
-      return 'Unavailable';
+      return 'gps.unavailable';
     case 'error':
-      return detail ?? 'Error';
+      return 'gps.error';
     default:
-      return 'Idle';
+      return 'gps.idle';
   }
 }
 
@@ -583,7 +589,7 @@ export function RunScreen({
     const paceStr = `${formatPace(paceSec)} ${paceLabel(profile.units)}`;
     const timeStr = formatDuration(elapsedMs);
     const hrStr = bpm !== null ? `${bpm} bpm` : '';
-    const title = session.mode === 'treadmill' ? 'Treadmill' : 'Outdoor run';
+    const title = t(session.mode === 'treadmill' ? 'run.treadmill' : 'run.outdoorRun');
     const snapshot = {
       active: true,
       paused: session.state === 'paused',
@@ -692,7 +698,7 @@ export function RunScreen({
       if (event.type === 'goal_met') {
         setGoalFlash(true);
         pulse([80, 40, 80, 40, 120]);
-        onToast('Goal reached!');
+        onToast(t('run.goalReached'));
       }
       if (event.type === 'auto_paused') pulse(50);
       if (event.type === 'auto_resumed') pulse(30);
@@ -729,8 +735,8 @@ export function RunScreen({
       if (advanced > 0) {
         pulse([40, 30, 60]);
         if (runner.done) {
-          onToast('Workout complete');
-          if (profile.audioCues) speak('Workout complete.');
+          onToast(t('run.workoutComplete'));
+          if (profile.audioCues) speak('Workout complete.'); // voice stays English by decision
         } else {
           const phase = runner.current();
           if (phase && profile.audioCues) {
@@ -811,7 +817,7 @@ export function RunScreen({
         );
       } else {
         setMotionStatus('denied');
-        onToast('No motion sensor — type the distance in when you finish.');
+        onToast(t('run.noMotion'));
       }
     },
     [onToast, profile.strideM],
@@ -888,7 +894,7 @@ export function RunScreen({
     }
 
     void startLiveRunNotification({
-      title: current.mode === 'treadmill' ? 'Treadmill' : 'Outdoor run',
+      title: t(current.mode === 'treadmill' ? 'run.treadmill' : 'run.outdoorRun'),
       time: '0:00',
       distance: `0.00 ${distanceLabel(profile.units)}`,
       pace: `--:-- ${paceLabel(profile.units)}`,
@@ -1093,13 +1099,13 @@ export function RunScreen({
             className="back"
             onClick={() => setWorkoutPickerView('main')}
           >
-            ‹ Workouts
+            ‹ {t('run.workouts')}
           </button>
-          <h1>My Workouts</h1>
+          <h1>{t('run.myWorkouts')}</h1>
           <p className="subtitle">
             {myWorkouts.length === 0
-              ? 'Nothing saved yet — build one under Custom intervals'
-              : 'Your saved interval sessions'}
+              ? t('run.myWorkoutsEmpty')
+              : t('run.myWorkoutsSub')}
           </p>
           <div className="workout-tile-grid">
             {myWorkouts.map((w) => {
@@ -1141,7 +1147,7 @@ export function RunScreen({
                         setWorkoutId('none');
                         setCustomTemplate(null);
                       }
-                      onToast('Workout deleted');
+                      onToast(t('run.workoutDeleted'));
                     }}
                   >
                     Delete
@@ -1209,7 +1215,7 @@ export function RunScreen({
         >
           ‹ Back
         </button>
-        <h1>Workout</h1>
+        <h1>{t('run.workout')}</h1>
         <p className="subtitle">
           Free run, your saves, or open a group — each preset lists purpose and benefits
         </p>
@@ -1224,14 +1230,14 @@ export function RunScreen({
             }}
           >
             <div className="workout-tile-top">
-              <span className="workout-tile-name">Free run</span>
+              <span className="workout-tile-name">{t('run.freeRun')}</span>
               <EffortDots level={1} />
             </div>
             <WorkoutIntervalStrip
               phases={[{ kind: 'steady', label: 'phase.steady', target: { type: 'time', ms: 1 } }]}
             />
-            <p className="workout-tile-blurb">No structure — just start and go.</p>
-            <span className="workout-tile-meta">Open-ended</span>
+            <p className="workout-tile-blurb">{t('run.freeRunBlurb')}</p>
+            <span className="workout-tile-meta">{t('run.openEnded')}</span>
           </button>
 
           <button
@@ -1243,7 +1249,7 @@ export function RunScreen({
             }}
           >
             <div className="workout-tile-top">
-              <span className="workout-tile-name">My Workouts</span>
+              <span className="workout-tile-name">{t('run.myWorkouts')}</span>
               <span className="workout-tile-badge">{myWorkouts.length}</span>
             </div>
             <WorkoutIntervalStrip
@@ -1257,11 +1263,11 @@ export function RunScreen({
             />
             <p className="workout-tile-blurb">
               {myWorkouts.length === 0
-                ? 'Save custom intervals here for reuse.'
-                : 'Open your saved sessions.'}
+                ? t('run.myWorkoutsHintEmpty')
+                : t('run.myWorkoutsHint')}
             </p>
             <span className="workout-tile-meta">
-              {myWorkouts.length === 0 ? 'Empty' : `${myWorkouts.length} saved`} ›
+              {myWorkouts.length === 0 ? t('run.empty') : t('run.savedCount', { count: myWorkouts.length })} ›
             </span>
           </button>
 
@@ -1288,7 +1294,7 @@ export function RunScreen({
                   />
                 )}
                 <p className="workout-tile-blurb">{t(g.blurb)}</p>
-                <span className="workout-tile-meta">Open group ›</span>
+                <span className="workout-tile-meta">{t('run.openGroup')} ›</span>
               </button>
             );
           })}
@@ -1300,7 +1306,7 @@ export function RunScreen({
               onClick={() => setWorkoutId('custom')}
             >
               <div className="workout-tile-top">
-                <span className="workout-tile-name">Custom intervals</span>
+                <span className="workout-tile-name">{t('run.customIntervals')}</span>
                 <EffortDots
                   level={
                     customTemplate ? workoutEffortLevel(customTemplate) : 3
@@ -1323,14 +1329,14 @@ export function RunScreen({
                 {customTemplate ? workoutText(customTemplate).blurb : t('workout.customFallback')}
               </p>
               <span className="workout-tile-meta">
-                {customTemplate ? workoutTileMeta(customTemplate) : 'Tap to edit below'}
+                {customTemplate ? workoutTileMeta(customTemplate) : t('run.tapToEdit')}
               </span>
             </button>
 
             {(customSelected || workoutId === 'custom') && (
               <div className="custom-workout workout-tile-custom-form">
                 <div className="field">
-                  <label htmlFor="cw-name">Name (for Save)</label>
+                  <label htmlFor="cw-name">{t('run.custom.name')}</label>
                   <input
                     id="cw-name"
                     type="text"
@@ -1342,7 +1348,7 @@ export function RunScreen({
                 </div>
                 <div className="field-row">
                   <div className="field">
-                    <label htmlFor="cw-warm">Warm-up (min)</label>
+                    <label htmlFor="cw-warm">{t('run.custom.warm')}</label>
                     <input
                       id="cw-warm"
                       type="number"
@@ -1352,7 +1358,7 @@ export function RunScreen({
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="cw-cool">Cool-down (min)</label>
+                    <label htmlFor="cw-cool">{t('run.custom.cool')}</label>
                     <input
                       id="cw-cool"
                       type="number"
@@ -1364,7 +1370,7 @@ export function RunScreen({
                 </div>
                 <div className="field-row">
                   <div className="field">
-                    <label htmlFor="cw-work">Work (min)</label>
+                    <label htmlFor="cw-work">{t('run.custom.work')}</label>
                     <input
                       id="cw-work"
                       type="number"
@@ -1375,7 +1381,7 @@ export function RunScreen({
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="cw-rest">Rest (min)</label>
+                    <label htmlFor="cw-rest">{t('run.custom.rest')}</label>
                     <input
                       id="cw-rest"
                       type="number"
@@ -1386,7 +1392,7 @@ export function RunScreen({
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="cw-reps">Repeats</label>
+                    <label htmlFor="cw-reps">{t('run.custom.reps')}</label>
                     <input
                       id="cw-reps"
                       type="number"
@@ -1449,22 +1455,26 @@ export function RunScreen({
     const resolvedWorkout = selectedWorkout();
     const workoutSummary =
       workoutId === 'none'
-        ? 'Free run'
-        : resolvedWorkout?.name ??
-          (workoutId === 'custom' ? 'Custom intervals' : 'Workout');
+        ? t('run.freeRun')
+        : resolvedWorkout
+          ? workoutText(resolvedWorkout).name
+          : workoutId === 'custom'
+            ? t('run.customIntervals')
+            : t('run.workout');
     const workoutBlurb =
       workoutId === 'none'
-        ? 'No structure'
-        : resolvedWorkout?.blurb ?? '';
+        ? t('run.noStructure')
+        : resolvedWorkout
+          ? workoutText(resolvedWorkout).blurb
+          : '';
     const goalSummary =
       goalPick === 'none'
-        ? 'Free run'
+        ? t('run.freeRun')
         : resolveGoal()
           ? formatGoalTarget(resolveGoal()!, profile.units)
           : goalKindLabel(goalPick);
-    const shoeSummary =
-      activeShoes(shoes).find((s) => s.id === shoeId)?.name ??
-      (activeShoes(shoes).length === 0 ? 'None' : 'None');
+    // A shoe the athlete named, or "None" — the two branches were identical.
+    const shoeSummary = activeShoes(shoes).find((s) => s.id === shoeId)?.name ?? t('run.none');
     const selectedForStrip: WorkoutPhase[] | null =
       workoutId === 'none' ? null : resolvedWorkout?.phases ?? null;
 
@@ -1472,38 +1482,38 @@ export function RunScreen({
       <div className="screen run-idle">
         <div className="title-row">
           <div>
-            <h1>New run</h1>
-            <p className="subtitle">Local only · data stays on this device</p>
+            <h1>{t('run.newRun')}</h1>
+            <p className="subtitle">{t('run.localOnly')}</p>
           </div>
         </div>
 
         <div className="mode-switch" role="group" aria-label="Run mode">
           <button type="button" aria-pressed={mode === 'outdoor'} onClick={() => setMode('outdoor')}>
-            Outdoor
+            {t('run.outdoor')}
           </button>
           <button
             type="button"
             aria-pressed={mode === 'treadmill'}
             onClick={() => setMode('treadmill')}
           >
-            Treadmill
+            {t('run.treadmill')}
           </button>
         </div>
         <p className="mode-blurb">
           {mode === 'outdoor'
-            ? 'GPS tracks route, distance and pace.'
-            : 'Foot pod, step counting, or type the console distance in.'}
+            ? t('run.outdoorHint')
+            : t('run.treadmillHint')}
         </p>
 
         <div className="run-hero-start">
-          <span className="run-ready-pill">Ready when you are</span>
+          <span className="run-ready-pill">{t('run.readyWhenYouAre')}</span>
           <button type="button" className="start-control" onClick={arm}>
             <span className="start-control-face" aria-hidden />
-            <span className="start-control-label">{isHud ? 'GO' : 'START'}</span>
-            <span className="start-control-sub">{isHud ? 'Tap to arm' : 'Arm sensors'}</span>
+            <span className="start-control-label">{isHud ? t('run.go') : t('run.start')}</span>
+            <span className="start-control-sub">{isHud ? t('run.tapToArm') : t('run.armSensors')}</span>
           </button>
           <p className="hint run-hero-hint">
-            Arms GPS / sensors first — the clock starts on the next screen.
+            {mode === 'outdoor' ? t('run.armHint') : t('run.armHintTreadmill')}
           </p>
         </div>
 
@@ -1514,7 +1524,7 @@ export function RunScreen({
             aria-expanded={panelGoalOpen}
             onClick={() => setPanelGoalOpen((v) => !v)}
           >
-            <h2>Goal</h2>
+            <h2>{t('stats.goal')}</h2>
             <span className="setup-panel-summary">{goalSummary}</span>
             <span className="setup-panel-chev" aria-hidden>
               {panelGoalOpen ? '▾' : '▸'}
@@ -1525,10 +1535,10 @@ export function RunScreen({
               <div className="goal-kinds">
                 {(
                   [
-                    ['none', 'Free run'],
-                    ['distance', 'Distance'],
-                    ['time', 'Time'],
-                    ['calories', 'Calories'],
+                    ['none', t('run.freeRun')],
+                    ['distance', t('run.goal.distance')],
+                    ['time', t('stats.time')],
+                    ['calories', t('run.goal.calories')],
                   ] as const
                 ).map(([id, label]) => (
                   <button
@@ -1559,8 +1569,8 @@ export function RunScreen({
                       {goalPick === 'distance'
                         ? `Target (${distanceLabel(profile.units)})`
                         : goalPick === 'time'
-                          ? 'Target (minutes)'
-                          : 'Target (kcal)'}
+                          ? t('run.goal.targetMinutes')
+                          : t('run.goal.targetKcal')}
                     </label>
                     <input
                       id="run-goal"
@@ -1616,17 +1626,17 @@ export function RunScreen({
                       once you start.
                     </p>
                   ) : (
-                    <p className="hint">Enter a target above, or pick a preset.</p>
+                    <p className="hint">{t('run.goal.enterTarget')}</p>
                   )}
                 </>
               )}
 
               {goalPick === 'none' && (
-                <p className="hint">No target — just start and run. Calories are still estimated.</p>
+                <p className="hint">{t('run.goal.freeHint')}</p>
               )}
 
               <div className="field" style={{ marginTop: 14 }}>
-                <label htmlFor="pace-target">Target pace (optional)</label>
+                <label htmlFor="pace-target">{t('run.goal.targetPace')}</label>
                 <input
                   id="pace-target"
                   type="text"
@@ -1671,7 +1681,7 @@ export function RunScreen({
                   </p>
                 ) : (
                   <p className="hint">
-                    Optional pacing guide — independent of distance/time goals above.
+                    {t('run.goal.paceHint')}
                   </p>
                 )}
               </div>
@@ -1690,7 +1700,7 @@ export function RunScreen({
             }}
           >
             <div className="workout-open-btn-main">
-              <span className="workout-open-btn-label">Workout</span>
+              <span className="workout-open-btn-label">{t('run.workout')}</span>
               <span className="workout-open-btn-name">{workoutSummary}</span>
               {workoutBlurb && (
                 <span className="workout-open-btn-blurb">{workoutBlurb}</span>
@@ -1703,7 +1713,7 @@ export function RunScreen({
                 phases={[{ kind: 'steady', label: 'phase.steady', target: { type: 'time', ms: 1 } }]}
               />
             )}
-            <span className="workout-open-btn-cta">Choose workout ›</span>
+            <span className="workout-open-btn-cta">{t('run.chooseWorkout')} ›</span>
           </button>
         </div>
 
@@ -1714,13 +1724,13 @@ export function RunScreen({
             aria-expanded={panelGearOpen}
             onClick={() => setPanelGearOpen((v) => !v)}
           >
-            <h2>Route &amp; shoes</h2>
+            <h2>{t('run.routeShoes')}</h2>
             <span className="setup-panel-summary">
               {mode === 'outdoor' && routeId
-                ? routes.find((r) => r.id === routeId)?.name ?? 'Route'
+                ? routes.find((r) => r.id === routeId)?.name ?? t('run.route')
                 : mode === 'outdoor'
-                  ? 'No ghost route'
-                  : 'Treadmill'}
+                  ? t('run.noGhostRoute')
+                  : t('run.treadmill')}
               {' · '}
               {shoeSummary}
             </span>
@@ -1733,7 +1743,7 @@ export function RunScreen({
               {mode === 'outdoor' && routes.length > 0 && (
                 <>
                   <div className="kv-row" style={{ marginTop: 12 }}>
-                    <span className="kv-k">Ghost route</span>
+                    <span className="kv-k">{t('run.ghostRoute')}</span>
                     <span className="kv-v">
                       {routeId ? routes.find((r) => r.id === routeId)?.name ?? '—' : 'None'}
                     </span>
@@ -1753,7 +1763,7 @@ export function RunScreen({
                   </select>
                   {routeId && (
                     <div className="row" style={{ marginTop: 10 }}>
-                      <span>Reverse direction</span>
+                      <span>{t('run.reverseDirection')}</span>
                       <button
                         type="button"
                         className="btn"
@@ -1764,12 +1774,12 @@ export function RunScreen({
                       </button>
                     </div>
                   )}
-                  <p className="hint">Grey path under your live track — not turn-by-turn nav.</p>
+                  <p className="hint">{t('run.ghostHint')}</p>
                 </>
               )}
 
               <div className="kv-row" style={{ marginTop: 12 }}>
-                <span className="kv-k">Shoes</span>
+                <span className="kv-k">{t('profile.shoes.title')}</span>
                 <span className="kv-v">{shoeSummary}</span>
               </div>
               <p className="hint" style={{ marginBottom: 0 }}>
@@ -1780,7 +1790,7 @@ export function RunScreen({
         </div>
 
         <div className="card sensor-compact">
-          <h2>Sensors</h2>
+          <h2>{t('run.sensors')}</h2>
           <div className="sensor-chip-row sensor-chip-row-pair">
             <div className="sensor-chip-group">
               <button
@@ -1809,15 +1819,15 @@ export function RunScreen({
                   }
                 />
                 <span className="sensor-chip-text">
-                  <span className="sensor-chip-title">Foot pod</span>
+                  <span className="sensor-chip-title">{t('settings.footpod.title')}</span>
                   <span className="sensor-chip-status">
                     {podStatus === 'connected'
-                      ? podName ?? 'Connected'
+                      ? podName ?? t('run.sensor.connected')
                       : podStatus === 'connecting'
-                        ? 'Connecting…'
+                        ? t('run.sensor.connecting')
                         : bluetoothSupported()
-                          ? 'Tap'
-                          : 'N/A'}
+                          ? t('run.sensor.tap')
+                          : t('run.sensor.na')}
                   </span>
                 </span>
               </button>
@@ -1860,15 +1870,15 @@ export function RunScreen({
                   }
                 />
                 <span className="sensor-chip-text">
-                  <span className="sensor-chip-title">Heart rate</span>
+                  <span className="sensor-chip-title">{t('history.extra.hr')}</span>
                   <span className="sensor-chip-status">
                     {heartStatus === 'connected'
-                      ? heartName ?? 'Connected'
+                      ? heartName ?? t('run.sensor.connected')
                       : heartStatus === 'connecting'
-                        ? 'Connecting…'
+                        ? t('run.sensor.connecting')
                         : bluetoothSupported()
-                          ? 'Tap'
-                          : 'N/A'}
+                          ? t('run.sensor.tap')
+                          : t('run.sensor.na')}
                   </span>
                 </span>
               </button>
@@ -1886,15 +1896,15 @@ export function RunScreen({
           {podInfoOpen && (
             <p className="hint sensor-info-body">
               {bluetoothSupported()
-                ? 'Any pod using the standard running speed and cadence profile — Zwift RunPod, Stryd, Garmin or Polar. On a treadmill it measures speed at the shoe. Give it a shake first; most pods only advertise once they are moving. Tap the button again to disconnect.'
-                : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
+                ? t('run.podInfo')
+                : t('run.noWebBluetooth')}
             </p>
           )}
           {hrInfoOpen && (
             <p className="hint sensor-info-body">
               {bluetoothSupported()
-                ? 'Any Bluetooth chest strap or watch using the standard heart rate service. Connect before you start so zones and the HR calorie model come with the run. Tap the button again to disconnect.'
-                : 'This browser has no Web Bluetooth. Chrome on Android supports it; Safari does not.'}
+                ? t('run.hrInfo')
+                : t('run.noWebBluetooth')}
             </p>
           )}
         </div>
@@ -1914,14 +1924,14 @@ export function RunScreen({
 
     return (
       <div className="screen">
-        <h1>Get ready</h1>
+        <h1>{t('run.getReady')}</h1>
         <p className="subtitle">
           Check sensors before the clock starts. Wait for a fix, or start immediately.
         </p>
 
         {armedGoal && (
           <div className="card">
-            <h2>Goal</h2>
+            <h2>{t('stats.goal')}</h2>
             <p className="goal-summary">
               {goalKindLabel(armedGoal.kind)} · {formatGoalTarget(armedGoal, profile.units)}
             </p>
@@ -1929,10 +1939,10 @@ export function RunScreen({
         )}
 
         <div className="card">
-          <h2>Shoes</h2>
+          <h2>{t('profile.shoes.title')}</h2>
           {activeShoes(shoes).length === 0 ? (
             <p className="hint" style={{ marginTop: 0 }}>
-              No active pairs yet. Add shoes under <strong>Profile → Shoes</strong>, then return
+              No active pairs yet. Add shoes under <strong>{t('run.profileShoes')}</strong>, then return
               here to assign them.
             </p>
           ) : (
@@ -1964,7 +1974,7 @@ export function RunScreen({
                     This pair is at or past its wear limit — consider retiring it in Profile.
                   </p>
                 ) : (
-                  <p className="hint">Mileage is added when you finish the run.</p>
+                  <p className="hint">{t('run.shoesMileageHint')}</p>
                 );
               })()}
             </>
@@ -1972,7 +1982,7 @@ export function RunScreen({
         </div>
 
         <div className="card sensor-status">
-          <h2>Sensors</h2>
+          <h2>{t('run.sensors')}</h2>
 
           {mode === 'outdoor' && (
             <div className="row">
@@ -1981,7 +1991,7 @@ export function RunScreen({
                 className={sensorPillClass(gpsReady ? 'good' : gpsBad ? 'bad' : 'warn')}
               >
                 <span className={`dot${gpsReady ? ' live' : ''}`} />
-                {geoLabel(geoStatus, geoDetail)}
+                {geoDetail || t(geoLabel(geoStatus))}
               </span>
             </div>
           )}
@@ -1989,10 +1999,10 @@ export function RunScreen({
           {mode === 'treadmill' && (
             <>
               <div className="row">
-                <span className="sensor-name">Foot pod</span>
+                <span className="sensor-name">{t('settings.footpod.title')}</span>
                 {podReady ? (
                   <span className="pill good">
-                    <span className="dot live" /> {podName ?? 'Connected'}
+                    <span className="dot live" /> {podName ?? t('run.sensor.connected')}
                   </span>
                 ) : (
                   <span className="pill warn">
@@ -2002,7 +2012,7 @@ export function RunScreen({
               </div>
               {!podReady && (
                 <div className="row">
-                  <span className="sensor-name">Steps</span>
+                  <span className="sensor-name">{t('run.pod.steps')}</span>
                   <span
                     className={sensorPillClass(
                       stepsReady ? 'good' : motionStatus === 'denied' ? 'bad' : 'warn',
@@ -2010,10 +2020,10 @@ export function RunScreen({
                   >
                     <span className={`dot${stepsReady ? ' live' : ''}`} />
                     {stepsReady
-                      ? 'Counting'
+                      ? t('run.sensor.counting')
                       : motionStatus === 'denied'
-                        ? 'Unavailable'
-                        : 'Starting…'}
+                        ? t('run.sensor.unavailable')
+                        : t('run.sensor.starting')}
                   </span>
                 </div>
               )}
@@ -2021,10 +2031,10 @@ export function RunScreen({
           )}
 
           <div className="row">
-            <span className="sensor-name">Heart rate</span>
+            <span className="sensor-name">{t('history.extra.hr')}</span>
             {hrReady ? (
               <span className="pill good">
-                <span className="dot live" /> {bpm !== null ? `${bpm} bpm` : (heartName ?? 'Connected')}
+                <span className="dot live" /> {bpm !== null ? `${bpm} bpm` : (heartName ?? t('run.sensor.connected'))}
               </span>
             ) : (
               <span className="pill">
@@ -2040,10 +2050,10 @@ export function RunScreen({
             </p>
           )}
           {mode === 'outdoor' && gpsReady && (
-            <p className="hint">GPS has a fix. Ready when you are.</p>
+            <p className="hint">{t('run.gpsReadyHint')}</p>
           )}
           {mode === 'treadmill' && !podReady && !stepsReady && motionStatus !== 'denied' && (
-            <p className="hint">Warming up the step counter, or connect a foot pod above.</p>
+            <p className="hint">{t('run.stepWarmupHint')}</p>
           )}
         </div>
 
@@ -2076,11 +2086,11 @@ export function RunScreen({
               {profile.theme === 'hud' ? 'GO' : 'START'}
             </span>
             <span className="start-control-sub">
-              {mode === 'outdoor' && !gpsReady ? 'Start without fix' : 'Start clock'}
+              {mode === 'outdoor' && !gpsReady ? t('run.startNoFix') : t('run.startClock')}
             </span>
           </button>
           {mode === 'outdoor' && !gpsReady && !gpsBad && (
-            <p className="hint run-hero-hint">Or wait until GPS shows Ready.</p>
+            <p className="hint run-hero-hint">{t('run.waitForGps')}</p>
           )}
         </div>
 
@@ -2095,10 +2105,10 @@ export function RunScreen({
               live
               emptyLabel={
                 gpsBad
-                  ? geoDetail || 'GPS unavailable'
+                  ? geoDetail || t('run.gpsUnavailable')
                   : lastGeo
                     ? 'GPS lock'
-                    : 'Waiting for GPS…'
+                    : t('run.waitingGps')
               }
             />
           </div>
@@ -2141,17 +2151,21 @@ export function RunScreen({
   const modeLabel =
     session.mode === 'outdoor'
       ? geoStatus === 'tracking'
-        ? 'Outdoor'
+        ? t('run.outdoor')
         : geoStatus === 'denied'
-          ? 'No GPS'
-          : geoDetail ?? 'Finding GPS…'
+          ? t('run.noGps')
+          : geoDetail ?? t('run.findingGps')
       : podStatus === 'connected'
-        ? 'Foot pod'
+        ? t('settings.footpod.title')
         : motionStatus === 'counting'
           ? `${session.steps} steps`
-          : 'Treadmill';
+          : t('run.treadmill');
   const heroLabel =
-    session.state === 'paused' ? (autoPaused ? 'Auto-paused' : 'Paused') : 'Moving';
+    session.state === 'paused'
+      ? autoPaused
+        ? t('run.autoPaused')
+        : t('run.paused')
+      : t('run.moving');
   const isHud = profile.theme === 'hud';
 
   return (
@@ -2174,9 +2188,11 @@ export function RunScreen({
           )}
           {cadence !== null && <span className="live-meta-pill">{Math.round(cadence)} spm</span>}
           {session.state === 'paused' && (
-            <span className="live-meta-pill warn">{autoPaused ? 'Auto-paused' : 'Paused'}</span>
+            <span className="live-meta-pill warn">
+              {autoPaused ? t('run.autoPaused') : t('run.paused')}
+            </span>
           )}
-          {(met || goalFlash) && <span className="live-meta-pill ok">Goal</span>}
+          {(met || goalFlash) && <span className="live-meta-pill ok">{t('stats.goal')}</span>}
           {targetPaceSec && bandStatus !== 'none' && (
             <span
               className={`live-meta-pill pace-band pace-band-${bandStatus}${
@@ -2402,7 +2418,7 @@ export function RunScreen({
             id: 'kcal',
             face0: {
               value: formatCalories(calories),
-              label: calorieEst.source === 'heart' ? 'kcal · hr' : 'kcal',
+              label: calorieEst.source === 'heart' ? t('run.pod.kcalHr') : t('run.pod.kcal'),
             },
             face1: {
               value: kcalPerHour !== null ? String(kcalPerHour) : '—',
@@ -2482,10 +2498,10 @@ export function RunScreen({
             live
             emptyLabel={
               geoStatus === 'denied' || geoStatus === 'unavailable' || geoStatus === 'error'
-                ? geoDetail || 'GPS unavailable'
+                ? geoDetail || t('run.gpsUnavailable')
                 : geoStatus === 'acquiring' || !lastGeo
-                  ? 'Waiting for GPS…'
-                  : 'Recording route…'
+                  ? t('run.waitingGps')
+                  : t('run.recordingRoute')
             }
           />
         </div>
@@ -2635,7 +2651,7 @@ export function RunScreen({
               setTick((t) => t + 1);
             }}
           >
-            Pause
+            {t('run.pause')}
           </button>
         ) : (
           <button
@@ -2648,7 +2664,7 @@ export function RunScreen({
               setTick((t) => t + 1);
             }}
           >
-            Resume
+            {t('run.resume')}
           </button>
         )}
         <button
@@ -2656,13 +2672,13 @@ export function RunScreen({
           className="btn danger run-action-finish"
           onClick={() => setConfirmAction('finish')}
         >
-          Finish
+          {t('run.finish')}
         </button>
       </div>
 
       <div className="run-actions-secondary">
         <button className="btn run-action-lap" onClick={markLap} type="button">
-          Lap
+          {t('run.lap')}
           {session.manualLaps.length > 0 ? ` (${session.manualLaps.length})` : ''}
         </button>
         {session.mode === 'treadmill' && podStatus !== 'connected' && (
@@ -2672,7 +2688,7 @@ export function RunScreen({
             onClick={connectPod}
             disabled={!bluetoothSupported()}
           >
-            Foot pod
+            {t('settings.footpod.title')}
           </button>
         )}
         {heartStatus !== 'connected' && (
@@ -2682,7 +2698,7 @@ export function RunScreen({
             onClick={connectStrap}
             disabled={!bluetoothSupported()}
           >
-            HR strap
+            {t('run.hrStrap')}
           </button>
         )}
       </div>
@@ -2701,7 +2717,7 @@ export function RunScreen({
           <ul className="lap-list">
             {session.manualLaps.map((lap) => (
               <li key={lap.index}>
-                <span>Lap {lap.index}</span>
+                <span>{t('run.lapN', { index: lap.index })}</span>
                 <span>
                   {formatDistance(lap.splitDistanceM, profile.units)} {distanceLabel(profile.units)}
                   {' · '}
@@ -2718,7 +2734,7 @@ export function RunScreen({
         type="button"
         onClick={() => setConfirmAction('discard')}
       >
-        Discard run
+        {t('run.discardRun')}
       </button>
 
       {confirmAction && (
@@ -2735,12 +2751,12 @@ export function RunScreen({
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="run-confirm-title">
-              {confirmAction === 'finish' ? 'Finish this run?' : 'Discard this run?'}
+              {confirmAction === 'finish' ? t('run.confirmFinish') : t('run.confirmDiscard')}
             </h2>
             <p className="hint" style={{ marginTop: 0, marginBottom: 16 }}>
               {confirmAction === 'finish'
-                ? 'Save the run to history and stop tracking.'
-                : 'The run will not be saved. This cannot be undone.'}
+                ? t('run.confirmFinishBody')
+                : t('run.confirmDiscardBody')}
             </p>
             <div className="btn-row">
               <button type="button" className="btn" onClick={() => setConfirmAction(null)}>
@@ -2756,7 +2772,7 @@ export function RunScreen({
                   else discard();
                 }}
               >
-                {confirmAction === 'finish' ? 'Finish' : 'Discard'}
+                {confirmAction === 'finish' ? t('run.finish') : t('run.discard')}
               </button>
             </div>
           </div>

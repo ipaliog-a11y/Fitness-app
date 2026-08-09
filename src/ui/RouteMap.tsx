@@ -37,7 +37,12 @@ interface Props {
   /** Marks the newest point, for a run in progress. */
   live?: boolean;
   /** Empty-state copy when there is nothing to centre on yet. */
-  emptyLabel?: string;
+  /**
+   * Shown when there is nothing to draw. Required rather than defaulted:
+   * a default would be an untranslatable English literal, and "this caller
+   * happens to be guarded" is an invariant a comment cannot enforce.
+   */
+  emptyLabel: string;
 }
 
 /**
@@ -107,7 +112,7 @@ export function RouteMap({
   tiles = true,
   basemap = 'standard',
   live = false,
-  emptyLabel = 'No route recorded',
+  emptyLabel,
 }: Props) {
   const basemapInfo = MAP_BASEMAPS[basemap] ?? MAP_BASEMAPS.standard;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

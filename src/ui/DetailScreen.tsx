@@ -144,6 +144,7 @@ export function DetailScreen({
           <RouteMap
             segments={activity.segments}
             basemap={resolveMapBasemap(profile.mapStyle, profile.theme)}
+            emptyLabel={t('detail.noRouteRecorded')}
           />
         </div>
       )}

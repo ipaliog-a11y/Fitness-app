@@ -2168,6 +2168,14 @@ const SHARED = new Set([
   'planKind.tempo',
   // 'splits' is what Greek runners say; «ενδιάμεσοι χρόνοι» is a textbook term.
   'run.panel.splits',
+  // The HUD theme's two-letter start face. 'GO' is what it says in Greek too.
+  'run.go',
+  // kcal is the unit symbol, the same in both languages.
+  'run.pod.kcal',
+  // Product names: Health Connect and Samsung Health are not translated by
+  // their own vendors either, and a Greek rendering would be unfindable.
+  'settings.hc.title',
+  'settings.hc.samsung',
   'workout.cruise-5x5.name',
   'workout.fartlek-20.name',
   'workout.mona-fartlek.name',

@@ -526,12 +526,12 @@ export function CoachScreen({
       </div>
 
       <div className="card">
-        <h2>Last 12 weeks</h2>
+        <h2>{t('stats.last12')}</h2>
         <WeeklyBars weeks={weeks} units={profile.units} />
       </div>
 
       <div className="card">
-        <h2>Personal records</h2>
+        <h2>{t('stats.records')}</h2>
         {records.every((r) => r.durationMs === null) ? (
           <p className="hint">
             Records come from GPS runs — the fastest continuous stretch inside any run.

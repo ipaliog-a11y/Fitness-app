@@ -310,12 +310,9 @@ function CalendarView({
         <h3 className="history-group-title cal-day-heading">{selectedLabel}</h3>
         {dayEvents.length === 0 ? (
           <p className="hint" style={{ margin: 0 }}>
-            Nothing logged or planned this day.
+            {t('history.emptyDay')}
             {!loadPlanEvents().length && (
-              <>
-                {' '}
-                Start a plan under <strong>Coach</strong> to see future sessions here.
-              </>
+              <> {t('history.startPlanHint', { coach: t('app.tab.coach') })}</>
             )}
           </p>
         ) : (

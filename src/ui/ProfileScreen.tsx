@@ -42,6 +42,7 @@ import {
 } from '../core/weight';
 import { AchievementsScreen } from './AchievementsScreen';
 import { WeightScreen } from './WeightScreen';
+import type { Translate } from '../i18n';
 import { useT } from '../i18n/react';
 
 interface Props {
@@ -52,15 +53,22 @@ interface Props {
   onWeightLogChange?(): void;
 }
 
-/** Catch render crashes so the tab never goes fully blank. */
+/**
+ * Catch render crashes so the tab never goes fully blank.
+ *
+ * Takes `t` as a prop rather than reading the context: a class component
+ * cannot use hooks, and this is precisely the screen you do not want to switch
+ * language on — a crash notice nobody can read is worse than the crash.
+ */
 class ProfileErrorBoundary extends Component<
-  { children: ReactNode },
+  { children: ReactNode; t: Translate },
   { error: string | null }
 > {
   override state: { error: string | null } = { error: null };
 
   static getDerivedStateFromError(error: Error): { error: string } {
-    return { error: error?.message || 'Something went wrong' };
+    // The thrown message is developer text; the fallback is the user-facing arm.
+    return { error: error?.message || '' };
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
@@ -71,17 +79,19 @@ class ProfileErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div className="screen">
-          <h1>Profile</h1>
+          <h1>{this.props.t('app.tab.profile')}</h1>
           <div className="card">
             <p className="hint" style={{ marginTop: 0 }}>
-              Could not open Profile: {this.state.error}
+              {this.state.error
+                ? this.props.t('profile.crashDetail', { detail: this.state.error })
+                : this.props.t('profile.crash')}
             </p>
             <button
               type="button"
               className="btn primary wide"
               onClick={() => this.setState({ error: null })}
             >
-              Try again
+              {this.props.t('profile.tryAgain')}
             </button>
           </div>
         </div>
@@ -92,8 +102,9 @@ class ProfileErrorBoundary extends Component<
 }
 
 export function ProfileScreen(props: Props) {
+  const t = useT();
   return (
-    <ProfileErrorBoundary>
+    <ProfileErrorBoundary t={t}>
       <ProfileScreenInner {...props} />
     </ProfileErrorBoundary>
   );
@@ -587,8 +598,7 @@ function ProfileScreenInner({
       <div className="card">
         <h2>{t('profile.shoes.title')}</h2>
         <p className="hint" style={{ marginTop: 0 }}>
-          Pick a pair on the <strong>Get ready</strong> screen before you start; mileage is added
-          when you finish.
+          {t('profile.shoes.pickHint', { screen: t('run.getReady') })}
         </p>
         {shoes.length === 0 && <p className="hint">{t('profile.shoes.empty')}</p>}
         {shoes.map((shoe) => {
