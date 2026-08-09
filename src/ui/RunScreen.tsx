@@ -106,7 +106,7 @@ import {
 } from '../platform/liveRunNative';
 import { resolveMapBasemap } from '../core/mercator';
 import { RouteMap } from './RouteMap';
-import { useT } from '../i18n/react';
+import { useT, useWorkoutText } from '../i18n/react';
 
 interface Props {
   profile: Profile;
@@ -146,6 +146,7 @@ function geoLabel(status: GeoStatus, detail?: string): string {
 
 /** Compact interval strip for workout tiles (warmup / work / rest / …). */
 function WorkoutIntervalStrip({ phases }: { phases: WorkoutPhase[] }) {
+  const t = useT();
   if (phases.length === 0) {
     return (
       <div className="workout-interval-strip" aria-hidden>
@@ -160,7 +161,15 @@ function WorkoutIntervalStrip({ phases }: { phases: WorkoutPhase[] }) {
           key={`${phase.kind}-${i}`}
           className={`interval-seg kind-${phase.kind as PhaseKind}`}
           style={{ flexGrow: Math.max(1, Math.round(phaseVisualWeight(phase) / 15_000)) }}
-          title={`${phaseKindLabel(phase.kind)}: ${phase.label}`}
+          title={`${t(phaseKindLabel(phase.kind))}: ${
+            phase.repeat
+              ? t('phase.repeat', {
+                  label: t(phase.label),
+                  index: phase.repeat.index,
+                  total: phase.repeat.total,
+                })
+              : t(phase.label)
+          }`}
         />
       ))}
     </div>
@@ -225,6 +234,7 @@ export function RunScreen({
   visible = true,
   backHandlerRef,
 }: Props) {
+  const workoutText = useWorkoutText();
   const t = useT();
   const [mode, setMode] = useState<RunMode>('outdoor');
   const [tick, setTick] = useState(0);
@@ -940,15 +950,17 @@ export function RunScreen({
                       setWorkoutId(w.id);
                       setWorkoutPickerOpen(false);
                       setWorkoutPickerView('main');
-                      onToast(`Workout: ${w.name}`);
+                      onToast(t('toast.workout', { name: workoutText(w).name }));
                     }}
                   >
                     <div className="workout-tile-top">
-                      <span className="workout-tile-name">{w.name}</span>
+                      <span className="workout-tile-name">{workoutText(w).name}</span>
                       <EffortDots level={workoutEffortLevel(tpl)} />
                     </div>
                     <WorkoutIntervalStrip phases={w.phases} />
-                    <p className="workout-tile-blurb">{w.blurb || 'Saved custom workout'}</p>
+                    <p className="workout-tile-blurb">
+                      {workoutText(w).blurb || t('workout.savedFallback')}
+                    </p>
                     <span className="workout-tile-meta">{workoutTileMeta(tpl)}</span>
                   </button>
                   <button
@@ -985,8 +997,8 @@ export function RunScreen({
           >
             ‹ Workouts
           </button>
-          <h1>{openGroup.name}</h1>
-          <p className="subtitle">{openGroup.blurb}</p>
+          <h1>{t(openGroup.name)}</h1>
+          <p className="subtitle">{t(openGroup.blurb)}</p>
           <div className="workout-tile-grid">
             {list.map((w) => {
               const selected = workoutId === w.id;
@@ -999,15 +1011,15 @@ export function RunScreen({
                     setWorkoutId(w.id);
                     setWorkoutPickerOpen(false);
                     setWorkoutPickerView('main');
-                    onToast(`Workout: ${w.name}`);
+                    onToast(t('toast.workout', { name: workoutText(w).name }));
                   }}
                 >
                   <div className="workout-tile-top">
-                    <span className="workout-tile-name">{w.name}</span>
+                    <span className="workout-tile-name">{workoutText(w).name}</span>
                     <EffortDots level={workoutEffortLevel(w)} />
                   </div>
                   <WorkoutIntervalStrip phases={w.phases} />
-                  <p className="workout-tile-blurb">{w.blurb}</p>
+                  <p className="workout-tile-blurb">{workoutText(w).blurb}</p>
                   <span className="workout-tile-meta">{workoutTileMeta(w)}</span>
                 </button>
               );
@@ -1048,7 +1060,7 @@ export function RunScreen({
               <EffortDots level={1} />
             </div>
             <WorkoutIntervalStrip
-              phases={[{ kind: 'steady', label: 'Free', target: { type: 'time', ms: 1 } }]}
+              phases={[{ kind: 'steady', label: 'phase.steady', target: { type: 'time', ms: 1 } }]}
             />
             <p className="workout-tile-blurb">No structure — just start and go.</p>
             <span className="workout-tile-meta">Open-ended</span>
@@ -1097,17 +1109,17 @@ export function RunScreen({
                 onClick={() => setWorkoutPickerView(g.id)}
               >
                 <div className="workout-tile-top">
-                  <span className="workout-tile-name">{g.name}</span>
+                  <span className="workout-tile-name">{t(g.name)}</span>
                   <span className="workout-tile-badge">{list.length}</span>
                 </div>
                 {preview ? (
                   <WorkoutIntervalStrip phases={preview.phases} />
                 ) : (
                   <WorkoutIntervalStrip
-                    phases={[{ kind: 'steady', label: '—', target: { type: 'time', ms: 1 } }]}
+                    phases={[{ kind: 'steady', label: 'phase.steady', target: { type: 'time', ms: 1 } }]}
                   />
                 )}
-                <p className="workout-tile-blurb">{g.blurb}</p>
+                <p className="workout-tile-blurb">{t(g.blurb)}</p>
                 <span className="workout-tile-meta">Open group ›</span>
               </button>
             );
@@ -1130,17 +1142,17 @@ export function RunScreen({
               <WorkoutIntervalStrip
                 phases={
                   customTemplate?.phases ?? [
-                    { kind: 'warmup', label: 'W', target: { type: 'time', ms: 5 * 60_000 } },
-                    { kind: 'work', label: 'H', target: { type: 'time', ms: 3 * 60_000 } },
-                    { kind: 'rest', label: 'R', target: { type: 'time', ms: 2 * 60_000 } },
-                    { kind: 'work', label: 'H', target: { type: 'time', ms: 3 * 60_000 } },
-                    { kind: 'rest', label: 'R', target: { type: 'time', ms: 2 * 60_000 } },
-                    { kind: 'cooldown', label: 'C', target: { type: 'time', ms: 5 * 60_000 } },
+                    { kind: 'warmup', label: 'phase.warmup', target: { type: 'time', ms: 5 * 60_000 } },
+                    { kind: 'work', label: 'phase.work', target: { type: 'time', ms: 3 * 60_000 } },
+                    { kind: 'rest', label: 'phase.rest', target: { type: 'time', ms: 2 * 60_000 } },
+                    { kind: 'work', label: 'phase.work', target: { type: 'time', ms: 3 * 60_000 } },
+                    { kind: 'rest', label: 'phase.rest', target: { type: 'time', ms: 2 * 60_000 } },
+                    { kind: 'cooldown', label: 'phase.cooldown', target: { type: 'time', ms: 5 * 60_000 } },
                   ]
                 }
               />
               <p className="workout-tile-blurb">
-                {customTemplate?.blurb ?? 'Build your own work / rest repeats.'}
+                {customTemplate ? workoutText(customTemplate).blurb : t('workout.customFallback')}
               </p>
               <span className="workout-tile-meta">
                 {customTemplate ? workoutTileMeta(customTemplate) : 'Tap to edit below'}
@@ -1239,7 +1251,7 @@ export function RunScreen({
                       const tpl = buildCustomFromForm();
                       const saved = addSavedWorkout(
                         tpl,
-                        customName.trim() || tpl.name,
+                        customName.trim() || workoutText(tpl).name,
                       );
                       setMyWorkouts(loadSavedWorkouts());
                       setCustomTemplate(templateFromSaved(saved));
@@ -1520,7 +1532,7 @@ export function RunScreen({
               <WorkoutIntervalStrip phases={selectedForStrip} />
             ) : (
               <WorkoutIntervalStrip
-                phases={[{ kind: 'steady', label: 'Free', target: { type: 'time', ms: 1 } }]}
+                phases={[{ kind: 'steady', label: 'phase.steady', target: { type: 'time', ms: 1 } }]}
               />
             )}
             <span className="workout-open-btn-cta">Choose workout ›</span>

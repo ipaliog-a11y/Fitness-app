@@ -284,4 +284,136 @@ export const el: Messages = {
   'coach.tip.recovery.loaded': 'Αποκατάσταση: Φορτωμένος',
   'coach.tip.recovery.high': 'Αποκατάσταση: Υψηλό φορτίο',
   'coach.tip.recovery.unknown': 'Αποκατάσταση: Δεν φτάνουν τα δεδομένα',
+
+  // --- Workout phases -------------------------------------------------------
+  /*
+   * The agreed glossary in action. Greek runners say "tempo", "fartlek",
+   * "strides" and "cruise" in English — translating them reads like a textbook
+   * nobody uses — while warm-up, cool-down, recovery and hard have perfectly
+   * ordinary Greek words that everyone does use. Kept short: these sit in
+   * interval strips and phase chips with very little room.
+   */
+  'phase.cooldown': 'Χαλάρωμα',
+  'phase.cooldownWalk': 'Χαλάρωμα με περπάτημα',
+  'phase.cruise': 'Cruise',
+  'phase.easy': 'Χαλαρό',
+  'phase.easyDown': 'Χαλαρό κατέβασμα',
+  'phase.easyJog': 'Χαλαρό τζόγκινγκ',
+  'phase.easyRun': 'Χαλαρό τρέξιμο',
+  'phase.easyWarmup': 'Χαλαρό ζέσταμα',
+  'phase.float': 'Float',
+  'phase.hard': 'Δυνατά',
+  'phase.hard15s': 'Δυνατά 15 δλ',
+  'phase.hard1min': '1 λεπτό δυνατά',
+  'phase.hard2min': '2 λεπτά δυνατά',
+  'phase.hard30s': 'Δυνατά 30 δλ',
+  'phase.hard3min': '3 λεπτά δυνατά',
+  'phase.hard4min': '4 λεπτά δυνατά',
+  'phase.hard5min': '5 λεπτά δυνατά',
+  'phase.hard60s': 'Δυνατά 60 δλ',
+  'phase.hard90s': 'Δυνατά 90 δλ',
+  'phase.hillHard': 'Ανηφόρα δυνατά',
+  'phase.m400': '400 μ',
+  'phase.m800': '800 μ',
+  'phase.recover': 'Αποκατάσταση',
+  'phase.rest': 'Ξεκούραση',
+  'phase.run': 'Τρέξιμο',
+  'phase.steady': 'Σταθερό',
+  'phase.strong': 'Δυνατό',
+  'phase.stride': 'Stride',
+  'phase.surge': 'Επιτάχυνση',
+  'phase.tempo': 'Tempo',
+  'phase.tempo1': 'Tempo 1',
+  'phase.tempo2': 'Tempo 2',
+  'phase.walk': 'Περπάτημα',
+  'phase.warmup': 'Ζέσταμα',
+  'phase.warmupWalk': 'Ζέσταμα με περπάτημα',
+  'phase.work': 'Προσπάθεια',
+
+  'phase.repeat': '{label} ({index}/{total})',
+
+  // --- Workout groups -------------------------------------------------------
+  'workoutGroup.easy.name': 'Χαλαρά & βάση',
+  'workoutGroup.easy.blurb': 'Τρεξίματα κουβέντας που χτίζουν αντοχή χωρίς πολλή κόπωση.',
+  'workoutGroup.walk-run.name': 'Περπάτημα / τρέξιμο',
+  'workoutGroup.walk-run.blurb': 'Εναλλαγή τρεξίματος και περπατήματος — ασφαλής πρόοδος για αρχάριους.',
+  'workoutGroup.recovery.name': 'Αποκατάσταση + strides',
+  'workoutGroup.recovery.blurb': 'Χαλαρός όγκος με σύντομες επιταχύνσεις για τεχνική και αίσθηση.',
+  'workoutGroup.mixed.name': 'Fartlek & μικτά',
+  'workoutGroup.mixed.blurb': 'Επιταχύνσεις, σκάλες και προοδευτικές προσπάθειες — ποιότητα χωρίς στίβο.',
+  'workoutGroup.tempo.name': 'Tempo & κατώφλι',
+  'workoutGroup.tempo.blurb': 'Άνετα σκληρός ρυθμός για δύναμη στον αγώνα.',
+  'workoutGroup.speed.name': 'Ταχύτητα, ανηφόρες & VO₂',
+  'workoutGroup.speed.blurb': 'Σύντομες δυνατές προσπάθειες για ισχύ, ταχύτητα και μέγιστη αερόβια ικανότητα.',
+
+  // --- Workout presets ------------------------------------------------------
+  'workout.easy-30.name': 'Χαλαρό 30',
+  'workout.easy-30.blurb':
+    'Σύντομο χαλαρό τρέξιμο. Χτίζει αερόβια βάση και συνήθεια με χαμηλό ρίσκο τραυματισμού — έτσι χαλαρή πρέπει να είναι η περισσότερη προπόνηση.',
+  'workout.easy-40.name': 'Χαλαρό 40',
+  'workout.easy-40.blurb':
+    'Πιο μεγάλο τρέξιμο κουβέντας. Περισσότερος χρόνος στα πόδια για αντοχή χωρίς σκληρή καταπόνηση — εξαιρετική μέρα βάσης.',
+  'workout.long-easy-45.name': 'Μεγάλο χαλαρό 45',
+  'workout.long-easy-45.blurb':
+    'Μεσαίο μεγάλο τρέξιμο. Βελτιώνει την αντοχή και την άνεση σε χαλαρό ρυθμό — ο ακρογωνιαίος λίθος της εβδομάδας.',
+  'workout.long-easy-60.name': 'Μεγάλο χαλαρό 60',
+  'workout.long-easy-60.blurb':
+    'Μία ώρα χαλαρού όγκου. Χτίζει βαθιά αερόβια αντοχή και ψυχική άνεση με μεγάλη διάρκεια — όταν τα 45 λεπτά μοιάζουν λίγα.',
+  'workout.beginner-walk-run.name': 'Περπάτημα/τρέξιμο αρχαρίων',
+  'workout.beginner-walk-run.blurb':
+    '8 × 1 λεπτό τρέξιμο / 90 δλ περπάτημα. Κλασικό ξεκίνημα — χτίζει χρόνο τρεξίματος με ασφάλεια και μειώνει το ρίσκο υπερφόρτωσης.',
+  'workout.walk-run-2-1.name': 'Περπάτημα/τρέξιμο 2–1',
+  'workout.walk-run-2-1.blurb':
+    '6 × 2 λεπτά τρέξιμο / 1 λεπτό περπάτημα. Το επόμενο βήμα μετά τις σύντομες δόσεις — πιο συνεχόμενο τρέξιμο με ακόμη χαλαρές αποκαταστάσεις.',
+  'workout.walk-run-3-1.name': 'Περπάτημα/τρέξιμο 3–1',
+  'workout.walk-run-3-1.blurb':
+    '5 × 3 λεπτά τρέξιμο / 1 λεπτό περπάτημα. Γέφυρα προς το συνεχόμενο χαλαρό τρέξιμο, κρατώντας διαλείμματα περπατήματος για αποκατάσταση.',
+  'workout.recovery-strides.name': 'Αποκατάσταση + strides',
+  'workout.recovery-strides.blurb':
+    'Χαλαρό τρέξιμο συν 6 × 20 δλ strides τεχνικής. Ενεργητική αποκατάσταση με λίγη ταχύτητα και τεχνική — ιδανικό για τη μέρα μετά από σκληρή δουλειά.',
+  'workout.progressive-35.name': 'Προοδευτικό 35',
+  'workout.progressive-35.blurb':
+    'Χαλαρό → σταθερό → δυνατό φινάλε. Μαθαίνει έλεγχο ρυθμού και αντοχή στο τέλος, χωρίς κανονικά ιντερβάλ στίβου.',
+  'workout.fartlek-20.name': 'Fartlek 20',
+  'workout.fartlek-20.blurb':
+    '10 × 1 λεπτό δυνατά / 1 λεπτό χαλαρά. Παιχνιδιάρικο μείγμα ταχύτητας και αερόβιου — ποιότητα με πλάκα, χωρίς αυστηρούς ρυθμούς στίβου.',
+  'workout.ladder-fartlek.name': 'Σκάλα 5–4–3–2–1',
+  'workout.ladder-fartlek.blurb':
+    'Φθίνοντα δυνατά μπλοκ με ίση χαλαρή αποκατάσταση. Παρατεταμένη προσπάθεια και μετά πιο κοφτό φινάλε — δυνατή ποιοτική προπόνηση.',
+  'workout.mona-fartlek.name': 'Mona fartlek',
+  'workout.mona-fartlek.blurb':
+    '2×90 δλ, 4×60 δλ, 4×30 δλ, 4×15 δλ δυνατά με ίσο float. Κλασικό speed-play — νευρομυϊκή σπίθα μαζί με αερόβια καταπόνηση.',
+  'workout.pyramid.name': 'Πυραμίδα 1–2–3–2–1',
+  'workout.pyramid.blurb':
+    'Ανέβασμα και μετά κατέβασμα σε δυνατά λεπτά. Μπλέκει σύντομες και μεσαίες προσπάθειες για ποικιλία και γενική ποιότητα.',
+  'workout.tempo-20.name': 'Tempo 20',
+  'workout.tempo-20.blurb':
+    '20 λεπτά άνετα σκληρά. Κλασική δουλειά κατωφλιού — ανεβάζει τον ρυθμό που αντέχεις και σκληραγωγεί την αίσθηση αγώνα (10Κ–ΗΜ).',
+  'workout.cruise-5x5.name': 'Cruise 5 × 5',
+  'workout.cruise-5x5.blurb':
+    '5 × 5 λεπτά κατώφλι με 1 λεπτό χαλαρά. Περισσότερος συνολικός χρόνος στο κατώφλι από ένα μεγάλο tempo, με σύντομα διαλείμματα.',
+  'workout.double-tempo.name': 'Διπλό tempo 2 × 12',
+  'workout.double-tempo.blurb':
+    'Δύο μπλοκ κατωφλιού 12 λεπτών με 3 λεπτά τζόγκινγκ. Ίδιος στόχος με το tempo, συχνά πιο εύκολο να ολοκληρωθεί με ένα μικρό διάλειμμα.',
+  'workout.hill-8x45.name': 'Ανηφόρες 8 × 45 δλ',
+  'workout.hill-8x45.blurb':
+    '8 × 45 δλ δυνατά στην ανηφόρα (ή δυνατό πάτημα σε ίσιωμα) / 90 δλ χαλαρά. Δύναμη, τεχνική και ισχύς χωρίς καθαρή ταχύτητα στίβου — ιδανικό για ανηφόρες ή μέρες «ισχύος».',
+  'workout.400-repeats.name': '6 × 400 μ',
+  'workout.400-repeats.blurb':
+    'Σύντομες γρήγορες επαναλήψεις με 90 δλ αποκατάσταση. Χτίζει ταχύτητα ποδιού, οικονομία και αναερόβια σπίθα — κλασική δουλειά ταχύτητας για 5Κ.',
+  'workout.800-repeats.name': '5 × 800 μ',
+  'workout.800-repeats.blurb':
+    'Κλασικά ιντερβάλ μεσαίων αποστάσεων στον στίβο, με 2 λεπτά αποκατάσταση. VO₂ και έλεγχος ρυθμού γύρω στην προσπάθεια 3–5Κ — βασικό στην προετοιμασία αγώνα.',
+  'workout.vo2-3min.name': '5 × 3 λεπτά',
+  'workout.vo2-3min.blurb':
+    'Δυνατά 3 λεπτά με ίση χαλαρή ξεκούραση. Στοχεύει τη μέγιστη αερόβια ικανότητα (VO₂) — ποιοτικό χτίσιμο φυσικής κατάστασης.',
+  'workout.vo2-4x4.name': '4 × 4 λεπτά',
+  'workout.vo2-4x4.blurb':
+    'Κλασικά ιντερβάλ VO₂ 4×4 με ίση αποκατάσταση. Δυνατό ερέθισμα για το αερόβιο μέγιστο — καλύτερα όταν έχεις ήδη βάση.',
+
+  'workout.custom.name': 'Δικό μου {repeats}×',
+  'workout.custom.blurb': '{repeats} × {work} λεπτά / {rest} λεπτά ξεκούραση',
+  'toast.workout': 'Προπόνηση: {name}',
+  'workout.savedFallback': 'Αποθηκευμένη δική σου προπόνηση',
+  'workout.customFallback': 'Φτιάξε τις δικές σου επαναλήψεις προσπάθειας / ξεκούρασης.',
 };

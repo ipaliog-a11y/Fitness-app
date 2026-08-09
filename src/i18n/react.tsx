@@ -77,3 +77,25 @@ export function useTipText(): (tip: {
     body: t(tip.body, tip.bodyVars),
   });
 }
+
+/**
+ * Resolve a workout's name and blurb.
+ *
+ * Presets carry keys; a workout the athlete built and named carries their own
+ * text. The key wins when present, and their text is never replaced by a
+ * translation — that is the whole reason WorkoutTemplate keeps both fields
+ * rather than becoming a MessageKey outright like phase labels did.
+ */
+export function useWorkoutText(): (w: {
+  name: string;
+  nameKey?: MessageKey;
+  blurb: string;
+  blurbKey?: MessageKey;
+  blurbVars?: Vars;
+}) => { name: string; blurb: string } {
+  const t = useT();
+  return (w) => ({
+    name: w.nameKey ? t(w.nameKey) : w.name,
+    blurb: w.blurbKey ? t(w.blurbKey, w.blurbVars) : w.blurb,
+  });
+}

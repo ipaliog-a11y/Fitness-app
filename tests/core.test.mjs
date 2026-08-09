@@ -2154,7 +2154,23 @@ check('no locale ships an empty string', () => {
  * SHARED holds the handful that are legitimately identical across languages:
  * proper nouns and units, not untranslated copy.
  */
-const SHARED = new Set([]);
+const SHARED = new Set([
+  // Training jargon Greek runners genuinely use in English. Translating these
+  // ("ρυθμικό τρέξιμο" for tempo, "διασκελισμοί" for strides) reads like a
+  // textbook nobody uses — the agreed glossary keeps them Latin.
+  'phase.tempo',
+  'phase.tempo1',
+  'phase.tempo2',
+  'phase.cruise',
+  'phase.float',
+  'phase.stride',
+  'workout.tempo-20.name',
+  'workout.cruise-5x5.name',
+  'workout.fartlek-20.name',
+  'workout.mona-fartlek.name',
+  // Pure format string — placeholders and punctuation, no words to translate.
+  'phase.repeat',
+]);
 
 check('Greek is actually translated, not copied', () => {
   const copied = [];

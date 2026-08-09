@@ -8,6 +8,8 @@
 
 import { newId } from './activity';
 
+import type { MessageKey, Vars } from '../i18n';
+
 export type PhaseKind = 'warmup' | 'work' | 'rest' | 'cooldown' | 'steady';
 
 export type PhaseTarget =
@@ -16,7 +18,23 @@ export type PhaseTarget =
 
 export interface WorkoutPhase {
   kind: PhaseKind;
-  label: string;
+  /**
+   * A message key. Every phase label in the app comes from one fixed
+   * vocabulary — presets and custom intervals both draw on it — so unlike a
+   * workout's *name* there is never arbitrary user text here.
+   */
+  label: MessageKey;
+  /**
+   * Which pass through a repeat block this is, 1-based, and how many there
+   * are. Absent on phases outside a repeat.
+   *
+   * These used to be spliced into the label as "Hard (3/6)". That only worked
+   * while the label was English prose; a key cannot carry a suffix. Keeping
+   * them as numbers is better anyway — the renderer can put the counter where
+   * the language wants it, and nothing has to parse a string to know a phase
+   * is the third of six.
+   */
+  repeat?: { index: number; total: number };
   target: PhaseTarget;
 }
 
@@ -31,49 +49,59 @@ export type WorkoutGroupId =
 
 export interface WorkoutGroup {
   id: WorkoutGroupId;
-  name: string;
+  name: MessageKey;
   /** Short line on the group tile. */
-  blurb: string;
+  blurb: MessageKey;
 }
 
 /** Six distinctive groups for the workout picker. */
 export const WORKOUT_GROUPS: WorkoutGroup[] = [
   {
     id: 'easy',
-    name: 'Easy & base',
-    blurb: 'Conversational runs that build endurance without much fatigue.',
+    name: 'workoutGroup.easy.name',
+    blurb: 'workoutGroup.easy.blurb',
   },
   {
     id: 'walk-run',
-    name: 'Walk / run',
-    blurb: 'Alternating run and walk — safe progression for new runners.',
+    name: 'workoutGroup.walk-run.name',
+    blurb: 'workoutGroup.walk-run.blurb',
   },
   {
     id: 'recovery',
-    name: 'Recovery + strides',
-    blurb: 'Easy volume with short pickups for form and feel.',
+    name: 'workoutGroup.recovery.name',
+    blurb: 'workoutGroup.recovery.blurb',
   },
   {
     id: 'mixed',
-    name: 'Fartlek & mixed',
-    blurb: 'Surges, ladders, and progressive efforts — quality without a track.',
+    name: 'workoutGroup.mixed.name',
+    blurb: 'workoutGroup.mixed.blurb',
   },
   {
     id: 'tempo',
-    name: 'Tempo & threshold',
-    blurb: 'Comfortably hard pace work for race-day strength.',
+    name: 'workoutGroup.tempo.name',
+    blurb: 'workoutGroup.tempo.blurb',
   },
   {
     id: 'speed',
-    name: 'Speed, hills & VO₂',
-    blurb: 'Short hard efforts for power, speed, and max aerobic capacity.',
+    name: 'workoutGroup.speed.name',
+    blurb: 'workoutGroup.speed.blurb',
   },
 ];
 
 export interface WorkoutTemplate {
   id: string;
+  /**
+   * Literal text. Presets fill this with the English as a fallback; a saved
+   * custom workout holds whatever the athlete typed, which is why this cannot
+   * simply become a MessageKey the way phase labels did.
+   */
   name: string;
+  /** Preset name as a key. Absent on user-created workouts. */
+  nameKey?: MessageKey;
   blurb: string;
+  /** Preset blurb as a key, with substitutions for composed ones. */
+  blurbKey?: MessageKey;
+  blurbVars?: Vars;
   /** Expanded phase list (repeats already unrolled). */
   phases: WorkoutPhase[];
   /** Picker effort 1–5 (explicit on presets; else derived). */
@@ -85,34 +113,45 @@ export interface WorkoutTemplate {
 /** Compact recipe used to build presets. */
 export interface WorkoutRecipe {
   id: string;
+  /**
+   * Literal text. Presets fill this with the English as a fallback; a saved
+   * custom workout holds whatever the athlete typed, which is why this cannot
+   * simply become a MessageKey the way phase labels did.
+   */
   name: string;
+  /** Preset name as a key. Absent on user-created workouts. */
+  nameKey?: MessageKey;
   blurb: string;
+  /** Preset blurb as a key, with substitutions for composed ones. */
+  blurbKey?: MessageKey;
+  blurbVars?: Vars;
   /** Built-in category; omit for custom intervals. */
   group?: WorkoutGroupId;
   /** Display / sort effort 1 (easiest) … 5 (hardest). Optional for custom. */
   effort?: number;
   steps: Array<
-    | { kind: PhaseKind; label: string; timeMs: number }
-    | { kind: PhaseKind; label: string; distanceM: number }
+    | { kind: PhaseKind; label: MessageKey; timeMs: number }
+    | { kind: PhaseKind; label: MessageKey; distanceM: number }
     | {
         kind: 'repeat';
         times: number;
-        work: { label: string; timeMs?: number; distanceM?: number };
-        rest: { label: string; timeMs?: number; distanceM?: number };
+        work: { label: MessageKey; timeMs?: number; distanceM?: number };
+        rest: { label: MessageKey; timeMs?: number; distanceM?: number };
       }
   >;
 }
 
 function phaseFrom(
   kind: PhaseKind,
-  label: string,
+  label: MessageKey,
   timeMs?: number,
   distanceM?: number,
+  repeat?: { index: number; total: number },
 ): WorkoutPhase {
   if (distanceM !== undefined && distanceM > 0) {
-    return { kind, label, target: { type: 'distance', m: distanceM } };
+    return { kind, label, repeat, target: { type: 'distance', m: distanceM } };
   }
-  return { kind, label, target: { type: 'time', ms: Math.max(0, timeMs ?? 0) } };
+  return { kind, label, repeat, target: { type: 'time', ms: Math.max(0, timeMs ?? 0) } };
 }
 
 export function expandRecipe(recipe: WorkoutRecipe): WorkoutTemplate {
@@ -120,21 +159,12 @@ export function expandRecipe(recipe: WorkoutRecipe): WorkoutTemplate {
   for (const step of recipe.steps) {
     if (step.kind === 'repeat') {
       for (let i = 1; i <= step.times; i++) {
+        const repeat = { index: i, total: step.times };
         phases.push(
-          phaseFrom(
-            'work',
-            `${step.work.label} (${i}/${step.times})`,
-            step.work.timeMs,
-            step.work.distanceM,
-          ),
+          phaseFrom('work', step.work.label, step.work.timeMs, step.work.distanceM, repeat),
         );
         phases.push(
-          phaseFrom(
-            'rest',
-            `${step.rest.label} (${i}/${step.times})`,
-            step.rest.timeMs,
-            step.rest.distanceM,
-          ),
+          phaseFrom('rest', step.rest.label, step.rest.timeMs, step.rest.distanceM, repeat),
         );
       }
     } else if ('distanceM' in step && step.distanceM !== undefined) {
@@ -146,7 +176,10 @@ export function expandRecipe(recipe: WorkoutRecipe): WorkoutTemplate {
   return {
     id: recipe.id,
     name: recipe.name,
+    nameKey: recipe.nameKey,
     blurb: recipe.blurb,
+    blurbKey: recipe.blurbKey,
+    blurbVars: recipe.blurbVars,
     phases,
     effort: recipe.effort,
     group: recipe.group,
@@ -165,378 +198,399 @@ const WORKOUT_RECIPES: WorkoutRecipe[] = [
   {
     id: 'easy-30',
     name: 'Easy 30',
+    nameKey: 'workout.easy-30.name',
     group: 'easy',
-    blurb:
-      'Short easy run. Builds aerobic base and habit with low injury risk — most training should feel this easy.',
+    blurb: 'Short easy run. Builds aerobic base and habit with low injury risk — most training should feel this easy.',
+    blurbKey: 'workout.easy-30.blurb',
     effort: 1,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
-      { kind: 'steady', label: 'Easy run', timeMs: min(20) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
+      { kind: 'steady', label: 'phase.easyRun', timeMs: min(20) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   {
     id: 'easy-40',
     name: 'Easy 40',
+    nameKey: 'workout.easy-40.name',
     group: 'easy',
-    blurb:
-      'Longer conversational run. More time on feet for endurance without hard stress — great base day.',
+    blurb: 'Longer conversational run. More time on feet for endurance without hard stress — great base day.',
+    blurbKey: 'workout.easy-40.blurb',
     effort: 1,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
-      { kind: 'steady', label: 'Easy run', timeMs: min(30) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
+      { kind: 'steady', label: 'phase.easyRun', timeMs: min(30) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   {
     id: 'long-easy-45',
     name: 'Long easy 45',
+    nameKey: 'workout.long-easy-45.name',
     group: 'easy',
-    blurb:
-      'Mid-length long run. Improves durability and fat-burning comfort at easy pace — weekly cornerstone.',
+    blurb: 'Mid-length long run. Improves durability and fat-burning comfort at easy pace — weekly cornerstone.',
+    blurbKey: 'workout.long-easy-45.blurb',
     effort: 1,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
-      { kind: 'steady', label: 'Easy', timeMs: min(35) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
+      { kind: 'steady', label: 'phase.easy', timeMs: min(35) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   {
     id: 'long-easy-60',
     name: 'Long easy 60',
+    nameKey: 'workout.long-easy-60.name',
     group: 'easy',
-    blurb:
-      'Hour of easy volume. Builds deep aerobic endurance and mental ease with long duration — when 45 min feels short.',
+    blurb: 'Hour of easy volume. Builds deep aerobic endurance and mental ease with long duration — when 45 min feels short.',
+    blurbKey: 'workout.long-easy-60.blurb',
     effort: 2,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
-      { kind: 'steady', label: 'Easy', timeMs: min(50) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
+      { kind: 'steady', label: 'phase.easy', timeMs: min(50) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   // --- Walk / run ------------------------------------------------------
   {
     id: 'beginner-walk-run',
     name: 'Beginner walk/run',
+    nameKey: 'workout.beginner-walk-run.name',
     group: 'walk-run',
-    blurb:
-      '8 × 1 min run / 90 s walk. Classic starter — builds run time safely and lowers overload risk for new runners.',
+    blurb: '8 × 1 min run / 90 s walk. Classic starter — builds run time safely and lowers overload risk for new runners.',
+    blurbKey: 'workout.beginner-walk-run.blurb',
     effort: 2,
     steps: [
-      { kind: 'warmup', label: 'Warm-up walk', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmupWalk', timeMs: min(5) },
       {
         kind: 'repeat',
         times: 8,
-        work: { label: 'Run', timeMs: min(1) },
-        rest: { label: 'Walk', timeMs: 90_000 },
+        work: { label: 'phase.run', timeMs: min(1) },
+        rest: { label: 'phase.walk', timeMs: 90_000 },
       },
-      { kind: 'cooldown', label: 'Cool-down walk', timeMs: min(5) },
+      { kind: 'cooldown', label: 'phase.cooldownWalk', timeMs: min(5) },
     ],
   },
   {
     id: 'walk-run-2-1',
     name: 'Walk/run 2–1',
+    nameKey: 'workout.walk-run-2-1.name',
     group: 'walk-run',
-    blurb:
-      '6 × 2 min run / 1 min walk. Next step after short bouts — more continuous running with still-easy recoveries.',
+    blurb: '6 × 2 min run / 1 min walk. Next step after short bouts — more continuous running with still-easy recoveries.',
+    blurbKey: 'workout.walk-run-2-1.blurb',
     effort: 2,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
       {
         kind: 'repeat',
         times: 6,
-        work: { label: 'Run', timeMs: min(2) },
-        rest: { label: 'Walk', timeMs: min(1) },
+        work: { label: 'phase.run', timeMs: min(2) },
+        rest: { label: 'phase.walk', timeMs: min(1) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   {
     id: 'walk-run-3-1',
     name: 'Walk/run 3–1',
+    nameKey: 'workout.walk-run-3-1.name',
     group: 'walk-run',
-    blurb:
-      '5 × 3 min run / 1 min walk. Bridge toward continuous easy runs while keeping walk breaks for recovery.',
+    blurb: '5 × 3 min run / 1 min walk. Bridge toward continuous easy runs while keeping walk breaks for recovery.',
+    blurbKey: 'workout.walk-run-3-1.blurb',
     effort: 3,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
       {
         kind: 'repeat',
         times: 5,
-        work: { label: 'Run', timeMs: min(3) },
-        rest: { label: 'Walk', timeMs: min(1) },
+        work: { label: 'phase.run', timeMs: min(3) },
+        rest: { label: 'phase.walk', timeMs: min(1) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   // --- Recovery + strides ----------------------------------------------
   {
     id: 'recovery-strides',
     name: 'Recovery + strides',
+    nameKey: 'workout.recovery-strides.name',
     group: 'recovery',
-    blurb:
-      'Easy run plus 6 × 20 s form strides. Active recovery with a little speed and technique — ideal day after hard work.',
+    blurb: 'Easy run plus 6 × 20 s form strides. Active recovery with a little speed and technique — ideal day after hard work.',
+    blurbKey: 'workout.recovery-strides.blurb',
     effort: 2,
     steps: [
-      { kind: 'warmup', label: 'Easy warm-up', timeMs: min(10) },
-      { kind: 'steady', label: 'Easy', timeMs: min(15) },
+      { kind: 'warmup', label: 'phase.easyWarmup', timeMs: min(10) },
+      { kind: 'steady', label: 'phase.easy', timeMs: min(15) },
       {
         kind: 'repeat',
         times: 6,
-        work: { label: 'Stride', timeMs: sec(20) },
-        rest: { label: 'Walk', timeMs: sec(40) },
+        work: { label: 'phase.stride', timeMs: sec(20) },
+        rest: { label: 'phase.walk', timeMs: sec(40) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   // --- Fartlek & mixed -------------------------------------------------
   {
     id: 'progressive-35',
     name: 'Progressive 35',
+    nameKey: 'workout.progressive-35.name',
     group: 'mixed',
-    blurb:
-      'Easy → steady → strong finish. Teaches pace control and late-run toughness without full track intervals.',
+    blurb: 'Easy → steady → strong finish. Teaches pace control and late-run toughness without full track intervals.',
+    blurbKey: 'workout.progressive-35.blurb',
     effort: 3,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
-      { kind: 'steady', label: 'Easy', timeMs: min(12) },
-      { kind: 'steady', label: 'Steady', timeMs: min(10) },
-      { kind: 'work', label: 'Strong', timeMs: min(8) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
+      { kind: 'steady', label: 'phase.easy', timeMs: min(12) },
+      { kind: 'steady', label: 'phase.steady', timeMs: min(10) },
+      { kind: 'work', label: 'phase.strong', timeMs: min(8) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   {
     id: 'fartlek-20',
     name: 'Fartlek 20',
+    nameKey: 'workout.fartlek-20.name',
     group: 'mixed',
-    blurb:
-      '10 × 1 min hard / 1 min easy. Playful speed + aerobic mix — fun quality without rigid track pacing.',
+    blurb: '10 × 1 min hard / 1 min easy. Playful speed + aerobic mix — fun quality without rigid track pacing.',
+    blurbKey: 'workout.fartlek-20.blurb',
     effort: 3,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(5) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(5) },
       {
         kind: 'repeat',
         times: 10,
-        work: { label: 'Surge', timeMs: min(1) },
-        rest: { label: 'Easy', timeMs: min(1) },
+        work: { label: 'phase.surge', timeMs: min(1) },
+        rest: { label: 'phase.easy', timeMs: min(1) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(5) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(5) },
     ],
   },
   {
     id: 'ladder-fartlek',
     name: 'Ladder 5–4–3–2–1',
+    nameKey: 'workout.ladder-fartlek.name',
     group: 'mixed',
-    blurb:
-      'Descending hard blocks with equal easy recovery. Sustained effort then sharper finish — strong quality session.',
+    blurb: 'Descending hard blocks with equal easy recovery. Sustained effort then sharper finish — strong quality session.',
+    blurbKey: 'workout.ladder-fartlek.blurb',
     effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
-      { kind: 'work', label: '5 min hard', timeMs: min(5) },
-      { kind: 'rest', label: 'Easy', timeMs: min(5) },
-      { kind: 'work', label: '4 min hard', timeMs: min(4) },
-      { kind: 'rest', label: 'Easy', timeMs: min(4) },
-      { kind: 'work', label: '3 min hard', timeMs: min(3) },
-      { kind: 'rest', label: 'Easy', timeMs: min(3) },
-      { kind: 'work', label: '2 min hard', timeMs: min(2) },
-      { kind: 'rest', label: 'Easy', timeMs: min(2) },
-      { kind: 'work', label: '1 min hard', timeMs: min(1) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(10) },
+      { kind: 'work', label: 'phase.hard5min', timeMs: min(5) },
+      { kind: 'rest', label: 'phase.easy', timeMs: min(5) },
+      { kind: 'work', label: 'phase.hard4min', timeMs: min(4) },
+      { kind: 'rest', label: 'phase.easy', timeMs: min(4) },
+      { kind: 'work', label: 'phase.hard3min', timeMs: min(3) },
+      { kind: 'rest', label: 'phase.easy', timeMs: min(3) },
+      { kind: 'work', label: 'phase.hard2min', timeMs: min(2) },
+      { kind: 'rest', label: 'phase.easy', timeMs: min(2) },
+      { kind: 'work', label: 'phase.hard1min', timeMs: min(1) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: 'mona-fartlek',
     name: 'Mona fartlek',
+    nameKey: 'workout.mona-fartlek.name',
     group: 'mixed',
-    blurb:
-      '2×90 s, 4×60 s, 4×30 s, 4×15 s hard with equal float. Classic speed-play — neuromuscular snap plus aerobic stress.',
+    blurb: '2×90 s, 4×60 s, 4×30 s, 4×15 s hard with equal float. Classic speed-play — neuromuscular snap plus aerobic stress.',
+    blurbKey: 'workout.mona-fartlek.blurb',
     effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(10) },
       {
         kind: 'repeat',
         times: 2,
-        work: { label: 'Hard 90 s', timeMs: sec(90) },
-        rest: { label: 'Float', timeMs: sec(90) },
+        work: { label: 'phase.hard90s', timeMs: sec(90) },
+        rest: { label: 'phase.float', timeMs: sec(90) },
       },
       {
         kind: 'repeat',
         times: 4,
-        work: { label: 'Hard 60 s', timeMs: sec(60) },
-        rest: { label: 'Float', timeMs: sec(60) },
+        work: { label: 'phase.hard60s', timeMs: sec(60) },
+        rest: { label: 'phase.float', timeMs: sec(60) },
       },
       {
         kind: 'repeat',
         times: 4,
-        work: { label: 'Hard 30 s', timeMs: sec(30) },
-        rest: { label: 'Float', timeMs: sec(30) },
+        work: { label: 'phase.hard30s', timeMs: sec(30) },
+        rest: { label: 'phase.float', timeMs: sec(30) },
       },
       {
         kind: 'repeat',
         times: 4,
-        work: { label: 'Hard 15 s', timeMs: sec(15) },
-        rest: { label: 'Float', timeMs: sec(15) },
+        work: { label: 'phase.hard15s', timeMs: sec(15) },
+        rest: { label: 'phase.float', timeMs: sec(15) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: 'pyramid',
     name: 'Pyramid 1–2–3–2–1',
+    nameKey: 'workout.pyramid.name',
     group: 'mixed',
-    blurb:
-      'Climb then descend hard minutes. Mixes short and mid efforts for variety and general fitness quality.',
+    blurb: 'Climb then descend hard minutes. Mixes short and mid efforts for variety and general fitness quality.',
+    blurbKey: 'workout.pyramid.blurb',
     effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(8) },
-      { kind: 'work', label: '1 min hard', timeMs: min(1) },
-      { kind: 'rest', label: 'Recover', timeMs: min(1) },
-      { kind: 'work', label: '2 min hard', timeMs: min(2) },
-      { kind: 'rest', label: 'Recover', timeMs: min(1) },
-      { kind: 'work', label: '3 min hard', timeMs: min(3) },
-      { kind: 'rest', label: 'Recover', timeMs: min(2) },
-      { kind: 'work', label: '2 min hard', timeMs: min(2) },
-      { kind: 'rest', label: 'Recover', timeMs: min(1) },
-      { kind: 'work', label: '1 min hard', timeMs: min(1) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(8) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(8) },
+      { kind: 'work', label: 'phase.hard1min', timeMs: min(1) },
+      { kind: 'rest', label: 'phase.recover', timeMs: min(1) },
+      { kind: 'work', label: 'phase.hard2min', timeMs: min(2) },
+      { kind: 'rest', label: 'phase.recover', timeMs: min(1) },
+      { kind: 'work', label: 'phase.hard3min', timeMs: min(3) },
+      { kind: 'rest', label: 'phase.recover', timeMs: min(2) },
+      { kind: 'work', label: 'phase.hard2min', timeMs: min(2) },
+      { kind: 'rest', label: 'phase.recover', timeMs: min(1) },
+      { kind: 'work', label: 'phase.hard1min', timeMs: min(1) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(8) },
     ],
   },
   // --- Tempo & threshold -----------------------------------------------
   {
     id: 'tempo-20',
     name: 'Tempo 20',
+    nameKey: 'workout.tempo-20.name',
     group: 'tempo',
-    blurb:
-      '20 min comfortably hard. Classic threshold work — raises the pace you can hold and toughens race feel (10K–HM).',
+    blurb: '20 min comfortably hard. Classic threshold work — raises the pace you can hold and toughens race feel (10K–HM).',
+    blurbKey: 'workout.tempo-20.blurb',
     effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
-      { kind: 'work', label: 'Tempo', timeMs: min(20) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(10) },
+      { kind: 'work', label: 'phase.tempo', timeMs: min(20) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: 'cruise-5x5',
     name: 'Cruise 5 × 5',
+    nameKey: 'workout.cruise-5x5.name',
     group: 'tempo',
-    blurb:
-      '5 × 5 min threshold with 1 min easy. More total threshold time than one long tempo, with short resets between.',
+    blurb: '5 × 5 min threshold with 1 min easy. More total threshold time than one long tempo, with short resets between.',
+    blurbKey: 'workout.cruise-5x5.blurb',
     effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(10) },
       {
         kind: 'repeat',
         times: 5,
-        work: { label: 'Cruise', timeMs: min(5) },
-        rest: { label: 'Easy', timeMs: min(1) },
+        work: { label: 'phase.cruise', timeMs: min(5) },
+        rest: { label: 'phase.easy', timeMs: min(1) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: 'double-tempo',
     name: 'Double tempo 2 × 12',
+    nameKey: 'workout.double-tempo.name',
     group: 'tempo',
-    blurb:
-      'Two 12 min threshold blocks with a 3 min jog. Same goal as tempo, often easier to complete with a short break.',
+    blurb: 'Two 12 min threshold blocks with a 3 min jog. Same goal as tempo, often easier to complete with a short break.',
+    blurbKey: 'workout.double-tempo.blurb',
     effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
-      { kind: 'work', label: 'Tempo 1', timeMs: min(12) },
-      { kind: 'rest', label: 'Easy jog', timeMs: min(3) },
-      { kind: 'work', label: 'Tempo 2', timeMs: min(12) },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(10) },
+      { kind: 'work', label: 'phase.tempo1', timeMs: min(12) },
+      { kind: 'rest', label: 'phase.easyJog', timeMs: min(3) },
+      { kind: 'work', label: 'phase.tempo2', timeMs: min(12) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   // --- Speed, hills & VO2 ----------------------------------------------
   {
     id: 'hill-8x45',
     name: 'Hills 8 × 45 s',
+    nameKey: 'workout.hill-8x45.name',
     group: 'speed',
-    blurb:
-      '8 × 45 s hard up (or flat drive) / 90 s easy. Strength, form, and power without pure track speed — great for hills or “power” days.',
+    blurb: '8 × 45 s hard up (or flat drive) / 90 s easy. Strength, form, and power without pure track speed — great for hills or “power” days.',
+    blurbKey: 'workout.hill-8x45.blurb',
     effort: 4,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(12) },
       {
         kind: 'repeat',
         times: 8,
-        work: { label: 'Hill hard', timeMs: sec(45) },
-        rest: { label: 'Easy down', timeMs: sec(90) },
+        work: { label: 'phase.hillHard', timeMs: sec(45) },
+        rest: { label: 'phase.easyDown', timeMs: sec(90) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: '400-repeats',
     name: '6 × 400 m',
+    nameKey: 'workout.400-repeats.name',
     group: 'speed',
-    blurb:
-      'Short fast reps with 90 s recoveries. Builds leg speed, economy, and anaerobic snap — classic 5K speed work.',
+    blurb: 'Short fast reps with 90 s recoveries. Builds leg speed, economy, and anaerobic snap — classic 5K speed work.',
+    blurbKey: 'workout.400-repeats.blurb',
     effort: 5,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(10) },
       {
         kind: 'repeat',
         times: 6,
-        work: { label: '400 m', distanceM: 400 },
-        rest: { label: 'Recover', timeMs: 90_000 },
+        work: { label: 'phase.m400', distanceM: 400 },
+        rest: { label: 'phase.recover', timeMs: 90_000 },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: '800-repeats',
     name: '5 × 800 m',
+    nameKey: 'workout.800-repeats.name',
     group: 'speed',
-    blurb:
-      'Classic mid-distance track intervals, 2 min recoveries. VO₂ and pace control around 3–5K effort — race prep staple.',
+    blurb: 'Classic mid-distance track intervals, 2 min recoveries. VO₂ and pace control around 3–5K effort — race prep staple.',
+    blurbKey: 'workout.800-repeats.blurb',
     effort: 5,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(12) },
       {
         kind: 'repeat',
         times: 5,
-        work: { label: '800 m', distanceM: 800 },
-        rest: { label: 'Recover', timeMs: min(2) },
+        work: { label: 'phase.m800', distanceM: 800 },
+        rest: { label: 'phase.recover', timeMs: min(2) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: 'vo2-3min',
     name: '5 × 3 min',
+    nameKey: 'workout.vo2-3min.name',
     group: 'speed',
-    blurb:
-      'Hard 3 min with equal easy rest. Targets max aerobic capacity (VO₂) — high-quality fitness builder.',
+    blurb: 'Hard 3 min with equal easy rest. Targets max aerobic capacity (VO₂) — high-quality fitness builder.',
+    blurbKey: 'workout.vo2-3min.blurb',
     effort: 5,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(10) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(10) },
       {
         kind: 'repeat',
         times: 5,
-        work: { label: 'Hard', timeMs: min(3) },
-        rest: { label: 'Easy', timeMs: min(3) },
+        work: { label: 'phase.hard', timeMs: min(3) },
+        rest: { label: 'phase.easy', timeMs: min(3) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
   {
     id: 'vo2-4x4',
     name: '4 × 4 min',
+    nameKey: 'workout.vo2-4x4.name',
     group: 'speed',
-    blurb:
-      'Classic 4×4 VO₂ intervals with equal recovery. Strong stimulus for aerobic max — best when you already have a base.',
+    blurb: 'Classic 4×4 VO₂ intervals with equal recovery. Strong stimulus for aerobic max — best when you already have a base.',
+    blurbKey: 'workout.vo2-4x4.blurb',
     effort: 5,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(12) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(12) },
       {
         kind: 'repeat',
         times: 4,
-        work: { label: 'Hard', timeMs: min(4) },
-        rest: { label: 'Easy', timeMs: min(4) },
+        work: { label: 'phase.hard', timeMs: min(4) },
+        rest: { label: 'phase.easy', timeMs: min(4) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(10) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(10) },
     ],
   },
 ];
@@ -562,18 +616,19 @@ export function workoutsInGroup(groupId: WorkoutGroupId): WorkoutTemplate[] {
   });
 }
 
-export function phaseKindLabel(kind: PhaseKind): string {
+/** The kind of a phase, as a key. Shares the phase-label vocabulary. */
+export function phaseKindLabel(kind: PhaseKind): MessageKey {
   switch (kind) {
     case 'warmup':
-      return 'Warm-up';
+      return 'phase.warmup';
     case 'work':
-      return 'Work';
+      return 'phase.work';
     case 'rest':
-      return 'Rest';
+      return 'phase.rest';
     case 'cooldown':
-      return 'Cool-down';
+      return 'phase.cooldown';
     case 'steady':
-      return 'Steady';
+      return 'phase.steady';
   }
 }
 
@@ -721,17 +776,22 @@ export function customIntervals(options: {
   return expandRecipe({
     id: `custom-${newId()}`,
     name: options.name ?? `Custom ${repeats}×`,
+    // Only key the name when the athlete did not supply one — their own text
+    // must never be replaced by a translation.
+    nameKey: options.name ? undefined : 'workout.custom.name',
     blurb: `${repeats} × ${options.workMin} min / ${options.restMin} min rest`,
+    blurbKey: 'workout.custom.blurb',
+    blurbVars: { repeats, work: options.workMin, rest: options.restMin },
     effort: 3,
     steps: [
-      { kind: 'warmup', label: 'Warm-up', timeMs: min(options.warmupMin) },
+      { kind: 'warmup', label: 'phase.warmup', timeMs: min(options.warmupMin) },
       {
         kind: 'repeat',
         times: repeats,
-        work: { label: 'Work', timeMs: min(options.workMin) },
-        rest: { label: 'Rest', timeMs: min(options.restMin) },
+        work: { label: 'phase.work', timeMs: min(options.workMin) },
+        rest: { label: 'phase.rest', timeMs: min(options.restMin) },
       },
-      { kind: 'cooldown', label: 'Cool-down', timeMs: min(options.cooldownMin) },
+      { kind: 'cooldown', label: 'phase.cooldown', timeMs: min(options.cooldownMin) },
     ],
   });
 }
