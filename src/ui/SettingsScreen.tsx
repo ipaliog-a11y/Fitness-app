@@ -12,6 +12,8 @@ import {
   type MapStyleId,
 } from '../core/mercator';
 import { loadProfile, THEME_OPTIONS, type Profile, type ThemeId } from '../core/settings';
+import { LOCALE_OPTIONS, type LocaleId } from '../i18n';
+import { useT } from '../i18n/react';
 import { estimateStride } from '../core/steps';
 import {
   distanceLabel,
@@ -143,17 +145,24 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
     });
   };
 
+  const t = useT();
   const [themeOpen, setThemeOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const activeTheme = THEME_OPTIONS.find((o) => o.id === profile.theme) ?? THEME_OPTIONS[0];
+  const activeLocale = LOCALE_OPTIONS.find((o) => o.id === profile.locale) ?? LOCALE_OPTIONS[0];
 
+  // One handler for both sheets: two effects racing the same Escape press
+  // would close the wrong one when they are ever open together.
   useEffect(() => {
-    if (!themeOpen) return;
+    if (!themeOpen && !langOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setThemeOpen(false);
+      if (e.key !== 'Escape') return;
+      setThemeOpen(false);
+      setLangOpen(false);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [themeOpen]);
+  }, [themeOpen, langOpen]);
 
   const routes = loadRoutes();
   void routesTick;
@@ -213,14 +222,37 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
 
   return (
     <div className="screen">
-      <h1>Settings</h1>
-      <p className="subtitle">Theme, units, run behaviour, routes, and backups.</p>
+      <h1>{t('settings.title')}</h1>
+      <p className="subtitle">{t('settings.subtitle')}</p>
 
       <div className="card">
-        <h2>Theme</h2>
+        <h2>{t('settings.language.title')}</h2>
         <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
-          Same app, different look. Pick whichever is easier to read outdoors — you can switch any
-          time.
+          {t('settings.language.hint')}
+        </p>
+        <button
+          type="button"
+          className="theme-trigger locale-trigger"
+          onClick={() => setLangOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="locale-swatch" aria-hidden>
+            {activeLocale.id.toUpperCase()}
+          </span>
+          <span className="theme-option-body">
+            <span className="theme-option-label">{activeLocale.endonym}</span>
+            <span className="theme-option-blurb">{activeLocale.english}</span>
+          </span>
+          <span className="theme-trigger-cue" aria-hidden>
+            {t('common.change')}
+          </span>
+        </button>
+      </div>
+
+      <div className="card">
+        <h2>{t('settings.theme.title')}</h2>
+        <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>
+          {t('settings.theme.hint')}
         </p>
         <button
           type="button"
@@ -234,11 +266,11 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
             <span className="theme-swatch-bar short" />
           </span>
           <span className="theme-option-body">
-            <span className="theme-option-label">{activeTheme.label}</span>
-            <span className="theme-option-blurb">{activeTheme.blurb}</span>
+            <span className="theme-option-label">{t(activeTheme.label)}</span>
+            <span className="theme-option-blurb">{t(activeTheme.blurb)}</span>
           </span>
           <span className="theme-trigger-cue" aria-hidden>
-            Change
+            {t('common.change')}
           </span>
         </button>
       </div>
@@ -729,11 +761,15 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
           }}
         >
           <div className="modal theme-modal" role="dialog" aria-modal="true" aria-labelledby="theme-modal-title">
-            <h2 id="theme-modal-title">Theme</h2>
+            <h2 id="theme-modal-title">{t('settings.theme.title')}</h2>
             <p className="hint" style={{ marginTop: 0 }}>
-              Each one restyles the live run screen too, not just the colours.
+              {t('settings.theme.modalHint')}
             </p>
-            <div className="theme-picker" role="radiogroup" aria-label="App theme">
+            <div
+              className="theme-picker"
+              role="radiogroup"
+              aria-label={t('settings.theme.groupLabel')}
+            >
               {THEME_OPTIONS.map((opt) => {
                 const selected = profile.theme === opt.id;
                 return (
@@ -756,8 +792,8 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
                       <span className="theme-swatch-bar short" />
                     </span>
                     <span className="theme-option-body">
-                      <span className="theme-option-label">{opt.label}</span>
-                      <span className="theme-option-blurb">{opt.blurb}</span>
+                      <span className="theme-option-label">{t(opt.label)}</span>
+                      <span className="theme-option-blurb">{t(opt.blurb)}</span>
                     </span>
                     <span className="theme-option-check" aria-hidden>
                       {selected ? '\u2713' : ''}
@@ -767,7 +803,70 @@ export function SettingsScreen({ profile, onChange, onReload, onToast }: Props) 
               })}
             </div>
             <button type="button" className="btn primary wide" onClick={() => setThemeOpen(false)}>
-              Done
+              {t('common.done')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {langOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setLangOpen(false);
+          }}
+        >
+          <div
+            className="modal theme-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="lang-modal-title"
+          >
+            <h2 id="lang-modal-title">{t('settings.language.title')}</h2>
+            <p className="hint" style={{ marginTop: 0 }}>
+              {t('settings.language.modalHint')}
+            </p>
+            <div
+              className="theme-picker"
+              role="radiogroup"
+              aria-label={t('settings.language.groupLabel')}
+            >
+              {LOCALE_OPTIONS.map((opt) => {
+                const selected = profile.locale === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`theme-option${selected ? ' selected' : ''}`}
+                    /*
+                     * Applies immediately and leaves the sheet open, like the
+                     * theme picker: the sheet's own copy is translated behind
+                     * the tap, which is the clearest possible confirmation
+                     * that the right language was chosen.
+                     */
+                    onClick={() => set('locale', opt.id as LocaleId)}
+                  >
+                    <span className="locale-swatch" aria-hidden>
+                      {opt.id.toUpperCase()}
+                    </span>
+                    <span className="theme-option-body">
+                      <span className="theme-option-label" lang={opt.id}>
+                        {opt.endonym}
+                      </span>
+                      <span className="theme-option-blurb">{opt.english}</span>
+                    </span>
+                    <span className="theme-option-check" aria-hidden>
+                      {selected ? '\u2713' : ''}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" className="btn primary wide" onClick={() => setLangOpen(false)}>
+              {t('common.done')}
             </button>
           </div>
         </div>

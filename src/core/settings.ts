@@ -6,6 +6,8 @@
  * a single number can be drawn.
  */
 
+import type { LocaleId, MessageKey } from '../i18n';
+import { parseLocale } from '../i18n';
 import type { BiologicalSex } from './calories';
 import { estimateMaxHeartRate } from './heart';
 import { parseMapStyle, type MapStyleId } from './mercator';
@@ -24,42 +26,48 @@ export type { BiologicalSex };
  */
 export type ThemeId = 'soft' | 'hud' | 'day' | 'crimson' | 'sky' | 'retro';
 
+/**
+ * Themes as message keys, not text.
+ *
+ * The label and blurb used to be English literals sitting in the pure core.
+ * They are keys now, so this module holds the catalogue of *what themes exist*
+ * and the i18n catalogue holds *what they are called* — and adding a theme
+ * without naming it in every locale fails to compile.
+ */
 export const THEME_OPTIONS: Array<{
   id: ThemeId;
-  label: string;
-  blurb: string;
+  label: MessageKey;
+  blurb: MessageKey;
 }> = [
   {
     id: 'soft',
-    label: 'Soft Emerald',
-    blurb: 'Calm slate cards, green accent, frosted tab bar.',
+    label: 'theme.soft.label',
+    blurb: 'theme.soft.blurb',
   },
   {
     id: 'hud',
-    label: 'Athletic HUD',
-    // Reads "near-black" rather than "pure black" so it stays distinct from
-    // Arcade Neon in the picker — that one really is #000, this one is #050505.
-    blurb: 'Near-black, volt lime, mono numbers, solid dock.',
+    label: 'theme.hud.label',
+    blurb: 'theme.hud.blurb',
   },
   {
     id: 'day',
-    label: 'Daylight',
-    blurb: 'Paper white, deep green, solid chrome — built for direct sun.',
+    label: 'theme.day.label',
+    blurb: 'theme.day.blurb',
   },
   {
     id: 'crimson',
-    label: 'Crimson Ember',
-    blurb: 'Hot red, cut-gem corners, edge dock — bold night-run chrome.',
+    label: 'theme.crimson.label',
+    blurb: 'theme.crimson.blurb',
   },
   {
     id: 'sky',
-    label: 'Skyline',
-    blurb: 'Sky blue, full pills, floating capsule tab — calm aviation feel.',
+    label: 'theme.sky.label',
+    blurb: 'theme.sky.blurb',
   },
   {
     id: 'retro',
-    label: 'Arcade Neon',
-    blurb: 'Neon purple on pure black, glowing dock, segment digits — pure 1985.',
+    label: 'theme.retro.label',
+    blurb: 'theme.retro.blurb',
   },
 ];
 
@@ -69,7 +77,13 @@ export interface Profile {
    * Not a login identity — stays on device only.
    */
   displayName: string;
-  /** UI look: Soft Emerald, HUD, Daylight, Crimson, or Skyline. */
+  /**
+   * Interface language. Independent of `units` on purpose: a Greek reader may
+   * well want kilometres, and an English one miles, and tying the two means
+   * one of them cannot have what they want.
+   */
+  locale: LocaleId;
+  /** UI look: Soft Emerald, HUD, Daylight, Crimson, Skyline, or Arcade Neon. */
   theme: ThemeId;
   units: UnitSystem;
   /**
@@ -127,6 +141,7 @@ export interface Profile {
 
 export const DEFAULTS: Profile = {
   displayName: '',
+  locale: 'en',
   theme: 'soft',
   units: 'metric',
   birthDate: '',
@@ -204,6 +219,19 @@ export function applyTheme(theme: ThemeId): void {
   if (meta) meta.setAttribute('content', THEME_CHROME[theme]);
 }
 
+/**
+ * Push the active language onto <html lang>.
+ *
+ * Not cosmetic: `lang` is what a screen reader picks a voice from, what the
+ * browser hyphenates by, and what `:lang()` selectors match. Leaving it at the
+ * hardcoded "en" in index.html would have Greek read aloud by an English
+ * synthesiser.
+ */
+export function applyLocale(locale: LocaleId): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = locale;
+}
+
 export function parseTheme(value: unknown): ThemeId {
   if (value === 'hud' || value === 'athletic' || value === 'athletic-hud') return 'hud';
   if (value === 'day' || value === 'light' || value === 'daylight') return 'day';
@@ -247,6 +275,7 @@ export function sanitise(raw: unknown): Profile {
 
   return {
     displayName,
+    locale: parseLocale(input.locale),
     theme: parseTheme(input.theme),
     units: input.units === 'imperial' ? 'imperial' : 'metric',
     birthDate,

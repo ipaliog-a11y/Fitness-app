@@ -2887,6 +2887,31 @@ button.cal-event {
   background: var(--accent-dim);
 }
 
+/*
+ * Language swatch: the locale's own tag, not a flag.
+ *
+ * Flags are the obvious choice and the wrong one — Greek is not only spoken in
+ * Greece, and a Cypriot reader picking a Greek flag to get their own language
+ * is a small papercut the tag avoids entirely. It also sizes identically to
+ * the theme swatch, so the two triggers line up.
+ */
+.locale-swatch {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
 .theme-swatch {
   width: 52px;
   height: 52px;

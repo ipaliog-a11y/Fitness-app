@@ -39,6 +39,17 @@ import {
   totals,
 } from '../src/core/stats.ts';
 import { sanitise, DEFAULTS, parseTheme, THEME_OPTIONS } from '../src/core/settings.ts';
+import {
+  LOCALE_OPTIONS,
+  createTranslator,
+  detectLocale,
+  interpolate,
+  localeTag,
+  parseLocale,
+  pluralArm,
+} from '../src/i18n/index.ts';
+import { en } from '../src/i18n/en.ts';
+import { el } from '../src/i18n/el.ts';
 import { tipsForRun, tipsForWeek } from '../src/core/coach.ts';
 import {
   project,
@@ -2053,6 +2064,151 @@ check('TCX export has lap totals and optional HR', () => {
   assert(tcx.includes('DistanceMeters'));
   assert(tcx.includes('HeartRateBpm'));
   assert(tcx.includes('80') || tcx.includes('<Calories>80</Calories>'));
+});
+
+// --- i18n -----------------------------------------------------------------
+
+const LOCALE_IDS = LOCALE_OPTIONS.map((o) => o.id);
+const CATALOGUES = { en, el };
+
+check('every shipping locale parses to itself', () => {
+  for (const id of LOCALE_IDS) equal(parseLocale(id), id, id);
+});
+
+check('an unknown locale falls back to English rather than breaking the shell', () => {
+  for (const junk of ['', 'xx', null, undefined, 42, {}, 'klingon']) {
+    equal(parseLocale(junk), 'en', String(junk));
+  }
+});
+
+check('regional Greek still gets Greek', () => {
+  // el-CY is Cypriot Greek. Matching on the primary subtag is the difference
+  // between a Greek speaker seeing Greek and seeing English.
+  equal(detectLocale(['el-CY', 'en-GB']), 'el', 'el-CY');
+  equal(detectLocale(['el']), 'el', 'bare el');
+  equal(detectLocale(['en-US']), 'en', 'en-US');
+  equal(detectLocale(['de-DE', 'fr-FR']), 'en', 'nothing we ship');
+  equal(detectLocale([]), 'en', 'no preference at all');
+  // Order matters: the first *supported* tag wins, not the first tag.
+  equal(detectLocale(['de-DE', 'el-GR', 'en-GB']), 'el', 'first supported wins');
+});
+
+check('English formats as en-GB, not en-US', () => {
+  // The app writes metres and kilometres; 8/9/2026 for "9 August" would be a
+  // different dialect from the rest of the interface.
+  equal(localeTag('en'), 'en-GB');
+  equal(localeTag('el'), 'el-GR');
+});
+
+check('placeholders interpolate, and unknown ones stay visible', () => {
+  equal(interpolate('Hi {name}, {n} runs', { name: 'Sam', n: 3 }), 'Hi Sam, 3 runs');
+  equal(interpolate('{a} and {a}', { a: 'x' }), 'x and x', 'repeated placeholder');
+  equal(interpolate('{count} km', { count: 0 }), '0 km', 'zero is not falsy here');
+  // A leftover brace is a visible bug report; an empty gap is a silent one.
+  equal(interpolate('Hi {nope}', { name: 'Sam' }), 'Hi {nope}', 'unknown name kept');
+  equal(interpolate('nothing to do', undefined), 'nothing to do', 'no vars');
+});
+
+check('every locale answers every key the app can ask for', () => {
+  const expected = Object.keys(en).sort();
+  for (const [id, catalogue] of Object.entries(CATALOGUES)) {
+    const actual = Object.keys(catalogue).sort();
+    const missing = expected.filter((k) => !actual.includes(k));
+    const extra = actual.filter((k) => !expected.includes(k));
+    assert(missing.length === 0, `${id} missing: ${missing.join(', ')}`);
+    // Extra keys are dead weight that survives a rename of the English one.
+    assert(extra.length === 0, `${id} has stale keys: ${extra.join(', ')}`);
+  }
+});
+
+check('no locale ships an empty string', () => {
+  for (const [id, catalogue] of Object.entries(CATALOGUES)) {
+    for (const [key, value] of Object.entries(catalogue)) {
+      const arms = typeof value === 'string' ? [value] : Object.values(value);
+      for (const arm of arms) {
+        assert(typeof arm === 'string' && arm.trim().length > 0, `${id} ${key} is blank`);
+      }
+    }
+  }
+});
+
+/*
+ * The compiler catches a *missing* key. It cannot catch a key whose value is
+ * still the English text — copy-pasting the source catalogue and translating
+ * half of it type-checks perfectly. This is the only check that finds that.
+ *
+ * SHARED holds the handful that are legitimately identical across languages:
+ * proper nouns and units, not untranslated copy.
+ */
+const SHARED = new Set([]);
+
+check('Greek is actually translated, not copied', () => {
+  const copied = [];
+  for (const [key, value] of Object.entries(en)) {
+    if (SHARED.has(key)) continue;
+    if (typeof value !== 'string') continue;
+    if (el[key] === value) copied.push(key);
+  }
+  assert(copied.length === 0, `still English in el: ${copied.join(', ')}`);
+});
+
+check('plural arms are selected by count, through Intl not a hardcoded 1', () => {
+  const message = { one: '{count} run', other: '{count} runs' };
+  equal(pluralArm(message, 'en', { count: 1 }), '{count} run');
+  equal(pluralArm(message, 'en', { count: 0 }), '{count} runs');
+  equal(pluralArm(message, 'en', { count: 5 }), '{count} runs');
+  equal(pluralArm(message, 'el', { count: 1 }), '{count} run');
+  equal(pluralArm(message, 'el', { count: 3 }), '{count} runs');
+  // No count at all means the caller is using a plural key as a plain label.
+  equal(pluralArm(message, 'en', undefined), '{count} runs', 'no count');
+  equal(pluralArm(message, 'en', { name: 'x' }), '{count} runs', 'count absent');
+  // A bare string is not a plural and must pass straight through.
+  equal(pluralArm('flat', 'el', { count: 2 }), 'flat');
+});
+
+check('a plural falls back to other when the locale needs an arm English lacks', () => {
+  // Polish selects "few" for 2-4. Nothing fills that arm today, and the
+  // resolver must land on `other` rather than undefined when Polish lands.
+  const message = { one: 'jeden', other: 'wiele' };
+  equal(pluralArm(message, 'en', { count: 3 }), 'wiele');
+  equal(message.few, undefined, 'few genuinely absent');
+});
+
+check('a translator returns the active language, and falls back rather than blanking', () => {
+  const enT = createTranslator('en');
+  const elT = createTranslator('el');
+  equal(enT('settings.title'), 'Settings');
+  equal(elT('settings.title'), 'Ρυθμίσεις');
+  // A key that exists in no catalogue returns the key, never undefined — an
+  // unreadable button beats an invisible one mid-run.
+  equal(createTranslator('el')('nope.not.a.key'), 'nope.not.a.key');
+});
+
+check('every theme names itself through the catalogue, in every locale', () => {
+  for (const id of LOCALE_IDS) {
+    const t = createTranslator(id);
+    for (const opt of THEME_OPTIONS) {
+      const label = t(opt.label);
+      const blurb = t(opt.blurb);
+      assert(label.length > 0 && label !== opt.label, `${id} ${opt.id} label unresolved`);
+      assert(blurb.length > 0 && blurb !== opt.blurb, `${id} ${opt.id} blurb unresolved`);
+    }
+  }
+});
+
+check('the locale picker offers a readable name in the language itself', () => {
+  for (const opt of LOCALE_OPTIONS) {
+    assert(opt.endonym.trim().length > 0, `${opt.id} endonym`);
+    assert(opt.english.trim().length > 0, `${opt.id} english name`);
+  }
+});
+
+check('a saved profile round-trips every locale', () => {
+  for (const id of LOCALE_IDS) {
+    equal(sanitise({ ...DEFAULTS, locale: id }).locale, id, id);
+  }
+  equal(sanitise({}).locale, 'en', 'default');
+  equal(sanitise({ locale: 'gr' }).locale, 'el', 'legacy gr alias');
 });
 
 // --- report ---------------------------------------------------------------
