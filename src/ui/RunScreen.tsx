@@ -105,7 +105,18 @@ import {
 } from '../platform/liveRunNative';
 import { resolveMapBasemap } from '../core/mercator';
 import { RouteMap } from './RouteMap';
-import type { MessageKey, Translate } from '../i18n';
+import { createTranslator, type MessageKey, type Translate } from '../i18n';
+
+/**
+ * Cue text, always in English.
+ *
+ * The spoken cues stay English whatever the interface language, by decision —
+ * so a phase label cannot go through the screen's translator. It cannot go
+ * through no translator either, which is what it was doing: `phase.label` is a
+ * MessageKey, and a MessageKey is a string, so the workout announced itself as
+ * "workout dot kind dot work" and compiled without complaint.
+ */
+const speech = createTranslator('en');
 import { useT, useWorkoutText } from '../i18n/react';
 
 interface Props {
@@ -768,7 +779,7 @@ export function RunScreen({
         } else {
           const phase = runner.current();
           if (phase && profile.audioCues) {
-            speak(`${phaseKindLabel(phase.kind)}. ${phase.label}.`);
+            speak(`${speech(phaseKindLabel(phase.kind))}. ${speech(phase.label)}.`);
           }
         }
       }
@@ -919,7 +930,7 @@ export function RunScreen({
 
     if (profile.audioCues && workoutRef.current?.current()) {
       const phase = workoutRef.current.current()!;
-      speak(`${phaseKindLabel(phase.kind)}. ${phase.label}.`);
+      speak(`${speech(phaseKindLabel(phase.kind))}. ${speech(phase.label)}.`);
     }
 
     void startLiveRunNotification({
@@ -2196,7 +2207,7 @@ export function RunScreen({
                 bandStatus === 'ok' ? ' ok' : bandStatus === 'unknown' ? '' : ' warn'
               }`}
             >
-              {paceBandLabel(bandStatus) || 'Pace'}
+              {paceBandLabel(bandStatus) || t('chart.pace')}
             </span>
           )}
         </div>
@@ -2253,7 +2264,7 @@ export function RunScreen({
         <div className={`workout-phase kind-${phaseProgress.phase.kind}`}>
           <div className="goal-track-head">
             <span>
-              {phaseKindLabel(phaseProgress.phase.kind)} · {phaseProgress.phase.label}
+              {t(phaseKindLabel(phaseProgress.phase.kind))} · {t(phaseProgress.phase.label)}
             </span>
             <span>
               {phaseProgress.index + 1}/{phaseProgress.total}
@@ -2518,7 +2529,7 @@ export function RunScreen({
             live
             emptyLabel={
               geoStatus === 'denied' || geoStatus === 'unavailable' || geoStatus === 'error'
-                ? geoDetail || t('run.gpsUnavailable')
+                ? t(geoDetail ?? 'run.gpsUnavailable')
                 : geoStatus === 'acquiring' || !lastGeo
                   ? t('run.waitingGps')
                   : t('run.recordingRoute')

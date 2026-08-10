@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:core",
+    "test": "npm run test:core && npm run test:keys",
     "icons": "node tools/make-icons.mjs",
     "test:browser": "node tests/browser.test.mjs",
     "test:i18n": "node tests/i18n.test.mjs",
@@ -16,7 +16,8 @@
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
     "android:studio": "npm run build && npm run android:sync && npx cap open android",
-    "android:run": "npm run build && npx cap run android"
+    "android:run": "npm run build && npx cap run android",
+    "test:keys": "node tests/keys.test.mjs"
   },
   "license": "ISC",
   "dependencies": {
